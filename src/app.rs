@@ -3,14 +3,34 @@ use winit::{EventsLoop, Window, WindowBuilder};
 
 /// The main application wrapper
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct App {
-    event_loop: EventsLoop,
+    events_loop: EventsLoop,
     window: Window,
 }
 
 impl App {
-    fn new(event_loop: EventsLoop, window: Window) -> Self {
-        App { event_loop, window }
+    fn new(events_loop: EventsLoop, window: Window) -> Self {
+        App {
+            events_loop,
+            window,
+        }
+    }
+
+    /// Starts the application loop
+    pub fn run(&mut self) {
+        use winit::Event::*;
+
+        let mut running = true;
+        while running {
+            self.events_loop.poll_events(|event| match event {
+                WindowEvent {
+                    event: winit::WindowEvent::CloseRequested,
+                    ..
+                } => running = false,
+                _ => (),
+            });
+        }
     }
 }
 
