@@ -38,8 +38,10 @@ impl App {
 ///
 /// Usage:
 ///
-/// ```
-/// let app = AppBuilder::new()
+/// ```ignore
+/// extern crate rengine;
+/// 
+/// let app = rengine::AppBuilder::new()
 ///     .size(640, 480)
 ///     .title("Example App")
 ///     .build()
