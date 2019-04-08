@@ -6,6 +6,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut app = rengine::AppBuilder::new()
         .title("Hello Example")
         .size(800, 600)
+        .background_color([0.3, 0.4, 0.5, 1.0])
         .build()?;
 
     app.run();
