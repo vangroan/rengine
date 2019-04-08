@@ -5,15 +5,6 @@ use glutin::{EventsLoop, WindowedContext};
 
 use crate::gfx_types::*;
 
-/// Correlates to the result of gfx_glutin initialization
-pub type InitArguments = (
-    WindowedContext,
-    Device,
-    Factory,
-    RenderTargetView<Resources, ColorFormat>,
-    DepthStencilView<Resources, DepthFormat>,
-);
-
 /// Wrapper for Glutin objects
 #[allow(dead_code)]
 pub struct GraphicContext {
@@ -27,22 +18,6 @@ pub struct GraphicContext {
 }
 
 impl GraphicContext {
-    pub fn new(
-        events_loop: EventsLoop,
-        encoder: Encoder<Resources, CommandBuffer>,
-        (window, device, factory, render_target, depth_stencil): InitArguments,
-    ) -> Self {
-        GraphicContext {
-            events_loop,
-            encoder,
-            window,
-            device,
-            factory,
-            render_target,
-            depth_stencil,
-        }
-    }
-
     #[inline]
     pub fn window(&self) -> &WindowedContext {
         &self.window
