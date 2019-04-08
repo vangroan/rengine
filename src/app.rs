@@ -1,35 +1,38 @@
+use super::glutin_state::GlutinState;
+use glutin::{EventsLoop, WindowBuilder};
 use std::error::Error;
-use winit::{EventsLoop, Window, WindowBuilder};
 
 /// The main application wrapper
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct App {
-    events_loop: EventsLoop,
-    window: Window,
+    glutin_state: GlutinState,
 }
 
 impl App {
-    fn new(events_loop: EventsLoop, window: Window) -> Self {
-        App {
-            events_loop,
-            window,
-        }
+    fn new(glutin_state: GlutinState) -> Self {
+        App { glutin_state }
     }
 
     /// Starts the application loop
     pub fn run(&mut self) {
-        use winit::Event::*;
+        use glutin::Event::*;
+
+        let &mut App {
+            ref mut glutin_state,
+        } = self;
 
         let mut running = true;
         while running {
-            self.events_loop.poll_events(|event| match event {
-                WindowEvent {
-                    event: winit::WindowEvent::CloseRequested,
-                    ..
-                } => running = false,
-                _ => (),
-            });
+            glutin_state
+                .events_loop_mut()
+                .poll_events(|event| match event {
+                    WindowEvent {
+                        event: glutin::WindowEvent::CloseRequested,
+                        ..
+                    } => running = false,
+                    _ => (),
+                });
         }
     }
 }
@@ -40,7 +43,7 @@ impl App {
 ///
 /// ```ignore
 /// extern crate rengine;
-/// 
+///
 /// let app = rengine::AppBuilder::new()
 ///     .size(640, 480)
 ///     .title("Example App")
@@ -82,6 +85,6 @@ impl AppBuilder {
             .with_dimensions((self.size[0], self.size[1]).into())
             .build(&events_loop)?;
 
-        Ok(App::new(events_loop, window))
+        Ok(App::new(GlutinState::new(events_loop, window)))
     }
 }
