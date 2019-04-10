@@ -9,8 +9,11 @@ pub extern crate specs;
 
 mod app;
 pub mod colors;
+pub mod comp;
 mod gfx_types;
 mod graphics;
+pub mod res;
+pub mod sys;
 
 pub use app::*;
 pub use gfx_types::*;

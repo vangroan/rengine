@@ -1,31 +1,50 @@
 use std::error::Error;
+use std::time::Instant;
 
 use gfx::Device;
 use glutin::{Api, ContextBuilder, EventsLoop, GlRequest, WindowBuilder};
+use specs::{Dispatcher, DispatcherBuilder, World};
 
 use crate::colors;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
+use crate::res::DeltaTime;
 
 /// The main application wrapper
 #[allow(dead_code)]
-pub struct App {
+pub struct App<'comp, 'thread> {
     graphics: GraphicContext,
+    world: World,
+    dispatcher: Dispatcher<'comp, 'thread>,
     bkg_color: colors::Color,
 }
 
-impl App {
+impl<'a, 'b> App<'a, 'b> {
     /// Starts the application loop
     pub fn run(&mut self) {
         use glutin::Event::*;
 
         let &mut App {
             ref mut graphics,
+            ref mut world,
+            ref mut dispatcher,
             bkg_color,
+            ..
         } = self;
 
         let mut running = true;
+        let mut last_time = Instant::now();
+
         while running {
+            // Time elapsed since last iteration
+            let new_time = Instant::now();
+            let delta_time = DeltaTime(new_time.duration_since(last_time));
+            last_time = new_time;
+
+            // Prepare world with frame scoped resources
+            world.add_resource(delta_time);
+
+            // Drain user input events
             graphics.events_loop.poll_events(|event| match event {
                 WindowEvent {
                     event: glutin::WindowEvent::CloseRequested,
@@ -34,10 +53,17 @@ impl App {
                 _ => (),
             });
 
+            // Run systems
+            dispatcher.dispatch(&world.res);
+
+            // Render
             graphics.encoder.clear(&graphics.render_target, bkg_color);
             graphics.encoder.flush(&mut graphics.device);
             graphics.window.swap_buffers().unwrap();
+
+            // Deallocate
             graphics.device.cleanup();
+            world.maintain();
         }
     }
 }
@@ -92,7 +118,7 @@ impl AppBuilder {
     }
 
     /// Consumes the builder and creates the application
-    pub fn build(self) -> Result<App, Box<dyn Error>> {
+    pub fn build<'a, 'b>(self) -> Result<App<'a, 'b>, Box<dyn Error>> {
         // Event Loop
         let events_loop = EventsLoop::new();
 
@@ -129,8 +155,16 @@ impl AppBuilder {
             depth_stencil,
         };
 
+        // World
+        let world = World::new();
+
+        // Dispatcher
+        let dispatcher = DispatcherBuilder::new().build();
+
         Ok(App {
             graphics,
+            world,
+            dispatcher,
             bkg_color: self.bkg_color,
         })
     }
