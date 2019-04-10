@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::time::Instant;
 
+use gfx::traits::FactoryExt;
 use gfx::Device;
 use glutin::{Api, ContextBuilder, EventsLoop, GlRequest, WindowBuilder};
 use specs::{Dispatcher, DispatcherBuilder, World};
@@ -21,16 +22,57 @@ pub struct App<'comp, 'thread> {
 
 impl<'a, 'b> App<'a, 'b> {
     /// Starts the application loop
-    pub fn run(&mut self) {
+    ///
+    /// Consumes the app
+    pub fn run(self) {
         use glutin::Event::*;
 
-        let &mut App {
-            ref mut graphics,
-            ref mut world,
-            ref mut dispatcher,
+        let App {
+            mut graphics,
+            mut world,
+            mut dispatcher,
             bkg_color,
             ..
         } = self;
+
+        // Pipeline Object
+        let pso = graphics
+            .factory
+            .create_pipeline_simple(
+                include_bytes!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/src/shaders/basic_150.glslv"
+                )),
+                include_bytes!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/src/shaders/basic_150.glslf"
+                )),
+                pipe::new(),
+            )
+            .unwrap();
+
+        // Test Quad
+        use crate::comp::Quad;
+        use specs::Builder;
+        world.register::<Quad>();
+        let entity = world
+            .create_entity()
+            .with(Quad::new([0., 0., 0.], [1.0, 1.0]))
+            .build();
+        let (vertices, indices) = world
+            .read_storage::<Quad>()
+            .get(entity)
+            .unwrap()
+            .create_vertices_indices();
+
+        let (vertex_buffer, slice) = graphics
+            .factory
+            .create_vertex_buffer_with_slice(&vertices, &*indices);
+
+        let data = pipe::Data {
+            vbuf: vertex_buffer,
+            out: graphics.render_target,
+        };
 
         let mut running = true;
         let mut last_time = Instant::now();
@@ -57,7 +99,8 @@ impl<'a, 'b> App<'a, 'b> {
             dispatcher.dispatch(&world.res);
 
             // Render
-            graphics.encoder.clear(&graphics.render_target, bkg_color);
+            graphics.encoder.clear(&data.out, bkg_color);
+            graphics.encoder.draw(&slice, &pso, &data);
             graphics.encoder.flush(&mut graphics.device);
             graphics.window.swap_buffers().unwrap();
 

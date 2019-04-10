@@ -6,7 +6,7 @@ use glutin::{EventsLoop, WindowedContext};
 use crate::gfx_types::*;
 
 /// Wrapper for Glutin objects
-/// 
+///
 /// TODO: Move into specs resources
 #[allow(dead_code)]
 pub struct GraphicContext {

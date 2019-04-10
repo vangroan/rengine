@@ -4,8 +4,11 @@ extern crate gfx_core;
 extern crate gfx_device_gl as gfx_device;
 extern crate gfx_window_glutin as gfx_glutin;
 extern crate glutin;
-pub extern crate nalgebra as algebra;
+pub extern crate nalgebra;
+pub extern crate nalgebra_glm as glm;
 pub extern crate specs;
+#[macro_use]
+extern crate specs_derive;
 
 mod app;
 pub mod colors;
