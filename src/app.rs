@@ -1,15 +1,13 @@
-use std::error::Error;
-use std::time::Instant;
-
-use gfx::traits::FactoryExt;
-use gfx::Device;
-use glutin::{Api, ContextBuilder, EventsLoop, GlRequest, WindowBuilder};
-use specs::{Dispatcher, DispatcherBuilder, World};
-
 use crate::colors;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::res::DeltaTime;
+use gfx::traits::FactoryExt;
+use gfx::Device;
+use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
+use specs::{Dispatcher, DispatcherBuilder, World};
+use std::error::Error;
+use std::time::Instant;
 
 /// The main application wrapper
 #[allow(dead_code)]
@@ -173,6 +171,7 @@ impl AppBuilder {
         // OpenGL Context
         let context_builder = ContextBuilder::new()
             .with_gl(GlRequest::Specific(Api::OpenGl, (3, 2)))
+            .with_gl_profile(GlProfile::Core) // modern OpenGL only
             .with_vsync(true);
 
         // Init
