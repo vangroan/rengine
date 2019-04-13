@@ -13,13 +13,11 @@ extern crate specs_derive;
 mod app;
 pub mod colors;
 pub mod comp;
-mod drawable;
 mod gfx_types;
 mod graphics;
 pub mod res;
 pub mod sys;
 
 pub use app::*;
-pub use drawable::*;
 pub use gfx_types::*;
 pub use graphics::*;

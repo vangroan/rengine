@@ -1,6 +1,5 @@
 use crate::colors::Color;
-use crate::drawable::Drawable;
-use crate::gfx_types::{pipe, GraphicsEncoder, PipelineStateObject, RenderTarget, Vertex};
+use crate::gfx_types::Vertex;
 use crate::graphics::GraphicContext;
 use gfx::handle::Buffer;
 use gfx::traits::FactoryExt;

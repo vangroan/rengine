@@ -1,5 +1,4 @@
 use crate::comp::{Mesh, Transform};
-use crate::drawable::Drawable;
 use crate::gfx_types::{pipe, PipelineStateObject, RenderTarget};
 use crate::graphics::ChannelPair;
 use specs::{Join, ReadExpect, ReadStorage, System};
