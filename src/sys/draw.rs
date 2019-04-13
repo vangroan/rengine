@@ -1,6 +1,7 @@
 use crate::comp::{Mesh, Transform};
 use crate::gfx_types::{pipe, PipelineStateObject, RenderTarget};
 use crate::graphics::ChannelPair;
+use gfx::Rect;
 use specs::{Join, ReadExpect, ReadStorage, System};
 use std::error::Error;
 
@@ -35,6 +36,13 @@ impl<'a> System<'a> for DrawSystem {
                     let data = pipe::Data {
                         vbuf: mesh.vbuf.clone(),
                         model: trans.matrix().into(),
+                        // The rectangle to allow rendering within
+                        scissor: Rect {
+                            x: 0,
+                            y: 0,
+                            w: 1280,
+                            h: 720,
+                        },
                         out: self.render_target.clone(),
                     };
 

@@ -16,6 +16,7 @@ use std::time::Instant;
 /// The main application wrapper
 #[allow(dead_code)]
 pub struct App<'comp, 'thread> {
+    events_loop: EventsLoop,
     graphics: GraphicContext,
     world: World,
     dispatcher: Dispatcher<'comp, 'thread>,
@@ -30,6 +31,7 @@ impl<'a, 'b> App<'a, 'b> {
         use glutin::Event::*;
 
         let App {
+            mut events_loop,
             mut graphics,
             mut world,
             mut dispatcher,
@@ -72,7 +74,7 @@ impl<'a, 'b> App<'a, 'b> {
             .with(
                 Transform::default()
                     .with_anchor([0.5, 0.5, 0.0])
-                    .with_position([0.0, 0.0, 0.])
+                    .with_position([1.0, 0.0, 0.])
                     .with_scale([0.5, 1.0, 1.0])
                     .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
@@ -102,11 +104,23 @@ impl<'a, 'b> App<'a, 'b> {
             world.add_resource(delta_time);
 
             // Drain user input events
-            graphics.events_loop.poll_events(|event| match event {
+            events_loop.poll_events(|event| match event {
                 WindowEvent {
                     event: glutin::WindowEvent::CloseRequested,
                     ..
                 } => running = false,
+                WindowEvent {
+                    event: glutin::WindowEvent::Resized(size),
+                    ..
+                } => {
+                    let dpi_factor = graphics.window.get_hidpi_factor();
+                    graphics.window.resize(size.to_physical(dpi_factor));
+                    gfx_window_glutin::update_views(
+                        &graphics.window,
+                        &mut graphics.render_target,
+                        &mut graphics.depth_stencil,
+                    );
+                }
                 _ => (),
             });
 
@@ -272,7 +286,6 @@ impl AppBuilder {
 
         // Graphics Context
         let graphics = GraphicContext {
-            events_loop,
             window,
             device,
             factory,
@@ -287,6 +300,7 @@ impl AppBuilder {
         let dispatcher = DispatcherBuilder::new().build();
 
         Ok(App {
+            events_loop,
             graphics,
             world,
             dispatcher,

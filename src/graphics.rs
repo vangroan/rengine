@@ -3,14 +3,13 @@ use crossbeam::channel::{Receiver, RecvError, SendError, Sender};
 use gfx::Encoder;
 use gfx_core::handle::{DepthStencilView, RenderTargetView};
 use gfx_device::{CommandBuffer, Device, Factory, Resources};
-use glutin::{EventsLoop, WindowedContext};
+use glutin::WindowedContext;
 
 /// Wrapper for Glutin objects
 ///
 /// TODO: Move into specs resources
 #[allow(dead_code)]
 pub struct GraphicContext {
-    pub(crate) events_loop: EventsLoop,
     pub(crate) window: WindowedContext,
     pub(crate) device: Device,
     pub(crate) factory: Factory,

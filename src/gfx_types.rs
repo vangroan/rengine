@@ -15,8 +15,13 @@ gfx_defines! {
 
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
+        
         // Model Transform Matrix
         model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
+
+        // Enables the scissor test
+        scissor: gfx::Scissor = (),
+
         out: gfx::RenderTarget<ColorFormat> = "Target0",
     }
 }
