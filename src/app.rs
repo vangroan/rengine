@@ -1,12 +1,14 @@
 use crate::colors;
+use crate::comp::{Mesh, MeshBuilder};
 use crate::gfx_types::*;
-use crate::graphics::GraphicContext;
+use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::DeltaTime;
 use gfx::traits::FactoryExt;
 use gfx::Device;
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
 use specs::{Dispatcher, DispatcherBuilder, World};
 use std::error::Error;
+use std::fmt;
 use std::time::Instant;
 
 /// The main application wrapper
@@ -22,7 +24,7 @@ impl<'a, 'b> App<'a, 'b> {
     /// Starts the application loop
     ///
     /// Consumes the app
-    pub fn run(self) {
+    pub fn run(self) -> AppResult {
         use glutin::Event::*;
 
         let App {
@@ -33,7 +35,7 @@ impl<'a, 'b> App<'a, 'b> {
             ..
         } = self;
 
-        // Pipeline Object
+        // Pipeline State Object
         let pso = graphics
             .factory
             .create_pipeline_simple(
@@ -50,27 +52,35 @@ impl<'a, 'b> App<'a, 'b> {
             .unwrap();
 
         // Test Quad
-        use crate::comp::Quad;
         use specs::Builder;
-        world.register::<Quad>();
-        let entity = world
+        world.register::<Mesh>();
+        let _entity = world
             .create_entity()
-            .with(Quad::new([0., 0., 0.], [1.0, 1.0]))
+            .with(
+                MeshBuilder::new()
+                    .quad(
+                        [0., 0., 0.],
+                        [1., 1.],
+                        [colors::RED, colors::GREEN, colors::BLUE, colors::MAGENTA],
+                    )
+                    .build(&mut graphics),
+            )
             .build();
-        let (vertices, indices) = world
-            .read_storage::<Quad>()
-            .get(entity)
-            .unwrap()
-            .create_vertices_indices();
 
         let (vertex_buffer, slice) = graphics
             .factory
-            .create_vertex_buffer_with_slice(&vertices, &*indices);
+            .create_vertex_buffer_with_slice(&QUAD_VERTICES[..], &QUAD_INDICES[..]);
 
         let data = pipe::Data {
             vbuf: vertex_buffer,
-            out: graphics.render_target,
+            out: graphics.render_target.clone(),
         };
+
+        // Encoder
+        let mut channel = ChannelPair::new();
+        if let Err(_) = channel.send_block(graphics.create_encoder()) {
+            return Err(AppError::EncoderSend);
+        }
 
         let mut running = true;
         let mut last_time = Instant::now();
@@ -93,19 +103,87 @@ impl<'a, 'b> App<'a, 'b> {
                 _ => (),
             });
 
+            // Pre-render
+            match channel.recv_block() {
+                Ok(mut encoder) => {
+                    encoder.clear(&graphics.render_target, bkg_color);
+
+                    // Send encoder back
+                    channel.send_block(encoder);
+                }
+                Err(_) => return Err(AppError::EncoderRecv),
+            }
+
             // Run systems
             dispatcher.dispatch(&world.res);
 
             // Render
-            graphics.encoder.clear(&data.out, bkg_color);
-            graphics.encoder.draw(&slice, &pso, &data);
-            graphics.encoder.flush(&mut graphics.device);
-            graphics.window.swap_buffers().unwrap();
+            match channel.recv_block() {
+                Ok(mut encoder) => {
+                    encoder.draw(&slice, &pso, &data);
+                    encoder.flush(&mut graphics.device);
+                    graphics.window.swap_buffers().unwrap();
+
+                    // Send encoder back
+                    channel.send_block(encoder)?;
+                }
+                Err(_) => return Err(AppError::EncoderRecv),
+            }
 
             // Deallocate
             graphics.device.cleanup();
             world.maintain();
         }
+
+        Ok(())
+    }
+}
+
+pub type AppResult = Result<(), AppError>;
+
+#[derive(Debug)]
+#[must_use]
+pub enum AppError {
+    /// Graphics encoder was not in the channel when render occurred
+    EncoderRecv,
+
+    /// Graphics encoder could not be sent over the channel, possibly because it has been disconnected
+    EncoderSend,
+}
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use AppError::*;
+
+        write!(
+            f,
+            "Application Error, {}",
+            match self {
+                EncoderRecv => "Encoder Receive",
+                EncoderSend => "Encoder Send",
+            }
+        )
+    }
+}
+
+impl Error for AppError {
+    fn description(&self) -> &str {
+        use AppError::*;
+
+        match self {
+            EncoderRecv => "Graphics encoder was not received from channel",
+            EncoderSend => "Graphics encoder could not be sent to the channel",
+        }
+    }
+}
+
+impl<R, C> From<crossbeam::channel::SendError<gfx::Encoder<R, C>>> for AppError
+where
+    R: gfx::Resources,
+    C: gfx::CommandBuffer<R>,
+{
+    fn from(_send_error: crossbeam::channel::SendError<gfx::Encoder<R, C>>) -> Self {
+        AppError::EncoderSend
     }
 }
 
@@ -182,14 +260,9 @@ impl AppBuilder {
                 &events_loop,
             )?;
 
-        // Encoder
-        let encoder: gfx::Encoder<gfx_device::Resources, gfx_device::CommandBuffer> =
-            factory.create_command_buffer().into();
-
         // Graphics Context
         let graphics = GraphicContext {
             events_loop,
-            encoder,
             window,
             device,
             factory,

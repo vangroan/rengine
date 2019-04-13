@@ -1,7 +1,10 @@
+use crate::colors::WHITE;
 use gfx;
 
 pub type ColorFormat = gfx::format::Srgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
+
+pub type GraphicsEncoder = gfx::Encoder<gfx_device::Resources, gfx_device::CommandBuffer>;
 
 gfx_defines! {
     vertex Vertex {
@@ -14,3 +17,28 @@ gfx_defines! {
         out: gfx::RenderTarget<ColorFormat> = "Target0",
     }
 }
+
+pub const QUAD_VERTICES: [Vertex; 4] = [
+    Vertex {
+        pos: [0.0, 0.0, 0.0],
+        color: WHITE,
+    },
+    Vertex {
+        pos: [1.0, 0.0, 0.0],
+        color: WHITE,
+    },
+    Vertex {
+        pos: [1.0, 1.0, 0.0],
+        color: WHITE,
+    },
+    Vertex {
+        pos: [0.0, 1.0, 0.0],
+        color: WHITE,
+    },
+];
+
+pub const QUAD_INDICES: [u16; 6] = [
+    // triangle 1
+    0, 1, 2, // triangle 2
+    0, 2, 3,
+];

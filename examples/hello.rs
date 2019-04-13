@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .background_color([0.3, 0.4, 0.5, 1.0])
         .build()?;
 
-    app.run();
+    app.run()?;
 
     Ok(())
 }
