@@ -1,4 +1,5 @@
 use crate::colors;
+use crate::comp::Z_AXIS;
 use crate::comp::{Mesh, MeshBuilder, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
@@ -68,17 +69,14 @@ impl<'a, 'b> App<'a, 'b> {
                     )
                     .build(&mut graphics),
             )
-            .with(Transform::default().with_position([-0.5, -0.5, 0.]))
+            .with(
+                Transform::default()
+                    .with_anchor([0.5, 0.5, 0.0])
+                    .with_position([0.0, 0.0, 0.])
+                    .with_scale([0.5, 1.0, 1.0])
+                    .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
+            )
             .build();
-
-        // let (vertex_buffer, slice) = graphics
-        //     .factory
-        //     .create_vertex_buffer_with_slice(&QUAD_VERTICES[..], &QUAD_INDICES[..]);
-
-        // let data = pipe::Data {
-        //     vbuf: vertex_buffer,
-        //     out: graphics.render_target.clone(),
-        // };
 
         // Encoder
         let mut channel = ChannelPair::new();
