@@ -1,5 +1,5 @@
 use crate::colors;
-use crate::comp::{Mesh, MeshBuilder};
+use crate::comp::{Mesh, MeshBuilder, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::DeltaTime;
@@ -56,6 +56,7 @@ impl<'a, 'b> App<'a, 'b> {
         use specs::Builder;
         world.add_resource(pso);
         world.register::<Mesh>();
+        world.register::<Transform>();
         let _entity = world
             .create_entity()
             .with(
@@ -67,6 +68,7 @@ impl<'a, 'b> App<'a, 'b> {
                     )
                     .build(&mut graphics),
             )
+            .with(Transform::default().with_position([-0.5, -0.5, 0.]))
             .build();
 
         // let (vertex_buffer, slice) = graphics

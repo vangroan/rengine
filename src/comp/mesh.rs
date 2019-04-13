@@ -10,24 +10,8 @@ use specs::{Component, DenseVecStorage};
 #[derive(Component)]
 #[storage(DenseVecStorage)]
 pub struct Mesh {
-    vbuf: Buffer<gfx_device::Resources, Vertex>,
-    slice: Slice<gfx_device::Resources>,
-}
-
-impl Drawable for Mesh {
-    fn draw(
-        &self,
-        encoder: &mut GraphicsEncoder,
-        pso: &PipelineStateObject,
-        target: &RenderTarget<gfx_device::Resources>,
-    ) {
-        let data = pipe::Data {
-            vbuf: self.vbuf.clone(),
-            out: target.clone(),
-        };
-
-        encoder.draw(&self.slice, &pso, &data);
-    }
+    pub(crate) vbuf: Buffer<gfx_device::Resources, Vertex>,
+    pub(crate) slice: Slice<gfx_device::Resources>,
 }
 
 pub struct MeshBuilder {

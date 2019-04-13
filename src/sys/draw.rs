@@ -1,6 +1,6 @@
-use crate::comp::Mesh;
+use crate::comp::{Mesh, Transform};
 use crate::drawable::Drawable;
-use crate::gfx_types::{PipelineStateObject, RenderTarget};
+use crate::gfx_types::{pipe, PipelineStateObject, RenderTarget};
 use crate::graphics::ChannelPair;
 use specs::{Join, ReadExpect, ReadStorage, System};
 use std::error::Error;
@@ -23,13 +23,23 @@ impl DrawSystem {
 }
 
 impl<'a> System<'a> for DrawSystem {
-    type SystemData = (ReadExpect<'a, PipelineStateObject>, ReadStorage<'a, Mesh>);
+    type SystemData = (
+        ReadExpect<'a, PipelineStateObject>,
+        ReadStorage<'a, Mesh>,
+        ReadStorage<'a, Transform>,
+    );
 
-    fn run(&mut self, (pso, meshes): Self::SystemData) {
+    fn run(&mut self, (pso, meshes, transforms): Self::SystemData) {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
-                for (ref mesh,) in (&meshes,).join() {
-                    mesh.draw(&mut encoder, &pso, &self.render_target);
+                for (ref mesh, ref trans) in (&meshes, &transforms).join() {
+                    let data = pipe::Data {
+                        vbuf: mesh.vbuf.clone(),
+                        model: trans.matrix().into(),
+                        out: self.render_target.clone(),
+                    };
+
+                    encoder.draw(&mesh.slice, &pso, &data);
                 }
 
                 if let Err(err) = self.channel.send_block(encoder) {

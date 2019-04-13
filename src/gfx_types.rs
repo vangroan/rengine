@@ -15,6 +15,8 @@ gfx_defines! {
 
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
+        // Model Transform Matrix
+        model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
         out: gfx::RenderTarget<ColorFormat> = "Target0",
     }
 }
