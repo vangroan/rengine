@@ -22,8 +22,7 @@ fn main() {
         .title("Example App")
         .build()
         .unwrap();
-    
+
     app.run();
 }
 ```
-
