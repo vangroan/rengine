@@ -5,6 +5,7 @@ pub type ColorFormat = gfx::format::Srgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
 
 pub type GraphicsEncoder = gfx::Encoder<gfx_device::Resources, gfx_device::CommandBuffer>;
+pub type RenderTarget<R> = gfx::handle::RenderTargetView<R, ColorFormat>;
 
 gfx_defines! {
     vertex Vertex {
@@ -17,6 +18,8 @@ gfx_defines! {
         out: gfx::RenderTarget<ColorFormat> = "Target0",
     }
 }
+
+pub type PipelineStateObject = gfx::PipelineState<gfx_device::Resources, pipe::Meta>;
 
 pub const QUAD_VERTICES: [Vertex; 4] = [
     Vertex {

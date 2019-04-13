@@ -1,33 +1,36 @@
 use crate::comp::Mesh;
+use crate::drawable::Drawable;
+use crate::gfx_types::{PipelineStateObject, RenderTarget};
 use crate::graphics::ChannelPair;
-use specs::{Join, ReadStorage, System};
+use specs::{Join, ReadExpect, ReadStorage, System};
 use std::error::Error;
 
-pub struct DrawSystem<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
-    channel: ChannelPair<R, C>,
+pub struct DrawSystem {
+    channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,
+    render_target: RenderTarget<gfx_device::Resources>,
 }
 
-impl<R, C> DrawSystem<R, C>
-where
-    R: gfx::Resources,
-    C: gfx::CommandBuffer<R>,
-{
-    pub fn new(channel: ChannelPair<R, C>) -> Self {
-        DrawSystem { channel }
+impl DrawSystem {
+    pub fn new(
+        channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,
+        render_target: RenderTarget<gfx_device::Resources>,
+    ) -> Self {
+        DrawSystem {
+            channel,
+            render_target,
+        }
     }
 }
 
-impl<'a, R, C> System<'a> for DrawSystem<R, C>
-where
-    R: gfx::Resources,
-    C: gfx::CommandBuffer<R>,
-{
-    type SystemData = (ReadStorage<'a, Mesh>,);
+impl<'a> System<'a> for DrawSystem {
+    type SystemData = (ReadExpect<'a, PipelineStateObject>, ReadStorage<'a, Mesh>);
 
-    fn run(&mut self, (meshes,): Self::SystemData) {
+    fn run(&mut self, (pso, meshes): Self::SystemData) {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
-                (&meshes,).join();
+                for (ref mesh,) in (&meshes,).join() {
+                    mesh.draw(&mut encoder, &pso, &self.render_target);
+                }
 
                 if let Err(err) = self.channel.send_block(encoder) {
                     eprintln!("{}, {}", err, err.description());

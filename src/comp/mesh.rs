@@ -1,6 +1,6 @@
 use crate::colors::Color;
 use crate::drawable::Drawable;
-use crate::gfx_types::Vertex;
+use crate::gfx_types::{pipe, GraphicsEncoder, PipelineStateObject, RenderTarget, Vertex};
 use crate::graphics::GraphicContext;
 use gfx::handle::Buffer;
 use gfx::traits::FactoryExt;
@@ -14,10 +14,20 @@ pub struct Mesh {
     slice: Slice<gfx_device::Resources>,
 }
 
-impl Mesh {}
-
 impl Drawable for Mesh {
-    fn draw(&self, context: &GraphicContext) {}
+    fn draw(
+        &self,
+        encoder: &mut GraphicsEncoder,
+        pso: &PipelineStateObject,
+        target: &RenderTarget<gfx_device::Resources>,
+    ) {
+        let data = pipe::Data {
+            vbuf: self.vbuf.clone(),
+            out: target.clone(),
+        };
+
+        encoder.draw(&self.slice, &pso, &data);
+    }
 }
 
 pub struct MeshBuilder {

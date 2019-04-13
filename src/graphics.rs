@@ -35,7 +35,6 @@ impl GraphicContext {
 }
 
 /// Channels for sending graphics encoders accross thread boundries
-#[derive(Clone)]
 pub struct ChannelPair<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
     send: Sender<gfx::Encoder<R, C>>,
     recv: Receiver<gfx::Encoder<R, C>>,
@@ -58,5 +57,18 @@ where
 
     pub fn recv_block(&mut self) -> Result<Encoder<R, C>, RecvError> {
         self.recv.recv()
+    }
+}
+
+impl<R, C> Clone for ChannelPair<R, C>
+where
+    R: gfx::Resources,
+    C: gfx::CommandBuffer<R>,
+{
+    fn clone(&self) -> Self {
+        ChannelPair {
+            send: self.send.clone(),
+            recv: self.recv.clone(),
+        }
     }
 }

@@ -3,10 +3,11 @@ use crate::comp::{Mesh, MeshBuilder};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::DeltaTime;
+use crate::sys::DrawSystem;
 use gfx::traits::FactoryExt;
 use gfx::Device;
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
-use specs::{Dispatcher, DispatcherBuilder, World};
+use specs::{Dispatcher, DispatcherBuilder, RunNow, World};
 use std::error::Error;
 use std::fmt;
 use std::time::Instant;
@@ -36,7 +37,7 @@ impl<'a, 'b> App<'a, 'b> {
         } = self;
 
         // Pipeline State Object
-        let pso = graphics
+        let pso: PipelineStateObject = graphics
             .factory
             .create_pipeline_simple(
                 include_bytes!(concat!(
@@ -53,6 +54,7 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Test Quad
         use specs::Builder;
+        world.add_resource(pso);
         world.register::<Mesh>();
         let _entity = world
             .create_entity()
@@ -67,14 +69,14 @@ impl<'a, 'b> App<'a, 'b> {
             )
             .build();
 
-        let (vertex_buffer, slice) = graphics
-            .factory
-            .create_vertex_buffer_with_slice(&QUAD_VERTICES[..], &QUAD_INDICES[..]);
+        // let (vertex_buffer, slice) = graphics
+        //     .factory
+        //     .create_vertex_buffer_with_slice(&QUAD_VERTICES[..], &QUAD_INDICES[..]);
 
-        let data = pipe::Data {
-            vbuf: vertex_buffer,
-            out: graphics.render_target.clone(),
-        };
+        // let data = pipe::Data {
+        //     vbuf: vertex_buffer,
+        //     out: graphics.render_target.clone(),
+        // };
 
         // Encoder
         let mut channel = ChannelPair::new();
@@ -82,6 +84,11 @@ impl<'a, 'b> App<'a, 'b> {
             return Err(AppError::EncoderSend);
         }
 
+        // Renderer
+        // TODO: Consider having a `Renderer` trait since it's being treated differently than other systems
+        let mut renderer = DrawSystem::new(channel.clone(), graphics.render_target.clone());
+
+        // Loop control
         let mut running = true;
         let mut last_time = Instant::now();
 
@@ -109,7 +116,7 @@ impl<'a, 'b> App<'a, 'b> {
                     encoder.clear(&graphics.render_target, bkg_color);
 
                     // Send encoder back
-                    channel.send_block(encoder);
+                    channel.send_block(encoder)?;
                 }
                 Err(_) => return Err(AppError::EncoderRecv),
             }
@@ -117,10 +124,13 @@ impl<'a, 'b> App<'a, 'b> {
             // Run systems
             dispatcher.dispatch(&world.res);
 
-            // Render
+            // Render Components
+            renderer.run_now(&world.res);
+
+            // Commit Render
             match channel.recv_block() {
                 Ok(mut encoder) => {
-                    encoder.draw(&slice, &pso, &data);
+                    // encoder.draw(&slice, &pso, &data);
                     encoder.flush(&mut graphics.device);
                     graphics.window.swap_buffers().unwrap();
 
@@ -253,7 +263,7 @@ impl AppBuilder {
             .with_vsync(true);
 
         // Init
-        let (window, device, mut factory, render_target, depth_stencil) =
+        let (window, device, factory, render_target, depth_stencil) =
             gfx_glutin::init::<ColorFormat, DepthFormat>(
                 window_builder,
                 context_builder,
