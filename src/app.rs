@@ -1,15 +1,12 @@
 use crate::colors;
-use crate::comp::Z_AXIS;
-use crate::comp::{Mesh, MeshBuilder, Transform};
+use crate::comp::{Camera, Mesh, MeshBuilder, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
-use crate::res::{DeltaTime, ViewPort};
-use crate::sys::DrawSystem;
+use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
+use crate::sys::{CameraResizeSystem, DrawSystem};
 use gfx::traits::FactoryExt;
 use gfx::Device;
-use glutin::{
-    dpi::LogicalSize, Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder,
-};
+use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
 use specs::{Dispatcher, DispatcherBuilder, RunNow, World};
 use std::error::Error;
 use std::fmt;
@@ -41,13 +38,38 @@ impl<'a, 'b> App<'a, 'b> {
             ..
         } = self;
 
+        // Engine Components
+        world.register::<Mesh>();
+        world.register::<Transform>();
+        world.register::<Camera>();
+
         // Initial ViewPort Size
-        let (win_w, win_h): (u32, u32) = match graphics.window.window().get_inner_size() {
-            // Implementation of Into<(u32, u32)> performs correct rounding
-            Some(logical_size) => logical_size.into(),
+        let device_dimensions = match DeviceDimensions::from_window(&graphics.window) {
+            Some(dim) => dim,
             None => return Err(AppError::WindowSize),
         };
-        world.add_resource(ViewPort::new((win_w as u16, win_h as u16)));
+
+        // Implementation of Into<(u32, u2)> performs proper rounding
+        let (logical_w, logical_h): (u32, u32) = device_dimensions.logical_size.into();
+        let (physical_w, physical_h): (u32, u32) = device_dimensions.physical_size.into();
+
+        world.add_resource(ViewPort::new((physical_w as u16, physical_h as u16)));
+        world.add_resource(device_dimensions);
+
+        // Default Camera
+        let camera_entity = world
+            .create_entity()
+            .with(Transform::new().with_position([0., 0., 0.]))
+            .with(Camera::with_device_size((
+                logical_w as u16,
+                logical_h as u16,
+            )))
+            .build();
+        world.add_resource(ActiveCamera::new(camera_entity));
+
+        // Update Camera on Resize
+        // TODO: message passing to notify systems of events
+        let mut camera_resize_system = CameraResizeSystem::new();
 
         // Pipeline State Object
         let pso: PipelineStateObject = graphics
@@ -68,8 +90,6 @@ impl<'a, 'b> App<'a, 'b> {
         // Test Quad
         use specs::Builder;
         world.add_resource(pso);
-        world.register::<Mesh>();
-        world.register::<Transform>();
         let _entity = world
             .create_entity()
             .with(
@@ -120,12 +140,12 @@ impl<'a, 'b> App<'a, 'b> {
                     ..
                 } => running = false,
                 WindowEvent {
-                    event: glutin::WindowEvent::Resized(size),
+                    event: glutin::WindowEvent::Resized(logical_size),
                     ..
                 } => {
                     // Coordinates use physical size
                     let dpi_factor = graphics.window.get_hidpi_factor();
-                    let physical_size = size.to_physical(dpi_factor);
+                    let physical_size = logical_size.to_physical(dpi_factor);
 
                     // Required by some platforms
                     graphics.window.resize(physical_size);
@@ -140,6 +160,10 @@ impl<'a, 'b> App<'a, 'b> {
                     let (win_w, win_h): (u32, u32) = physical_size.into();
                     let vp = ViewPort::new((win_w as u16, win_h as u16));
                     world.add_resource(vp);
+
+                    // Update cameras
+                    world.add_resource(DeviceDimensions::new(dpi_factor, logical_size));
+                    camera_resize_system.run_now(&world.res);
                 }
                 _ => (),
             });

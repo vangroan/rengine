@@ -9,8 +9,9 @@ uniform Transform {
     mat4 u_Transform;
 };
 uniform mat4 u_View;
+uniform mat4 u_Proj;
 
 void main() {
     v_Color = vec4(a_Color);
-    gl_Position = u_View * u_Transform * vec4(a_Pos, 1.0);
+    gl_Position = u_Proj * u_View * u_Transform * vec4(a_Pos, 1.0);
 }

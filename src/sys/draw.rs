@@ -1,8 +1,9 @@
-use crate::comp::{Mesh, Transform};
+use crate::comp::{Camera, Mesh, Transform};
 use crate::gfx_types::{self, pipe, PipelineStateObject, RenderTarget};
 use crate::graphics::ChannelPair;
-use crate::res::ViewPort;
-use specs::{Join, ReadExpect, ReadStorage, System};
+use crate::res::{ActiveCamera, ViewPort};
+use nalgebra::Matrix4;
+use specs::{Join, Read, ReadExpect, ReadStorage, System};
 use std::error::Error;
 
 pub struct DrawSystem {
@@ -26,13 +27,25 @@ impl<'a> System<'a> for DrawSystem {
     type SystemData = (
         ReadExpect<'a, PipelineStateObject>,
         ReadExpect<'a, ViewPort>,
+        Read<'a, ActiveCamera>,
         ReadStorage<'a, Mesh>,
         ReadStorage<'a, Transform>,
+        ReadStorage<'a, Camera>,
     );
 
-    fn run(&mut self, (pso, view_port, meshes, transforms): Self::SystemData) {
+    fn run(
+        &mut self,
+        (pso, view_port, active_camera, meshes, transforms, cameras): Self::SystemData,
+    ) {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
+                // Without a camera, we draw according to the default OpenGL behaviour
+                let proj_matrix = active_camera
+                    .camera_entity()
+                    .and_then(|entity| cameras.get(entity))
+                    .map(|camera| camera.proj_matrix)
+                    .unwrap_or(Matrix4::identity());
+
                 for (ref mesh, ref trans) in (&meshes, &transforms).join() {
                     // Convert to pipeline transform type
                     let trans = gfx_types::Transform {
@@ -44,11 +57,13 @@ impl<'a> System<'a> for DrawSystem {
                         .update_buffer(&mesh.transbuf, &[trans], 0)
                         .expect("Failed to update buffer");
 
+                    // Prepare data
                     let data = pipe::Data {
                         vbuf: mesh.vbuf.clone(),
                         transforms: mesh.transbuf.clone(),
                         // TODO: Camera position and zoom
-                        view: view_port.matrix.into(),
+                        view: Matrix4::identity().into(),
+                        proj: proj_matrix.into(),
                         // The rectangle to allow rendering within
                         scissor: view_port.rect,
                         out: self.render_target.clone(),

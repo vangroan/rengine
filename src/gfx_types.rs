@@ -24,8 +24,11 @@ gfx_defines! {
         // Model Transform Matrix
         transforms: gfx::ConstantBuffer<Transform> = "Transform",
 
-        // View Port
+        // View
         view: gfx::Global<[[f32; 4]; 4]> = "u_View",
+
+        // Projection
+        proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",
 
         // Enables the scissor test
         scissor: gfx::Scissor = (),
