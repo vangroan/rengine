@@ -1,4 +1,4 @@
-use crate::comp::{Camera, Mesh, Transform};
+use crate::comp::{Camera, GlTexture, Mesh, Transform};
 use crate::gfx_types::{self, pipe, PipelineStateObject, RenderTarget};
 use crate::graphics::ChannelPair;
 use crate::res::{ActiveCamera, ViewPort};
@@ -29,13 +29,14 @@ impl<'a> System<'a> for DrawSystem {
         ReadExpect<'a, ViewPort>,
         Read<'a, ActiveCamera>,
         ReadStorage<'a, Mesh>,
+        ReadStorage<'a, GlTexture>,
         ReadStorage<'a, Transform>,
         ReadStorage<'a, Camera>,
     );
 
     fn run(
         &mut self,
-        (pso, view_port, active_camera, meshes, transforms, cameras): Self::SystemData,
+        (pso, view_port, active_camera, meshes, textures, transforms, cameras): Self::SystemData,
     ) {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
@@ -46,7 +47,7 @@ impl<'a> System<'a> for DrawSystem {
                     .map(|camera| camera.proj_matrix)
                     .unwrap_or(Matrix4::identity());
 
-                for (ref mesh, ref trans) in (&meshes, &transforms).join() {
+                for (ref mesh, ref tex, ref trans) in (&meshes, &textures, &transforms).join() {
                     // Convert to pipeline transform type
                     let trans = gfx_types::Transform {
                         transform: trans.matrix().into(),
@@ -60,6 +61,7 @@ impl<'a> System<'a> for DrawSystem {
                     // Prepare data
                     let data = pipe::Data {
                         vbuf: mesh.vbuf.clone(),
+                        sampler: (tex.bundle.view.clone(), tex.bundle.sampler.clone()),
                         transforms: mesh.transbuf.clone(),
                         // TODO: Camera position and zoom
                         view: Matrix4::identity().into(),

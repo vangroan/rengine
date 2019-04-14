@@ -4,6 +4,7 @@ extern crate gfx_core;
 extern crate gfx_device_gl as gfx_device;
 extern crate gfx_window_glutin as gfx_glutin;
 extern crate glutin;
+extern crate image;
 pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
 pub extern crate specs;

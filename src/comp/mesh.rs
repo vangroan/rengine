@@ -44,18 +44,22 @@ impl MeshBuilder {
         self.vertices.extend(&[
             Vertex {
                 pos: [pos.x, pos.y, pos.z],
+                uv: [0.0, 0.0],
                 color: colors[0],
             },
             Vertex {
                 pos: [pos.x + w, pos.y, pos.z],
+                uv: [1.0, 0.0],
                 color: colors[1],
             },
             Vertex {
                 pos: [pos.x + w, pos.y + h, pos.z],
+                uv: [1.0, 1.0],
                 color: colors[2],
             },
             Vertex {
                 pos: [pos.x, pos.y + h, pos.z],
+                uv: [0.0, 1.0],
                 color: colors[3],
             },
         ]);

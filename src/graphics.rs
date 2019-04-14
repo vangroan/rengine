@@ -1,4 +1,5 @@
 use crate::gfx_types::*;
+use crate::res::TextureAssets;
 use crossbeam::channel::{Receiver, RecvError, SendError, Sender};
 use gfx::format::Formatted;
 use gfx::Encoder;
@@ -55,6 +56,10 @@ impl GraphicContext {
             self.render_target = Typed::new(cv);
             self.depth_stencil = Typed::new(dv);
         }
+    }
+
+    pub fn create_texture_cache<'a>() -> TextureAssets<'a, Factory, Resources> {
+        TextureAssets::new()
     }
 }
 

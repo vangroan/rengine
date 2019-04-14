@@ -1,5 +1,5 @@
 use crate::colors;
-use crate::comp::{Camera, Mesh, MeshBuilder, Transform};
+use crate::comp::{Camera, GlTexture, Mesh, MeshBuilder, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
@@ -42,6 +42,11 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<Mesh>();
         world.register::<Transform>();
         world.register::<Camera>();
+        world.register::<GlTexture>();
+
+        // Assets
+        // TODO: Place in world and allow for loading textures from game without needing factory (operation buffer?)
+        let mut textures = GraphicContext::create_texture_cache();
 
         // Initial ViewPort Size
         let device_dimensions = match DeviceDimensions::from_window(&graphics.window) {
@@ -90,6 +95,7 @@ impl<'a, 'b> App<'a, 'b> {
         // Test Quad
         use specs::Builder;
         world.add_resource(pso);
+        let tex_bundle = textures.load_texture(&mut graphics.factory, "examples/test.png");
         let _entity = world
             .create_entity()
             .with(
@@ -108,6 +114,7 @@ impl<'a, 'b> App<'a, 'b> {
                     .with_scale([0.5, 0.5, 1.0])
                     // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
+            .with(GlTexture::from_bundle(tex_bundle))
             .build();
 
         // Encoder

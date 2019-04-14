@@ -11,6 +11,7 @@ pub type RenderTarget<R> = gfx::handle::RenderTargetView<R, ColorFormat>;
 gfx_defines! {
     vertex Vertex {
         pos: [f32; 3] = "a_Pos",
+        uv: [f32; 2] = "a_Uv",
         color: [f32; 4] = "a_Color",
     }
 
@@ -20,6 +21,9 @@ gfx_defines! {
 
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
+
+        // Simple texture sampler
+        sampler: gfx::TextureSampler<[f32; 4]> = "t_Sampler",
 
         // Model Transform Matrix
         transforms: gfx::ConstantBuffer<Transform> = "Transform",
@@ -38,28 +42,3 @@ gfx_defines! {
 }
 
 pub type PipelineStateObject = gfx::PipelineState<gfx_device::Resources, pipe::Meta>;
-
-pub const QUAD_VERTICES: [Vertex; 4] = [
-    Vertex {
-        pos: [0.0, 0.0, 0.0],
-        color: WHITE,
-    },
-    Vertex {
-        pos: [1.0, 0.0, 0.0],
-        color: WHITE,
-    },
-    Vertex {
-        pos: [1.0, 1.0, 0.0],
-        color: WHITE,
-    },
-    Vertex {
-        pos: [0.0, 1.0, 0.0],
-        color: WHITE,
-    },
-];
-
-pub const QUAD_INDICES: [u16; 6] = [
-    // triangle 1
-    0, 1, 2, // triangle 2
-    0, 2, 3,
-];
