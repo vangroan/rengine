@@ -48,7 +48,7 @@ impl<'a> System<'a> for DrawSystem {
                         vbuf: mesh.vbuf.clone(),
                         transforms: mesh.transbuf.clone(),
                         // TODO: Camera position and zoom
-                        // view: view_port.scale.into(),
+                        view: view_port.matrix.into(),
                         // The rectangle to allow rendering within
                         scissor: view_port.rect,
                         out: self.render_target.clone(),

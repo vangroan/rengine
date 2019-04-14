@@ -1,4 +1,4 @@
-use glm::Mat4x4;
+use nalgebra::Matrix4;
 
 /// View port rectangle used for communicating target window size to
 /// rendering systems.
@@ -7,7 +7,7 @@ use glm::Mat4x4;
 #[derive(Debug)]
 pub struct ViewPort {
     pub(crate) rect: gfx::Rect,
-    // pub(crate) scale: Mat4x4,
+    pub(crate) matrix: Matrix4<f32>,
 }
 
 impl ViewPort {
@@ -15,7 +15,18 @@ impl ViewPort {
     pub fn new(device_size: (u16, u16)) -> Self {
         let (dev_w, dev_h) = device_size;
 
-        // TODO: Transform
+        // TODO: Does DPI need to be taken into account?
+        let scale_factor = 1000.;
+
+        // TODO: Refactor into Orthographic Camera component
+        let matrix = Matrix4::new_orthographic(
+            0.,
+            dev_w as f32 / scale_factor,
+            0.,
+            dev_h as f32 / scale_factor,
+            -1.0,
+            1.0,
+        );
 
         ViewPort {
             rect: gfx::Rect {
@@ -24,6 +35,7 @@ impl ViewPort {
                 w: device_size.0,
                 h: device_size.1,
             },
+            matrix,
         }
     }
 }
