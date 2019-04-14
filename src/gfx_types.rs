@@ -1,4 +1,3 @@
-use crate::colors::WHITE;
 use gfx;
 
 pub type ColorFormat = gfx::format::Srgba8;
