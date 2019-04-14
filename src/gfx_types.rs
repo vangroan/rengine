@@ -13,11 +13,18 @@ gfx_defines! {
         color: [f32; 4] = "a_Color",
     }
 
+    constant Transform {
+        transform: [[f32; 4]; 4] = "u_Transform",
+    }
+
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
-        
+
         // Model Transform Matrix
-        model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
+        transforms: gfx::ConstantBuffer<Transform> = "Transform",
+
+        // View Port
+        // view: gfx::Global<[[f32; 4]; 4]> = "u_View",
 
         // Enables the scissor test
         scissor: gfx::Scissor = (),

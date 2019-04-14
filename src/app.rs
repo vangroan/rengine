@@ -3,11 +3,13 @@ use crate::comp::Z_AXIS;
 use crate::comp::{Mesh, MeshBuilder, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
-use crate::res::DeltaTime;
+use crate::res::{DeltaTime, ViewPort};
 use crate::sys::DrawSystem;
 use gfx::traits::FactoryExt;
 use gfx::Device;
-use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
+use glutin::{
+    dpi::LogicalSize, Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder,
+};
 use specs::{Dispatcher, DispatcherBuilder, RunNow, World};
 use std::error::Error;
 use std::fmt;
@@ -38,6 +40,14 @@ impl<'a, 'b> App<'a, 'b> {
             bkg_color,
             ..
         } = self;
+
+        // Initial ViewPort Size
+        let (win_w, win_h): (u32, u32) = match graphics.window.window().get_inner_size() {
+            // Implementation of Into<(u32, u32)> performs correct rounding
+            Some(logical_size) => logical_size.into(),
+            None => return Err(AppError::WindowSize),
+        };
+        world.add_resource(ViewPort::new((win_w as u16, win_h as u16)));
 
         // Pipeline State Object
         let pso: PipelineStateObject = graphics
@@ -73,10 +83,10 @@ impl<'a, 'b> App<'a, 'b> {
             )
             .with(
                 Transform::default()
-                    .with_anchor([0.5, 0.5, 0.0])
-                    .with_position([1.0, 0.0, 0.])
-                    .with_scale([0.5, 1.0, 1.0])
-                    .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
+                    .with_anchor([0.0, 0.0, 0.0])
+                    .with_position([0.0, 0.0, 0.])
+                    .with_scale([0.5, 0.5, 1.0])
+                    // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
             .build();
 
@@ -113,13 +123,23 @@ impl<'a, 'b> App<'a, 'b> {
                     event: glutin::WindowEvent::Resized(size),
                     ..
                 } => {
+                    // Coordinates use physical size
                     let dpi_factor = graphics.window.get_hidpi_factor();
-                    graphics.window.resize(size.to_physical(dpi_factor));
-                    gfx_window_glutin::update_views(
-                        &graphics.window,
-                        &mut graphics.render_target,
-                        &mut graphics.depth_stencil,
-                    );
+                    let physical_size = size.to_physical(dpi_factor);
+
+                    // Required by some platforms
+                    graphics.window.resize(physical_size);
+
+                    // Update dimensions of frame buffer targets
+                    graphics.update_views();
+
+                    // Ensure no dangling shared references
+                    renderer.render_target = graphics.render_target.clone();
+
+                    // Update view port/scissor rectangle for rendering systems
+                    let (win_w, win_h): (u32, u32) = physical_size.into();
+                    let vp = ViewPort::new((win_w as u16, win_h as u16));
+                    world.add_resource(vp);
                 }
                 _ => (),
             });
@@ -173,6 +193,9 @@ pub enum AppError {
 
     /// Graphics encoder could not be sent over the channel, possibly because it has been disconnected
     EncoderSend,
+
+    /// Failed to retrieve Window Size
+    WindowSize,
 }
 
 impl fmt::Display for AppError {
@@ -185,6 +208,7 @@ impl fmt::Display for AppError {
             match self {
                 EncoderRecv => "Encoder Receive",
                 EncoderSend => "Encoder Send",
+                WindowSize => "Window Size",
             }
         )
     }
@@ -197,6 +221,7 @@ impl Error for AppError {
         match self {
             EncoderRecv => "Graphics encoder was not received from channel",
             EncoderSend => "Graphics encoder could not be sent to the channel",
+            WindowSize => "Failed to retrieve window size",
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::colors::Color;
-use crate::gfx_types::Vertex;
+use crate::gfx_types::{Transform, Vertex};
 use crate::graphics::GraphicContext;
 use gfx::handle::Buffer;
 use gfx::traits::FactoryExt;
@@ -11,6 +11,7 @@ use specs::{Component, DenseVecStorage};
 pub struct Mesh {
     pub(crate) vbuf: Buffer<gfx_device::Resources, Vertex>,
     pub(crate) slice: Slice<gfx_device::Resources>,
+    pub(crate) transbuf: Buffer<gfx_device::Resources, Transform>,
 }
 
 pub struct MeshBuilder {
@@ -73,7 +74,12 @@ impl MeshBuilder {
         let (vbuf, slice) = ctx
             .factory
             .create_vertex_buffer_with_slice(&self.vertices[..], &self.indices[..]);
+        let transbuf = ctx.factory.create_constant_buffer(1);
 
-        Mesh { vbuf, slice }
+        Mesh {
+            vbuf,
+            slice,
+            transbuf,
+        }
     }
 }
