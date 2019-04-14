@@ -7,6 +7,7 @@ pub type DepthFormat = gfx::format::DepthStencil;
 pub type GraphicsEncoder = gfx::Encoder<gfx_device::Resources, gfx_device::CommandBuffer>;
 pub type RenderTarget<R> = gfx::handle::RenderTargetView<R, ColorFormat>;
 
+/// Note that document comments inside this block breaks the macro
 gfx_defines! {
     vertex Vertex {
         pos: [f32; 3] = "a_Pos",
@@ -24,7 +25,7 @@ gfx_defines! {
         transforms: gfx::ConstantBuffer<Transform> = "Transform",
 
         // View Port
-        // view: gfx::Global<[[f32; 4]; 4]> = "u_View",
+        view: gfx::Global<[[f32; 4]; 4]> = "u_View",
 
         // Enables the scissor test
         scissor: gfx::Scissor = (),
