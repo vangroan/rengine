@@ -36,7 +36,9 @@ gfx_defines! {
         // Enables the scissor test
         scissor: gfx::Scissor = (),
 
-        out: gfx::RenderTarget<ColorFormat> = "Target0",
+        // out: gfx::RenderTarget<ColorFormat> = "Target0"
+        // This makes the BlendMode part of the pipeline, which is fine for the simple case
+        out: gfx::BlendTarget<ColorFormat> = ("Target0", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
     }
 }
 
