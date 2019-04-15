@@ -3,6 +3,8 @@ use gfx_device::Resources;
 use specs::{Component, DenseVecStorage};
 use std::sync::Arc;
 
+// TODO: Consider renaming to TextureSampler, TextureHandle or ImmutableTexture
+
 #[derive(Component)]
 #[storage(DenseVecStorage)]
 pub struct GlTexture {

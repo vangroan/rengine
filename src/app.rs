@@ -91,11 +91,12 @@ impl<'a, 'b> App<'a, 'b> {
                 pipe::new(),
             )
             .unwrap();
+        world.add_resource(pso);
 
         // Test Quad
         use specs::Builder;
-        world.add_resource(pso);
-        let tex_bundle = textures.load_texture(&mut graphics.factory, "examples/test.png");
+        // let tex_bundle = textures.load_texture(&mut graphics.factory, "examples/test.png");
+        let tex_bundle = textures.default_texture(&mut graphics.factory);
         let _entity = world
             .create_entity()
             .with(
