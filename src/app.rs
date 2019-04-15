@@ -95,8 +95,8 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Test Quad
         use specs::Builder;
-        // let tex_bundle = textures.load_texture(&mut graphics.factory, "examples/test.png");
-        let tex_bundle = textures.default_texture(&mut graphics.factory);
+        let tex_bundle = textures.load_texture(&mut graphics.factory, "examples/test.png");
+        // let tex_bundle = textures.default_texture(&mut graphics.factory);
         let _entity = world
             .create_entity()
             .with(
@@ -104,7 +104,8 @@ impl<'a, 'b> App<'a, 'b> {
                     .quad(
                         [0., 0., 0.],
                         [1., 1.],
-                        [colors::RED, colors::GREEN, colors::BLUE, colors::MAGENTA],
+                        // [colors::RED, colors::GREEN, colors::BLUE, colors::MAGENTA],
+                        [colors::WHITE, colors::WHITE, colors::WHITE, colors::WHITE],
                     )
                     .build(&mut graphics),
             )

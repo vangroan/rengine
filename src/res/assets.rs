@@ -1,4 +1,5 @@
 use crate::gfx_types::ColorFormat;
+use gfx::texture::{FilterMethod, SamplerInfo, WrapMode};
 use gfx::traits::FactoryExt;
 use std::collections::BTreeMap;
 use std::marker::PhantomData;
@@ -88,7 +89,9 @@ where
                     .unwrap();
 
                 // Texture Sampler
-                let sampler = factory.create_sampler_linear();
+                // let sampler = factory.create_sampler_linear();
+                let sampler =
+                    factory.create_sampler(SamplerInfo::new(FilterMethod::Scale, WrapMode::Clamp));
 
                 // Cache
                 Arc::new(AssetBundle {
