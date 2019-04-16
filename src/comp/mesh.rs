@@ -1,4 +1,4 @@
-use crate::colors::Color;
+use crate::colors::{Color, WHITE};
 use crate::gfx_types::{Transform, Vertex};
 use crate::graphics::GraphicContext;
 use gfx::handle::Buffer;
@@ -27,19 +27,81 @@ impl MeshBuilder {
         }
     }
 
+    // New vertices will be inserted starting here
+    fn next_index(&self) -> u16 {
+        if self.vertices.len() > 0 {
+            (self.vertices.len() - 1) as u16
+        } else {
+            0
+        }
+    }
+
+    pub fn pseudocube<V>(mut self, position: V, size: [f32; 3]) -> Self
+    where
+        V: Into<glm::Vec3>,
+    {
+        let pos = position.into();
+        let (w, h) = (size[0], size[1]);
+        let index = self.next_index();
+
+        // face 1
+        self.vertices.extend(&[
+            Vertex {
+                pos: [pos.x, pos.y, pos.z],
+                uv: [0.0, 0.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y, pos.z],
+                uv: [1.0, 0.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y + h, pos.z],
+                uv: [1.0, 1.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x, pos.y + h, pos.z],
+                uv: [0.0, 1.0],
+                color: WHITE,
+            },
+        ]);
+
+        // face 1
+        self.vertices.extend(&[
+            Vertex {
+                pos: [pos.x, pos.y, pos.z],
+                uv: [0.0, 0.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y, pos.z],
+                uv: [1.0, 0.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y + h, pos.z],
+                uv: [1.0, 1.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x, pos.y + h, pos.z],
+                uv: [0.0, 1.0],
+                color: WHITE,
+            },
+        ]);
+
+        self
+    }
+
     pub fn quad<V>(mut self, position: V, size: [f32; 2], colors: [Color; 4]) -> Self
     where
         V: Into<glm::Vec3>,
     {
         let pos = position.into();
         let (w, h) = (size[0], size[1]);
-
-        // New vertices will be inserted starting here
-        let index = if self.vertices.len() > 0 {
-            self.vertices.len() - 1
-        } else {
-            0
-        } as u16;
+        let index = self.next_index();
 
         self.vertices.extend(&[
             Vertex {
