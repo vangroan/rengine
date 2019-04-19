@@ -41,11 +41,11 @@ impl<'a> System<'a> for DrawSystem {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
                 // Without a camera, we draw according to the default OpenGL behaviour
-                let proj_matrix = active_camera
+                let (proj_matrix, view_matrix) = active_camera
                     .camera_entity()
                     .and_then(|entity| cameras.get(entity))
-                    .map(|camera| camera.proj_matrix)
-                    .unwrap_or(Matrix4::identity());
+                    .map(|camera| (camera.proj_matrix, camera.view_matrix))
+                    .unwrap_or((Matrix4::identity(), Matrix4::identity()));
 
                 for (ref mesh, ref tex, ref trans) in (&meshes, &textures, &transforms).join() {
                     // Convert to pipeline transform type
@@ -64,7 +64,7 @@ impl<'a> System<'a> for DrawSystem {
                         sampler: (tex.bundle.view.clone(), tex.bundle.sampler.clone()),
                         transforms: mesh.transbuf.clone(),
                         // TODO: Camera position and zoom
-                        view: Matrix4::identity().into(),
+                        view: view_matrix.into(),
                         proj: proj_matrix.into(),
                         // The rectangle to allow rendering within
                         scissor: view_port.rect,
