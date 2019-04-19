@@ -135,8 +135,8 @@ impl<'a, 'b> App<'a, 'b> {
                     .with_anchor([0.0, 0.0, 0.0])
                     .with_position([0.0, 0.0, 0.])
                     .with_scale([0.5, 0.5, 0.5])
-                    // .with_rotate_world(45. * (::std::f32::consts::PI / 180.), Y_AXIS)
-                    // .with_rotate_world(-30. * (::std::f32::consts::PI / 180.), X_AXIS)
+                    .with_rotate_world(45. * (::std::f32::consts::PI / 180.), Y_AXIS)
+                    .with_rotate_world(326. * (::std::f32::consts::PI / 180.), X_AXIS)
                     // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
             .with(tex)

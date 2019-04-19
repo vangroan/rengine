@@ -45,12 +45,12 @@ impl MeshBuilder {
     {
         let pos = position.into();
         let [w, h, d] = size;
-        let [back_tex, front_tex, left_tex, right_tex, top_tex, bottom_tex] = texture_rects;
+        let [back_tex, front_tex, left_tex, right_tex, _top_tex, _bottom_tex] = texture_rects;
         let index = self.next_index();
 
-        // face 1
+        // Back Quad
+        // let normal = glm::vec3(0., 0., -1.);
         self.vertices.extend(&[
-            // Front Quad
             Vertex {
                 pos: [pos.x, pos.y, pos.z],
                 uv: [back_tex.x(), back_tex.h()],
@@ -71,27 +71,6 @@ impl MeshBuilder {
                 uv: [back_tex.x(), back_tex.y()],
                 color: WHITE,
             },
-            // // Back Quad
-            // Vertex {
-            //     pos: [pos.x, pos.y, pos.z + d],
-            //     uv: [0.0, 0.0],
-            //     color: WHITE,
-            // },
-            // Vertex {
-            //     pos: [pos.x + w, pos.y, pos.z + d],
-            //     uv: [1.0, 0.0],
-            //     color: WHITE,
-            // },
-            // Vertex {
-            //     pos: [pos.x + w, pos.y + h, pos.z + d],
-            //     uv: [1.0, 1.0],
-            //     color: WHITE,
-            // },
-            // Vertex {
-            //     pos: [pos.x, pos.y + h, pos.z + d],
-            //     uv: [0.0, 1.0],
-            //     color: WHITE,
-            // },
         ]);
 
         // triangle 1
@@ -100,14 +79,95 @@ impl MeshBuilder {
         // triangle 2
         self.indices.extend(&[index, index + 2, index + 3]);
 
-        // // triangle 3
-        // self.indices.extend(&[index + 4, index + 5, index + 6]);
+        // Back Quad
+        self.vertices.extend(&[
+            Vertex {
+                pos: [pos.x, pos.y, pos.z + d],
+                uv: [front_tex.x(), front_tex.h()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y, pos.z + d],
+                uv: [front_tex.w(), front_tex.h()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y + h, pos.z + d],
+                uv: [front_tex.w(), front_tex.y()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x, pos.y + h, pos.z + d],
+                uv: [front_tex.x(), front_tex.y()],
+                color: WHITE,
+            },
+        ]);
 
-        // // triangle 4
-        // self.indices.extend(&[index + 4, index + 6, index + 7]);
+        // triangle 3
+        self.indices.extend(&[index + 4, index + 5, index + 6]);
 
-        // self.indices.extend(&[index + 1, index + 5, index + 6]);
-        // self.indices.extend(&[index + 1, index + 6, index + 2]);
+        // triangle 4
+        self.indices.extend(&[index + 4, index + 6, index + 7]);
+
+        // Left Quad
+        self.vertices.extend(&[
+            Vertex {
+                pos: [pos.x, pos.y, pos.z],
+                uv: [left_tex.x(), left_tex.h()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x, pos.y, pos.z + d],
+                uv: [left_tex.w(), left_tex.h()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x, pos.y + h, pos.z + d],
+                uv: [left_tex.w(), left_tex.y()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x, pos.y + h, pos.z],
+                uv: [left_tex.x(), left_tex.y()],
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 5
+        self.indices.extend(&[index + 8, index + 9, index + 10]);
+
+        // triangle 6
+        self.indices.extend(&[index + 8, index + 10, index + 11]);
+
+        // Right Quad
+        self.vertices.extend(&[
+            Vertex {
+                pos: [pos.x + w, pos.y, pos.z],
+                uv: [right_tex.x(), right_tex.h()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y, pos.z + d],
+                uv: [right_tex.w(), right_tex.h()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y + h, pos.z + d],
+                uv: [right_tex.w(), right_tex.y()],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y + h, pos.z],
+                uv: [right_tex.x(), right_tex.y()],
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 7
+        self.indices.extend(&[index + 12, index + 13, index + 14]);
+
+        // triangle 8
+        self.indices.extend(&[index + 12, index + 14, index + 15]);
 
         self
     }
