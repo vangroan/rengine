@@ -30,7 +30,10 @@ impl Transform {
 
         m
     }
+}
 
+/// Builder methods that consume the `Transform` and returns it
+impl Transform {
     #[inline]
     pub fn with_anchor<V>(mut self, anchor: V) -> Self
     where
@@ -58,7 +61,7 @@ impl Transform {
         self
     }
 
-    /// Rotate around given axis, by an angle expressed as radians
+    /// Rotates around given axis in local space, by an angle expressed as radians
     ///
     /// ```
     /// extern crate rengine;
@@ -70,16 +73,37 @@ impl Transform {
     ///     let angle = 45. * (PI / 180.);
     ///
     ///     let mut t = Transform::new()
-    ///         .with_rotation(angle, Z_AXIS);
+    ///         .with_rotate(angle, Z_AXIS);
     /// }
     /// ```
     #[inline]
-    pub fn with_rotation<V>(mut self, angle: f32, axis: V) -> Self
+    pub fn with_rotate<V>(mut self, angle: f32, axis: V) -> Self
     where
         V: Into<Vec3>,
     {
         self.rot = glm::quat_rotate(&self.rot, angle, &axis.into());
         self
+    }
+
+    #[inline]
+    pub fn with_rotate_world<V>(mut self, angle: f32, axis: V) -> Self
+    where
+        V: Into<Vec3>,
+    {
+        self.rotate_world(angle, axis);
+        self
+    }
+}
+
+/// Methods that mutate the `Transform `in place
+impl Transform {
+    #[inline]
+    pub fn rotate_world<V>(&mut self, angle: f32, axis: V)
+    where
+        V: Into<Vec3>,
+    {
+        let world_rot = glm::quat_rotate(&Qua::<f32>::identity(), angle, &axis.into());
+        self.rot = world_rot * self.rot;
     }
 }
 

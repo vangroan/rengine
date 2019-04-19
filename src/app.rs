@@ -1,5 +1,6 @@
 use crate::colors;
 use crate::comp::{Camera, GlTexture, Mesh, MeshBuilder, Transform};
+use crate::comp::{X_AXIS, Y_AXIS, Z_AXIS};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
@@ -101,19 +102,22 @@ impl<'a, 'b> App<'a, 'b> {
             .create_entity()
             .with(
                 MeshBuilder::new()
-                    .quad(
-                        [0., 0., 0.],
-                        [1., 1.],
-                        // [colors::RED, colors::GREEN, colors::BLUE, colors::MAGENTA],
-                        [colors::WHITE, colors::WHITE, colors::WHITE, colors::WHITE],
-                    )
+                    // .quad(
+                    //     [0., 0., 0.],
+                    //     [1., 1.],
+                    //     // [colors::RED, colors::GREEN, colors::BLUE, colors::MAGENTA],
+                    //     [colors::WHITE, colors::WHITE, colors::WHITE, colors::WHITE],
+                    // )
+                    .pseudocube([0., 0., 0.], [1., 1., 1.])
                     .build(&mut graphics),
             )
             .with(
                 Transform::default()
                     .with_anchor([0.0, 0.0, 0.0])
                     .with_position([0.0, 0.0, 0.])
-                    .with_scale([0.5, 0.5, 1.0])
+                    .with_scale([0.5, 0.5, 0.5])
+                    .with_rotate_world(45. * (::std::f32::consts::PI / 180.), Y_AXIS)
+                    .with_rotate_world(30. * (::std::f32::consts::PI / 180.), X_AXIS)
                     // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
             .with(GlTexture::from_bundle(tex_bundle))

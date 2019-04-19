@@ -6,6 +6,8 @@ use gfx::traits::FactoryExt;
 use gfx::Slice;
 use specs::{Component, DenseVecStorage};
 
+// http://ilkinulas.github.io/development/unity/2016/05/06/uv-mapping.html
+
 #[derive(Component)]
 #[storage(DenseVecStorage)]
 pub struct Mesh {
@@ -41,11 +43,12 @@ impl MeshBuilder {
         V: Into<glm::Vec3>,
     {
         let pos = position.into();
-        let (w, h) = (size[0], size[1]);
+        let (w, h, d) = (size[0], size[1], size[2]);
         let index = self.next_index();
 
         // face 1
         self.vertices.extend(&[
+            // Front Quad
             Vertex {
                 pos: [pos.x, pos.y, pos.z],
                 uv: [0.0, 0.0],
@@ -63,34 +66,46 @@ impl MeshBuilder {
             },
             Vertex {
                 pos: [pos.x, pos.y + h, pos.z],
+                uv: [0.0, 1.0],
+                color: WHITE,
+            },
+            // Back Quad
+            Vertex {
+                pos: [pos.x, pos.y, pos.z + d],
+                uv: [0.0, 0.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y, pos.z + d],
+                uv: [1.0, 0.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y + h, pos.z + d],
+                uv: [1.0, 1.0],
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x, pos.y + h, pos.z + d],
                 uv: [0.0, 1.0],
                 color: WHITE,
             },
         ]);
 
-        // face 1
-        self.vertices.extend(&[
-            Vertex {
-                pos: [pos.x, pos.y, pos.z],
-                uv: [0.0, 0.0],
-                color: WHITE,
-            },
-            Vertex {
-                pos: [pos.x + w, pos.y, pos.z],
-                uv: [1.0, 0.0],
-                color: WHITE,
-            },
-            Vertex {
-                pos: [pos.x + w, pos.y + h, pos.z],
-                uv: [1.0, 1.0],
-                color: WHITE,
-            },
-            Vertex {
-                pos: [pos.x, pos.y + h, pos.z],
-                uv: [0.0, 1.0],
-                color: WHITE,
-            },
-        ]);
+        // triangle 1
+        self.indices.extend(&[index, index + 1, index + 2]);
+
+        // triangle 2
+        self.indices.extend(&[index, index + 2, index + 3]);
+
+        // triangle 3
+        self.indices.extend(&[index + 4, index + 5, index + 6]);
+
+        // triangle 4
+        self.indices.extend(&[index + 4, index + 6, index + 7]);
+
+        self.indices.extend(&[index + 1, index + 5, index + 6]);
+        self.indices.extend(&[index + 1, index + 6, index + 2]);
 
         self
     }
