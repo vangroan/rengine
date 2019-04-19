@@ -7,10 +7,12 @@ extern crate glutin;
 extern crate image;
 pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
+extern crate num_traits;
 pub extern crate specs;
 #[macro_use]
 extern crate specs_derive;
 
+pub mod angle;
 mod app;
 pub mod colors;
 pub mod comp;

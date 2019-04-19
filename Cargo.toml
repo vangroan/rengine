@@ -17,5 +17,6 @@ glutin = "0.20.0"
 image = "0.21.1"
 nalgebra = "0.18.0"
 nalgebra-glm = "0.4.0"
+num-traits = "0.2.6"
 specs = { version = "0.14.3", default_features = false } # disable rayon due to CPU usage bug
 specs-derive = "0.4.0"
