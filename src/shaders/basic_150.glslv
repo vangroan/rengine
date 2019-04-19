@@ -3,6 +3,7 @@
 
 in vec3 a_Pos;
 in vec2 a_Uv;
+in vec3 a_Normal;
 in vec4 a_Color;
 out vec2 v_Uv;
 out vec4 v_Color;

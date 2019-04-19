@@ -11,6 +11,7 @@ gfx_defines! {
     vertex Vertex {
         pos: [f32; 3] = "a_Pos",
         uv: [f32; 2] = "a_Uv",
+        normal: [f32; 3] = "a_Normal",
         color: [f32; 4] = "a_Color",
     }
 

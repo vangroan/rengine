@@ -49,26 +49,30 @@ impl MeshBuilder {
         let index = self.next_index();
 
         // Back Quad
-        // let normal = glm::vec3(0., 0., -1.);
+        let normal = glm::vec3(0., 0., -1.).into();
         self.vertices.extend(&[
             Vertex {
                 pos: [pos.x, pos.y, pos.z],
                 uv: [back_tex.x(), back_tex.h()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x + w, pos.y, pos.z],
                 uv: [back_tex.w(), back_tex.h()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x + w, pos.y + h, pos.z],
                 uv: [back_tex.w(), back_tex.y()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x, pos.y + h, pos.z],
                 uv: [back_tex.x(), back_tex.y()],
+                normal,
                 color: WHITE,
             },
         ]);
@@ -79,26 +83,31 @@ impl MeshBuilder {
         // triangle 2
         self.indices.extend(&[index, index + 2, index + 3]);
 
-        // Back Quad
+        // Front Quad
+        let normal = glm::vec3(0., 0., 1.).into();
         self.vertices.extend(&[
             Vertex {
                 pos: [pos.x, pos.y, pos.z + d],
                 uv: [front_tex.x(), front_tex.h()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x + w, pos.y, pos.z + d],
                 uv: [front_tex.w(), front_tex.h()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x + w, pos.y + h, pos.z + d],
                 uv: [front_tex.w(), front_tex.y()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x, pos.y + h, pos.z + d],
                 uv: [front_tex.x(), front_tex.y()],
+                normal,
                 color: WHITE,
             },
         ]);
@@ -110,25 +119,30 @@ impl MeshBuilder {
         self.indices.extend(&[index + 4, index + 6, index + 7]);
 
         // Left Quad
+        let normal = glm::vec3(-1., 0., 0.).into();
         self.vertices.extend(&[
             Vertex {
                 pos: [pos.x, pos.y, pos.z],
                 uv: [left_tex.x(), left_tex.h()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x, pos.y, pos.z + d],
                 uv: [left_tex.w(), left_tex.h()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x, pos.y + h, pos.z + d],
                 uv: [left_tex.w(), left_tex.y()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x, pos.y + h, pos.z],
                 uv: [left_tex.x(), left_tex.y()],
+                normal,
                 color: WHITE,
             },
         ]);
@@ -140,25 +154,30 @@ impl MeshBuilder {
         self.indices.extend(&[index + 8, index + 10, index + 11]);
 
         // Right Quad
+        let normal = glm::vec3(1., 0., 0.).into();
         self.vertices.extend(&[
             Vertex {
                 pos: [pos.x + w, pos.y, pos.z],
                 uv: [right_tex.x(), right_tex.h()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x + w, pos.y, pos.z + d],
                 uv: [right_tex.w(), right_tex.h()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x + w, pos.y + h, pos.z + d],
                 uv: [right_tex.w(), right_tex.y()],
+                normal,
                 color: WHITE,
             },
             Vertex {
                 pos: [pos.x + w, pos.y + h, pos.z],
                 uv: [right_tex.x(), right_tex.y()],
+                normal,
                 color: WHITE,
             },
         ]);
@@ -179,26 +198,31 @@ impl MeshBuilder {
         let pos = position.into();
         let (w, h) = (size[0], size[1]);
         let index = self.next_index();
+        let normal = glm::vec3(0., 0., 1.).into();
 
         self.vertices.extend(&[
             Vertex {
                 pos: [pos.x, pos.y, pos.z],
                 uv: [0.0, 0.0],
+                normal,
                 color: colors[0],
             },
             Vertex {
                 pos: [pos.x + w, pos.y, pos.z],
                 uv: [1.0, 0.0],
+                normal,
                 color: colors[1],
             },
             Vertex {
                 pos: [pos.x + w, pos.y + h, pos.z],
                 uv: [1.0, 1.0],
+                normal,
                 color: colors[2],
             },
             Vertex {
                 pos: [pos.x, pos.y + h, pos.z],
                 uv: [0.0, 1.0],
+                normal,
                 color: colors[3],
             },
         ]);
