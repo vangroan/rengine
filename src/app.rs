@@ -96,8 +96,26 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Test Quad
         use specs::Builder;
-        let tex_bundle = textures.load_texture(&mut graphics.factory, "examples/test.png");
-        // let tex_bundle = textures.default_texture(&mut graphics.factory);
+        let tex = GlTexture::from_bundle(
+            textures.load_texture(&mut graphics.factory, "examples/block.png"),
+        );
+        let tex_rects = {
+            let tex_rect = tex.source_rect();
+            let back_rect = tex_rect.sub_rect([0, 0], [16, 16]);
+            let front_rect = tex_rect.sub_rect([16, 0], [16, 16]);
+            let left_rect = tex_rect.sub_rect([32, 0], [16, 16]);
+            let right_rect = tex_rect.sub_rect([0, 16], [16, 16]);
+            let top_rect = tex_rect.sub_rect([16, 16], [16, 16]);
+            let bottom_rect = tex_rect.sub_rect([32, 16], [16, 16]);
+            [
+                back_rect,
+                front_rect,
+                left_rect,
+                right_rect,
+                top_rect,
+                bottom_rect,
+            ]
+        };
         let _entity = world
             .create_entity()
             .with(
@@ -108,7 +126,8 @@ impl<'a, 'b> App<'a, 'b> {
                     //     // [colors::RED, colors::GREEN, colors::BLUE, colors::MAGENTA],
                     //     [colors::WHITE, colors::WHITE, colors::WHITE, colors::WHITE],
                     // )
-                    .pseudocube([0., 0., 0.], [1., 1., 1.])
+                    .pseudocube([0., 0., 0.], [1., 1., 1.], tex_rects)
+                    // .pseudocube([0., 0., 0.], [1., 1., 1.], [0., 0., 1., 1.])
                     .build(&mut graphics),
             )
             .with(
@@ -116,11 +135,11 @@ impl<'a, 'b> App<'a, 'b> {
                     .with_anchor([0.0, 0.0, 0.0])
                     .with_position([0.0, 0.0, 0.])
                     .with_scale([0.5, 0.5, 0.5])
-                    .with_rotate_world(45. * (::std::f32::consts::PI / 180.), Y_AXIS)
-                    .with_rotate_world(-30. * (::std::f32::consts::PI / 180.), X_AXIS)
+                    // .with_rotate_world(45. * (::std::f32::consts::PI / 180.), Y_AXIS)
+                    // .with_rotate_world(-30. * (::std::f32::consts::PI / 180.), X_AXIS)
                     // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
-            .with(GlTexture::from_bundle(tex_bundle))
+            .with(tex)
             .build();
 
         // Encoder

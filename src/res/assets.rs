@@ -1,6 +1,5 @@
 use crate::gfx_types::ColorFormat;
 use gfx::texture::{FilterMethod, SamplerInfo, WrapMode};
-use gfx::traits::FactoryExt;
 use std::collections::BTreeMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -95,6 +94,7 @@ where
 
                 // Cache
                 Arc::new(AssetBundle {
+                    tex_size: (width, height),
                     _tex: tex,
                     view,
                     sampler,
@@ -115,6 +115,7 @@ where
 }
 
 pub struct AssetBundle<R: gfx::Resources> {
+    pub(crate) tex_size: (u32, u32),
     _tex: gfx::handle::Texture<R, gfx::format::R8_G8_B8_A8>,
     pub(crate) view: gfx::handle::ShaderResourceView<R, [f32; 4]>,
     pub(crate) sampler: gfx::handle::Sampler<R>,
