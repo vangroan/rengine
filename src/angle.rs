@@ -1,3 +1,24 @@
+//! Functions can use `Into<Rad<f32>>` or `Into<Rad<f64>>`
+//! to support both `Deg` and float literals.
+//!
+//! # Example
+//!
+//! ```
+//! extern crate rengine;
+//!
+//! use rengine::angle::*;
+//! use std::f32::consts::PI;
+//!
+//! fn add_pi<A: Into<Rad<f32>>>(angle: A) -> f32 {
+//!     angle.into().as_radians() + PI
+//! }
+//!
+//! fn main() {
+//!     assert_eq!(PI * 2.0, add_pi(PI));
+//!     assert_eq!(PI * 2.0, add_pi(Deg(180.)));
+//! }
+//! ```
+
 use num_traits::cast::FromPrimitive;
 use num_traits::float::{Float, FloatConst};
 use std::fmt;
@@ -64,8 +85,16 @@ impl<N> Into<Deg<N>> for Rad<N>
 where
     N: Float + FromPrimitive + FloatConst,
 {
+    #[inline]
     fn into(self) -> Deg<N> {
         Deg(self.as_degrees())
+    }
+}
+
+impl Into<Rad<f32>> for f32 {
+    #[inline]
+    fn into(self) -> Rad<f32> {
+        Rad(self)
     }
 }
 

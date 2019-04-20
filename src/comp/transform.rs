@@ -1,3 +1,4 @@
+use crate::angle::Rad;
 use glm::{Mat4x4, Qua, Vec3};
 use specs::{Component, DenseVecStorage};
 
@@ -77,17 +78,19 @@ impl Transform {
     /// }
     /// ```
     #[inline]
-    pub fn with_rotate<V>(mut self, angle: f32, axis: V) -> Self
+    pub fn with_rotate<A, V>(mut self, angle: A, axis: V) -> Self
     where
+        A: Into<Rad<f32>>,
         V: Into<Vec3>,
     {
-        self.rot = glm::quat_rotate(&self.rot, angle, &axis.into());
+        self.rot = glm::quat_rotate(&self.rot, angle.into().as_radians(), &axis.into());
         self
     }
 
     #[inline]
-    pub fn with_rotate_world<V>(mut self, angle: f32, axis: V) -> Self
+    pub fn with_rotate_world<A, V>(mut self, angle: A, axis: V) -> Self
     where
+        A: Into<Rad<f32>>,
         V: Into<Vec3>,
     {
         self.rotate_world(angle, axis);
@@ -97,12 +100,26 @@ impl Transform {
 
 /// Methods that mutate the `Transform `in place
 impl Transform {
+    // #[inline]
+    // pub fn rotate_world<V>(&mut self, angle: f32, axis: V)
+    // where
+    //     V: Into<Vec3>,
+    // {
+    //     let world_rot = glm::quat_rotate(&Qua::<f32>::identity(), angle, &axis.into());
+    //     self.rot = world_rot * self.rot;
+    // }
+
     #[inline]
-    pub fn rotate_world<V>(&mut self, angle: f32, axis: V)
+    pub fn rotate_world<A, V>(&mut self, angle: A, axis: V)
     where
+        A: Into<Rad<f32>>,
         V: Into<Vec3>,
     {
-        let world_rot = glm::quat_rotate(&Qua::<f32>::identity(), angle, &axis.into());
+        let world_rot = glm::quat_rotate(
+            &Qua::<f32>::identity(),
+            angle.into().as_radians(),
+            &axis.into(),
+        );
         self.rot = world_rot * self.rot;
     }
 }

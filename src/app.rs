@@ -1,6 +1,7 @@
+use crate::angle::Deg;
 use crate::colors;
 use crate::comp::{Camera, GlTexture, Mesh, MeshBuilder, Transform};
-use crate::comp::{X_AXIS, Y_AXIS, Z_AXIS};
+use crate::comp::{X_AXIS, Y_AXIS};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
@@ -148,8 +149,8 @@ impl<'a, 'b> App<'a, 'b> {
                     .with_anchor([0.0, 0.0, 0.0])
                     .with_position([0.0, 0.0, 0.])
                     .with_scale([0.5, 0.5, 0.5])
-                    .with_rotate_world(45. * (::std::f32::consts::PI / 180.), Y_AXIS)
-                    .with_rotate_world(326. * (::std::f32::consts::PI / 180.), X_AXIS)
+                    .with_rotate_world(Deg(45.), Y_AXIS)
+                    .with_rotate_world(Deg(30.), X_AXIS)
                     // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
             .with(tex)
