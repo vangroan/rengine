@@ -20,8 +20,10 @@ mod gfx_types;
 mod graphics;
 mod option;
 pub mod res;
+mod scene;
 pub mod sys;
 
 pub use app::*;
 pub use gfx_types::*;
 pub use graphics::*;
+pub use scene::*;
