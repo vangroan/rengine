@@ -52,25 +52,25 @@ impl MeshBuilder {
         let normal = glm::vec3(0., 0., -1.).into();
         self.vertices.extend(&[
             Vertex {
-                pos: [pos.x, pos.y, pos.z],
+                pos: [pos.x + w, pos.y, pos.z],
                 uv: [back_tex.x(), back_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: [pos.x + w, pos.y, pos.z],
+                pos: [pos.x, pos.y, pos.z],
                 uv: [back_tex.w(), back_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: [pos.x + w, pos.y + h, pos.z],
+                pos: [pos.x, pos.y + h, pos.z],
                 uv: [back_tex.w(), back_tex.y()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: [pos.x, pos.y + h, pos.z],
+                pos: [pos.x + w, pos.y + h, pos.z],
                 uv: [back_tex.x(), back_tex.y()],
                 normal,
                 color: WHITE,
@@ -157,25 +157,25 @@ impl MeshBuilder {
         let normal = glm::vec3(1., 0., 0.).into();
         self.vertices.extend(&[
             Vertex {
-                pos: [pos.x + w, pos.y, pos.z],
+                pos: [pos.x + w, pos.y, pos.z + d],
                 uv: [right_tex.x(), right_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: [pos.x + w, pos.y, pos.z + d],
+                pos: [pos.x + w, pos.y, pos.z],
                 uv: [right_tex.w(), right_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: [pos.x + w, pos.y + h, pos.z + d],
+                pos: [pos.x + w, pos.y + h, pos.z],
                 uv: [right_tex.w(), right_tex.y()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: [pos.x + w, pos.y + h, pos.z],
+                pos: [pos.x + w, pos.y + h, pos.z + d],
                 uv: [right_tex.x(), right_tex.y()],
                 normal,
                 color: WHITE,

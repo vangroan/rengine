@@ -1,6 +1,7 @@
+use crate::angle::Deg;
 use crate::colors;
 use crate::comp::{Camera, GlTexture, Mesh, MeshBuilder, Transform};
-use crate::comp::{X_AXIS, Y_AXIS, Z_AXIS};
+use crate::comp::{X_AXIS, Y_AXIS};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
@@ -77,10 +78,10 @@ impl<'a, 'b> App<'a, 'b> {
         // TODO: message passing to notify systems of events
         let mut camera_resize_system = CameraResizeSystem::new();
 
-        // Pipeline State Object
-        let pso: PipelineStateObject = graphics
+        // Shader program
+        let shader_program = graphics
             .factory
-            .create_pipeline_simple(
+            .link_program(
                 include_bytes!(concat!(
                     env!("CARGO_MANIFEST_DIR"),
                     "/src/shaders/basic_150.glslv"
@@ -89,10 +90,23 @@ impl<'a, 'b> App<'a, 'b> {
                     env!("CARGO_MANIFEST_DIR"),
                     "/src/shaders/basic_150.glslf"
                 )),
+            )
+            .unwrap();
+
+        // Pipeline State Object
+        let pso = graphics
+            .factory
+            .create_pipeline_from_program(
+                &shader_program,
+                gfx::Primitive::TriangleList,
+                gfx::state::Rasterizer::new_fill().with_cull_back(),
                 pipe::new(),
             )
             .unwrap();
-        world.add_resource(pso);
+
+        // Bundle program and pipeline state object together to avoid
+        // lifetime issues with world resources borrowing each other.
+        world.add_resource(PipelineBundle::new(pso, shader_program));
 
         // Test Quad
         use specs::Builder;
@@ -133,10 +147,10 @@ impl<'a, 'b> App<'a, 'b> {
             .with(
                 Transform::default()
                     .with_anchor([0.0, 0.0, 0.0])
-                    .with_position([0.0, 0.0, 0.])
+                    .with_position([0.5, 0.25, 0.])
                     .with_scale([0.5, 0.5, 0.5])
-                    .with_rotate_world(45. * (::std::f32::consts::PI / 180.), Y_AXIS)
-                    .with_rotate_world(326. * (::std::f32::consts::PI / 180.), X_AXIS)
+                    // .with_rotate_world(Deg(45.), Y_AXIS)
+                    .with_rotate_world(Deg(30.), X_AXIS)
                     // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
             .with(tex)
@@ -199,6 +213,15 @@ impl<'a, 'b> App<'a, 'b> {
                 }
                 _ => (),
             });
+
+            // TODO: Remove
+            {
+                use specs::Join;
+                let mut trans = world.write_storage::<Transform>();
+                for (ref mut tran,) in (&mut trans,).join() {
+                    tran.rotate(Deg(0.5), Y_AXIS);
+                }
+            }
 
             // Pre-render
             match channel.recv_block() {

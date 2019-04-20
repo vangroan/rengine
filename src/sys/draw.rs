@@ -1,5 +1,5 @@
 use crate::comp::{Camera, GlTexture, Mesh, Transform};
-use crate::gfx_types::{self, pipe, PipelineStateObject, RenderTarget};
+use crate::gfx_types::{self, pipe, PipelineBundle, RenderTarget};
 use crate::graphics::ChannelPair;
 use crate::res::{ActiveCamera, ViewPort};
 use nalgebra::Matrix4;
@@ -25,7 +25,7 @@ impl DrawSystem {
 
 impl<'a> System<'a> for DrawSystem {
     type SystemData = (
-        ReadExpect<'a, PipelineStateObject>,
+        ReadExpect<'a, PipelineBundle>,
         ReadExpect<'a, ViewPort>,
         Read<'a, ActiveCamera>,
         ReadStorage<'a, Mesh>,
@@ -36,7 +36,7 @@ impl<'a> System<'a> for DrawSystem {
 
     fn run(
         &mut self,
-        (pso, view_port, active_camera, meshes, textures, transforms, cameras): Self::SystemData,
+        (pipeline, view_port, active_camera, meshes, textures, transforms, cameras): Self::SystemData,
     ) {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
@@ -71,7 +71,7 @@ impl<'a> System<'a> for DrawSystem {
                         out: self.render_target.clone(),
                     };
 
-                    encoder.draw(&mesh.slice, &pso, &data);
+                    encoder.draw(&mesh.slice, &pipeline.pso, &data);
                 }
 
                 if let Err(err) = self.channel.send_block(encoder) {
