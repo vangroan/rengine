@@ -45,7 +45,7 @@ impl MeshBuilder {
     {
         let pos = position.into();
         let [w, h, d] = size;
-        let [back_tex, front_tex, left_tex, right_tex, _top_tex, _bottom_tex] = texture_rects;
+        let [back_tex, front_tex, left_tex, right_tex, bottom_tex, _top_tex] = texture_rects;
         let index = self.next_index();
 
         // Back Quad
@@ -187,6 +187,43 @@ impl MeshBuilder {
 
         // triangle 8
         self.indices.extend(&[index + 12, index + 14, index + 15]);
+
+        // Bottom Quad
+        let normal = glm::vec3(0., -1., 0.).into();
+        self.vertices.extend(&[
+            Vertex {
+                pos: [pos.x, pos.y, pos.z],
+                uv: [bottom_tex.x(), bottom_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y, pos.z],
+                uv: [bottom_tex.w(), bottom_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x + w, pos.y, pos.z + d],
+                uv: [bottom_tex.w(), bottom_tex.y()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: [pos.x, pos.y, pos.z + d],
+                uv: [bottom_tex.x(), bottom_tex.y()],
+                normal,
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 9
+        self.indices.extend(&[index + 16, index + 17, index + 18]);
+
+        // triangle 10
+        self.indices.extend(&[index + 16, index + 18, index + 19]);
+
+        // Top Quad
 
         self
     }

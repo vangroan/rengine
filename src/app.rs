@@ -119,15 +119,15 @@ impl<'a, 'b> App<'a, 'b> {
             let front_rect = tex_rect.sub_rect([16, 0], [16, 16]);
             let left_rect = tex_rect.sub_rect([32, 0], [16, 16]);
             let right_rect = tex_rect.sub_rect([0, 16], [16, 16]);
-            let top_rect = tex_rect.sub_rect([16, 16], [16, 16]);
-            let bottom_rect = tex_rect.sub_rect([32, 16], [16, 16]);
+            let bottom_rect = tex_rect.sub_rect([16, 16], [16, 16]);
+            let top_rect = tex_rect.sub_rect([32, 16], [16, 16]);
             [
                 back_rect,
                 front_rect,
                 left_rect,
                 right_rect,
-                top_rect,
                 bottom_rect,
+                top_rect,
             ]
         };
         let _entity = world
@@ -219,7 +219,7 @@ impl<'a, 'b> App<'a, 'b> {
                 use specs::Join;
                 let mut trans = world.write_storage::<Transform>();
                 for (ref mut tran,) in (&mut trans,).join() {
-                    tran.rotate(Deg(0.5), Y_AXIS);
+                    tran.rotate(Deg(0.5), X_AXIS);
                 }
             }
 
