@@ -77,10 +77,10 @@ impl<'a, 'b> App<'a, 'b> {
         // TODO: message passing to notify systems of events
         let mut camera_resize_system = CameraResizeSystem::new();
 
-        // Pipeline State Object
-        let pso: PipelineStateObject = graphics
+        // Shader program
+        let shader_program = graphics
             .factory
-            .create_pipeline_simple(
+            .link_program(
                 include_bytes!(concat!(
                     env!("CARGO_MANIFEST_DIR"),
                     "/src/shaders/basic_150.glslv"
@@ -89,10 +89,23 @@ impl<'a, 'b> App<'a, 'b> {
                     env!("CARGO_MANIFEST_DIR"),
                     "/src/shaders/basic_150.glslf"
                 )),
+            )
+            .unwrap();
+
+        // Pipeline State Object
+        let pso = graphics
+            .factory
+            .create_pipeline_from_program(
+                &shader_program,
+                gfx::Primitive::TriangleList,
+                gfx::state::Rasterizer::new_fill().with_cull_back(),
                 pipe::new(),
             )
             .unwrap();
-        world.add_resource(pso);
+
+        // Bundle program and pipeline state object together to avoid
+        // lifetime issues with world resources borrowing each other.
+        world.add_resource(PipelineBundle::new(pso, shader_program));
 
         // Test Quad
         use specs::Builder;
