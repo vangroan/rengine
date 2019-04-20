@@ -147,9 +147,9 @@ impl<'a, 'b> App<'a, 'b> {
             .with(
                 Transform::default()
                     .with_anchor([0.0, 0.0, 0.0])
-                    .with_position([0.0, 0.0, 0.])
+                    .with_position([0.5, 0.25, 0.])
                     .with_scale([0.5, 0.5, 0.5])
-                    .with_rotate_world(Deg(45.), Y_AXIS)
+                    // .with_rotate_world(Deg(45.), Y_AXIS)
                     .with_rotate_world(Deg(30.), X_AXIS)
                     // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
             )
@@ -213,6 +213,15 @@ impl<'a, 'b> App<'a, 'b> {
                 }
                 _ => (),
             });
+
+            // TODO: Remove
+            {
+                use specs::Join;
+                let mut trans = world.write_storage::<Transform>();
+                for (ref mut tran,) in (&mut trans,).join() {
+                    tran.rotate(Deg(0.5), Y_AXIS);
+                }
+            }
 
             // Pre-render
             match channel.recv_block() {

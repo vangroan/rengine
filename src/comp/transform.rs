@@ -83,7 +83,7 @@ impl Transform {
         A: Into<Rad<f32>>,
         V: Into<Vec3>,
     {
-        self.rot = glm::quat_rotate(&self.rot, angle.into().as_radians(), &axis.into());
+        self.rotate(angle, axis);
         self
     }
 
@@ -100,14 +100,14 @@ impl Transform {
 
 /// Methods that mutate the `Transform `in place
 impl Transform {
-    // #[inline]
-    // pub fn rotate_world<V>(&mut self, angle: f32, axis: V)
-    // where
-    //     V: Into<Vec3>,
-    // {
-    //     let world_rot = glm::quat_rotate(&Qua::<f32>::identity(), angle, &axis.into());
-    //     self.rot = world_rot * self.rot;
-    // }
+    #[inline]
+    pub fn rotate<A, V>(&mut self, angle: A, axis: V)
+    where
+        A: Into<Rad<f32>>,
+        V: Into<Vec3>,
+    {
+        self.rot = glm::quat_rotate(&self.rot, angle.into().as_radians(), &axis.into());
+    }
 
     #[inline]
     pub fn rotate_world<A, V>(&mut self, angle: A, axis: V)
