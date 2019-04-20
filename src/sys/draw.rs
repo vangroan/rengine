@@ -1,6 +1,7 @@
 use crate::comp::{Camera, GlTexture, Mesh, Transform};
 use crate::gfx_types::{self, pipe, PipelineBundle, RenderTarget};
 use crate::graphics::ChannelPair;
+use crate::option::lift2;
 use crate::res::{ActiveCamera, ViewPort};
 use nalgebra::Matrix4;
 use specs::{Join, Read, ReadExpect, ReadStorage, System};
@@ -43,8 +44,10 @@ impl<'a> System<'a> for DrawSystem {
                 // Without a camera, we draw according to the default OpenGL behaviour
                 let (proj_matrix, view_matrix) = active_camera
                     .camera_entity()
-                    .and_then(|entity| cameras.get(entity))
-                    .map(|camera| (camera.proj_matrix, camera.view_matrix))
+                    .and_then(|entity| lift2(cameras.get(entity), transforms.get(entity)))
+                    .map(|(camera, transform)| {
+                        (camera.proj_matrix, camera.view_matrix(transform.pos))
+                    })
                     .unwrap_or((Matrix4::identity(), Matrix4::identity()));
 
                 for (ref mesh, ref tex, ref trans) in (&meshes, &textures, &transforms).join() {

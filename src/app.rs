@@ -66,11 +66,13 @@ impl<'a, 'b> App<'a, 'b> {
         // Default Camera
         let camera_entity = world
             .create_entity()
-            .with(Transform::new().with_position([0., 0., 0.]))
-            .with(Camera::with_device_size((
-                logical_w as u16,
-                logical_h as u16,
-            )))
+            .with(Transform::new().with_position([0., 0., -2.]))
+            .with({
+                let mut cam = Camera::with_device_size((logical_w as u16, logical_h as u16));
+                cam.set_target([0., 0., 2.]);
+
+                cam
+            })
             .build();
         world.add_resource(ActiveCamera::new(camera_entity));
 
@@ -141,7 +143,6 @@ impl<'a, 'b> App<'a, 'b> {
                     //     [colors::WHITE, colors::WHITE, colors::WHITE, colors::WHITE],
                     // )
                     .pseudocube([0., 0., 0.], [1., 1., 1.], tex_rects)
-                    // .pseudocube([0., 0., 0.], [1., 1., 1.], [0., 0., 1., 1.])
                     .build(&mut graphics),
             )
             .with(
@@ -150,8 +151,7 @@ impl<'a, 'b> App<'a, 'b> {
                     .with_position([0.25, 0.25, 0.])
                     .with_scale([0.5, 0.5, 0.5])
                     .with_rotate_world(Deg(45.), Y_AXIS)
-                    .with_rotate_world(Deg(30.), X_AXIS)
-                    // .with_rotation(10. * (::std::f32::consts::PI / 180.), Z_AXIS),
+                    .with_rotate_world(Deg(30.), X_AXIS),
             )
             .with(tex)
             .build();

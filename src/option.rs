@@ -15,7 +15,7 @@
 ///
 /// assert_eq!(Some(("a", 1)), c);
 /// ```
-fn lift2<A, B>(a: Option<A>, b: Option<B>) -> Option<(A, B)> {
+pub fn lift2<A, B>(a: Option<A>, b: Option<B>) -> Option<(A, B)> {
     a.and_then(|ai| b.map(|bi| (ai, bi)))
 }
 
