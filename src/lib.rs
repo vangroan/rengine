@@ -18,6 +18,7 @@ pub mod colors;
 pub mod comp;
 mod gfx_types;
 mod graphics;
+mod option;
 pub mod res;
 pub mod sys;
 
