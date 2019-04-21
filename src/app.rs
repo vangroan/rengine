@@ -5,6 +5,7 @@ use crate::comp::{X_AXIS, Y_AXIS};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
+use crate::scene::{SceneBuilder, SceneFactories, SceneStack};
 use crate::sys::{CameraResizeSystem, DrawSystem};
 use gfx::traits::FactoryExt;
 use gfx::Device;
@@ -22,9 +23,22 @@ pub struct App<'comp, 'thread> {
     world: World,
     dispatcher: Dispatcher<'comp, 'thread>,
     bkg_color: colors::Color,
+    initial_scene_key: Option<&'static str>,
+    scene_factories: SceneFactories,
 }
 
 impl<'a, 'b> App<'a, 'b> {
+    pub fn init_scene(&mut self, key: &'static str) {
+        self.initial_scene_key = Some(key);
+    }
+
+    pub fn register_scene<F>(&mut self, key: &'static str, factory: F)
+    where
+        F: 'static + Fn(SceneBuilder) -> SceneBuilder,
+    {
+        self.scene_factories.add(key, factory);
+    }
+
     /// Starts the application loop
     ///
     /// Consumes the app
@@ -36,6 +50,8 @@ impl<'a, 'b> App<'a, 'b> {
             mut graphics,
             mut world,
             mut dispatcher,
+            initial_scene_key,
+            scene_factories,
             bkg_color,
             ..
         } = self;
@@ -166,6 +182,16 @@ impl<'a, 'b> App<'a, 'b> {
         // TODO: Consider having a `Renderer` trait since it's being treated differently than other systems
         let mut renderer = DrawSystem::new(channel.clone(), graphics.render_target.clone());
 
+        // Scenes
+        let mut scene_stack = SceneStack::new(scene_factories);
+
+        match initial_scene_key {
+            Some(key) => {
+                scene_stack.push(key);
+            }
+            None => return Err(AppError::NoInitialScene),
+        }
+
         // Loop control
         let mut running = true;
         let mut last_time = Instant::now();
@@ -175,6 +201,9 @@ impl<'a, 'b> App<'a, 'b> {
             let new_time = Instant::now();
             let delta_time = DeltaTime(new_time.duration_since(last_time));
             last_time = new_time;
+
+            // Prepare requested scene
+            scene_stack.maintain();
 
             // Prepare world with frame scoped resources
             world.add_resource(delta_time);
@@ -275,6 +304,8 @@ pub enum AppError {
 
     /// Failed to retrieve Window Size
     WindowSize,
+
+    NoInitialScene,
 }
 
 impl fmt::Display for AppError {
@@ -288,6 +319,7 @@ impl fmt::Display for AppError {
                 EncoderRecv => "Encoder Receive",
                 EncoderSend => "Encoder Send",
                 WindowSize => "Window Size",
+                NoInitialScene => "No initial Scene",
             }
         )
     }
@@ -301,6 +333,7 @@ impl Error for AppError {
             EncoderRecv => "Graphics encoder was not received from channel",
             EncoderSend => "Graphics encoder could not be sent to the channel",
             WindowSize => "Failed to retrieve window size",
+            NoInitialScene => "No initial scene configured",
         }
     }
 }
@@ -409,6 +442,8 @@ impl AppBuilder {
             world,
             dispatcher,
             bkg_color: self.bkg_color,
+            initial_scene_key: None,
+            scene_factories: SceneFactories::new(),
         })
     }
 }
