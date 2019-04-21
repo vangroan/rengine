@@ -5,7 +5,7 @@ use crate::comp::{X_AXIS, Y_AXIS};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
-use crate::scene::{SceneBuilder, SceneFactories, SceneStack};
+use crate::scene::{SceneBuilder, SceneError, SceneFactories, SceneStack};
 use crate::sys::{CameraResizeSystem, DrawSystem};
 use gfx::traits::FactoryExt;
 use gfx::Device;
@@ -203,7 +203,7 @@ impl<'a, 'b> App<'a, 'b> {
             last_time = new_time;
 
             // Prepare requested scene
-            scene_stack.maintain();
+            scene_stack.maintain()?;
 
             // Prepare world with frame scoped resources
             world.add_resource(delta_time);
@@ -306,6 +306,7 @@ pub enum AppError {
     WindowSize,
 
     NoInitialScene,
+    SceneTransitionFail(SceneError),
 }
 
 impl fmt::Display for AppError {
@@ -320,6 +321,7 @@ impl fmt::Display for AppError {
                 EncoderSend => "Encoder Send",
                 WindowSize => "Window Size",
                 NoInitialScene => "No initial Scene",
+                SceneTransitionFail(_) => "Scene Transition Fail",
             }
         )
     }
@@ -334,6 +336,16 @@ impl Error for AppError {
             EncoderSend => "Graphics encoder could not be sent to the channel",
             WindowSize => "Failed to retrieve window size",
             NoInitialScene => "No initial scene configured",
+            SceneTransitionFail(_) => "Failure to transition scene during maintenance phase",
+        }
+    }
+
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        use AppError::*;
+
+        match self {
+            SceneTransitionFail(err) => Some(err),
+            _ => None,
         }
     }
 }
@@ -345,6 +357,12 @@ where
 {
     fn from(_send_error: crossbeam::channel::SendError<gfx::Encoder<R, C>>) -> Self {
         AppError::EncoderSend
+    }
+}
+
+impl From<SceneError> for AppError {
+    fn from(scene_error: SceneError) -> Self {
+        AppError::SceneTransitionFail(scene_error)
     }
 }
 
