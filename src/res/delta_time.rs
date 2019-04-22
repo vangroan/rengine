@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 /// The time it took for the last frame to elapse
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct DeltaTime(pub(crate) Duration);
 
 impl DeltaTime {

@@ -206,7 +206,10 @@ impl<'a, 'b> App<'a, 'b> {
             scene_stack.maintain()?;
 
             // Prepare world with frame scoped resources
-            world.add_resource(delta_time);
+            world.add_resource(delta_time.clone());
+            scene_stack
+                .current_mut()
+                .map(|scene| scene.world.add_resource(delta_time));
 
             // Drain user input events
             events_loop.poll_events(|event| match event {
@@ -251,6 +254,8 @@ impl<'a, 'b> App<'a, 'b> {
                     tran.rotate(Deg(0.5), Y_AXIS);
                 }
             }
+
+            // Scene Update
 
             // Pre-render
             match channel.recv_block() {

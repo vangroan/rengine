@@ -2,13 +2,41 @@ use specs::{RunNow, World};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
-use std::time;
+use std::marker::PhantomData;
 
 /// Wrapper for Scene world and dispatchers.
 pub struct SceneState<'a> {
-    world: World,
+    pub(crate) world: World,
     update: Vec<Box<dyn RunNow<'a>>>,
     signal: Vec<Box<dyn RunNow<'a>>>,
+    // _marker: PhantomData<&'b World>,
+}
+
+impl<'a> SceneDispatch for SceneState<'a> {
+    fn dispatch_update(&mut self) {
+        let &mut SceneState {
+            ref world,
+            ref mut update,
+            ..
+        } = self;
+
+        // FIXME: Lifetimes not working out
+
+        // for run_now in update.iter_mut() {
+        //     run_now.run_now(&world.res);
+        // }
+        // dispatch_update(world, update);
+    }
+}
+
+pub trait SceneDispatch {
+    fn dispatch_update(&mut self);
+}
+
+fn dispatch_update<'a, 'b: 'a>(world: &'b World, update: &'a mut Vec<Box<dyn RunNow<'b>>>) {
+    for run_now in update.iter_mut() {
+        (*run_now).run_now(&world.res);
+    }
 }
 
 pub struct SceneBuilder<'a> {
@@ -80,10 +108,6 @@ impl SceneFactories {
     }
 }
 
-pub trait SceneDispatch<'a> {
-    fn dispatch_update(&mut self, delta_time: time::Duration);
-}
-
 pub struct SceneStack<'a> {
     factories: SceneFactories,
     scenes: Vec<SceneState<'a>>,
@@ -102,15 +126,15 @@ impl<'a> SceneStack<'a> {
     /// Retrieves the scene at the top of the stack.
     ///
     /// Returns `None` when the stack is empty.
-    pub fn current(&self) -> Option<&SceneDispatch> {
-        unimplemented!()
+    pub fn current(&self) -> Option<&SceneState<'a>> {
+        self.scenes.last()
     }
 
     /// Retrieves the scene at the top of the stack.
     ///
     /// Returns `None` when the stack is empty.
-    pub fn current_mut(&mut self) -> Option<&mut SceneDispatch> {
-        unimplemented!()
+    pub fn current_mut(&mut self) -> Option<&mut SceneState<'a>> {
+        self.scenes.last_mut()
     }
 
     /// Instantiates a new instance of the given
@@ -182,9 +206,9 @@ impl<'a> SceneStack<'a> {
 
 /// Methods for dispatching main loop events
 impl<'a> SceneStack<'a> {
-    pub fn dispatch_update(&mut self, delta_time: time::Duration) {
+    pub fn dispatch_update(&mut self) {
         if let Some(ref mut scene) = self.current_mut() {
-            scene.dispatch_update(delta_time);
+            scene.dispatch_update();
         }
     }
 }
