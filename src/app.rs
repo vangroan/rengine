@@ -305,6 +305,7 @@ pub enum AppError {
     /// Failed to retrieve Window Size
     WindowSize,
 
+    /// App was setup with no initial scene
     NoInitialScene,
     SceneTransitionFail(SceneError),
 }
