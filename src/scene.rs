@@ -3,6 +3,9 @@ use std::fmt;
 
 pub trait Scene {
     fn on_start(&mut self) {}
+    fn on_stop(&mut self) {}
+    fn on_resume(&mut self) {}
+    fn on_pause(&mut self) {}
     fn on_event(&mut self) {}
     fn on_update(&mut self) {}
     fn on_message(&mut self) {}
@@ -64,16 +67,29 @@ impl SceneStack {
     /// stack.
     ///
     /// Does nothing when the stack is empty.
-    pub fn pop(&mut self) {
-        unimplemented!()
+    pub fn pop(&mut self) -> bool {
+        if self.request.is_some() {
+            false
+        } else {
+            self.request = Some(Trans::Pop);
+            true
+        }
     }
 
     /// Removes the current scene at the top of the
     /// stack, if any. A new instance of the given
     /// scene type will be pushed to the top of the
     /// stack.
-    pub fn replace<T>(&mut self) {
-        unimplemented!()
+    pub fn replace<S>(&mut self, scene: S) -> bool
+    where
+        S: 'static + Scene,
+    {
+        if self.request.is_some() {
+            false
+        } else {
+            self.request = Some(Trans::Replace(Box::new(scene)));
+            true
+        }
     }
 }
 
@@ -85,11 +101,18 @@ impl SceneStack {
             use Trans::*;
 
             match request {
-                Push(scene) => {
-                    self.apply_push(scene);
+                Push(scene_box) => {
+                    self.apply_push(scene_box);
                     Ok(())
                 }
-                _ => unimplemented!(),
+                Pop => {
+                    self.apply_pop();
+                    Ok(())
+                }
+                Replace(scene_box) => {
+                    self.apply_replace(scene_box);
+                    Ok(())
+                }
             }
         } else {
             Ok(())
@@ -97,6 +120,10 @@ impl SceneStack {
     }
 
     fn apply_push(&mut self, scene_box: Box<dyn Scene>) {
+        if let Some(ref mut s) = self.current_mut() {
+            s.on_pause();
+        }
+
         self.scenes.push(scene_box);
 
         if let Some(ref mut s) = self.current_mut() {
@@ -105,11 +132,28 @@ impl SceneStack {
     }
 
     fn apply_pop(&mut self) {
-        unimplemented!()
+        if let Some(ref mut s) = self.current_mut() {
+            s.on_stop();
+        }
+
+        self.scenes.pop();
+
+        if let Some(ref mut s) = self.current_mut() {
+            s.on_resume();
+        }
     }
 
-    fn apply_replace(&mut self) {
-        unimplemented!()
+    fn apply_replace(&mut self, scene_box: Box<dyn Scene>) {
+        if let Some(ref mut s) = self.current_mut() {
+            s.on_stop();
+        }
+
+        self.scenes.pop();
+        self.scenes.push(scene_box);
+
+        if let Some(ref mut s) = self.current_mut() {
+            s.on_start();
+        }
     }
 }
 
