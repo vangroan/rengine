@@ -1,8 +1,11 @@
+use specs::World;
 use std::error::Error;
 use std::fmt;
 
 pub trait Scene {
-    fn on_start(&mut self) {}
+    fn on_start(&mut self, _world: &World) -> Option<Trans> {
+        None
+    }
     fn on_stop(&mut self) {}
     fn on_resume(&mut self) {}
     fn on_pause(&mut self) {}
@@ -96,13 +99,13 @@ impl SceneStack {
 /// Methods for applying a stack change from
 /// a request, during maintain
 impl SceneStack {
-    pub fn maintain(&mut self) -> SceneResult {
+    pub fn maintain(&mut self, world: &World) -> SceneResult {
         if let Some(request) = self.request.take() {
             use Trans::*;
 
             match request {
                 Push(scene_box) => {
-                    self.apply_push(scene_box);
+                    self.apply_push(scene_box, world);
                     Ok(())
                 }
                 Pop => {
@@ -110,7 +113,7 @@ impl SceneStack {
                     Ok(())
                 }
                 Replace(scene_box) => {
-                    self.apply_replace(scene_box);
+                    self.apply_replace(scene_box, world);
                     Ok(())
                 }
             }
@@ -119,15 +122,19 @@ impl SceneStack {
         }
     }
 
-    fn apply_push(&mut self, scene_box: Box<dyn Scene>) {
+    fn apply_push(&mut self, scene_box: Box<dyn Scene>, world: &World) {
         if let Some(ref mut s) = self.current_mut() {
             s.on_pause();
         }
 
+        println!("Pushing");
         self.scenes.push(scene_box);
 
         if let Some(ref mut s) = self.current_mut() {
-            s.on_start();
+            let trans = s.on_start(world);
+            if !trans.is_none() {
+                self.request = trans;
+            }
         }
     }
 
@@ -143,7 +150,7 @@ impl SceneStack {
         }
     }
 
-    fn apply_replace(&mut self, scene_box: Box<dyn Scene>) {
+    fn apply_replace(&mut self, scene_box: Box<dyn Scene>, world: &World) {
         if let Some(ref mut s) = self.current_mut() {
             s.on_stop();
         }
@@ -152,7 +159,7 @@ impl SceneStack {
         self.scenes.push(scene_box);
 
         if let Some(ref mut s) = self.current_mut() {
-            s.on_start();
+            s.on_start(world);
         }
     }
 }
@@ -160,16 +167,32 @@ impl SceneStack {
 /// Methods for dispatching main loop events
 impl SceneStack {
     pub fn dispatch_update(&mut self) {
-        if let Some(ref mut scene) = self.current_mut() {
+        if let Some(ref mut _scene) = self.current_mut() {
             // scene.dispatch_update();
         }
     }
 }
 
-enum Trans {
+pub enum Trans {
     Push(Box<dyn Scene>),
     Pop,
     Replace(Box<dyn Scene>),
+}
+
+impl Trans {
+    pub fn push<S>(scene: S) -> Option<Trans>
+    where
+        S: 'static + Scene,
+    {
+        Some(Trans::Push(Box::new(scene)))
+    }
+
+    pub fn replace<S>(scene: S) -> Option<Trans>
+    where
+        S: 'static + Scene,
+    {
+        Some(Trans::Replace(Box::new(scene)))
+    }
 }
 
 pub type SceneResult = Result<(), SceneError>;

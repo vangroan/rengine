@@ -190,7 +190,7 @@ impl<'a, 'b> App<'a, 'b> {
             last_time = new_time;
 
             // Prepare requested scene
-            scene_stack.maintain()?;
+            scene_stack.maintain(&world)?;
 
             // Prepare world with frame scoped resources
             world.add_resource(delta_time);

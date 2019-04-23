@@ -1,13 +1,20 @@
 extern crate rengine;
-use rengine::Scene;
+use rengine::specs::World;
+use rengine::{Scene, Trans};
 use std::error::Error;
 
 #[derive(Debug)]
 struct Intro;
 
 impl Scene for Intro {
-    fn on_start(&mut self) {
+    fn on_start(&mut self, _world: &World) -> Option<Trans> {
         println!("{:?}: On start", self);
+
+        Trans::replace(Game)
+    }
+
+    fn on_stop(&mut self) {
+        println!("{:?}: On stop", self);
     }
 }
 
@@ -15,8 +22,10 @@ impl Scene for Intro {
 struct Game;
 
 impl Scene for Game {
-    fn on_start(&mut self) {
+    fn on_start(&mut self, _world: &World) -> Option<Trans> {
         println!("{:?}: On start", self);
+
+        None
     }
 
     fn on_update(&mut self) {
