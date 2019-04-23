@@ -1,123 +1,21 @@
-use specs::{RunNow, World};
-use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
-use std::marker::PhantomData;
 
-/// Wrapper for Scene world and dispatchers.
-pub struct SceneState<'a> {
-    pub(crate) world: World,
-    update: Vec<Box<dyn RunNow<'a>>>,
-    signal: Vec<Box<dyn RunNow<'a>>>,
-    // _marker: PhantomData<&'b World>,
+pub trait Scene {
+    fn on_start(&mut self) {}
+    fn on_event(&mut self) {}
+    fn on_update(&mut self) {}
+    fn on_message(&mut self) {}
 }
 
-impl<'a> SceneDispatch for SceneState<'a> {
-    fn dispatch_update(&mut self) {
-        let &mut SceneState {
-            ref world,
-            ref mut update,
-            ..
-        } = self;
-
-        // FIXME: Lifetimes not working out
-
-        // for run_now in update.iter_mut() {
-        //     run_now.run_now(&world.res);
-        // }
-        // dispatch_update(world, update);
-    }
+pub struct SceneStack {
+    scenes: Vec<Box<dyn Scene>>,
+    request: Option<Trans>,
 }
 
-pub trait SceneDispatch {
-    fn dispatch_update(&mut self);
-}
-
-fn dispatch_update<'a, 'b: 'a>(world: &'b World, update: &'a mut Vec<Box<dyn RunNow<'b>>>) {
-    for run_now in update.iter_mut() {
-        (*run_now).run_now(&world.res);
-    }
-}
-
-pub struct SceneBuilder<'a> {
-    world: World,
-    update: Vec<Box<dyn RunNow<'a>>>,
-    signal: Vec<Box<dyn RunNow<'a>>>,
-}
-
-impl<'a> SceneBuilder<'a> {
-    fn new() -> Self {
-        SceneBuilder {
-            world: World::new(),
-            update: Vec::new(),
-            signal: Vec::new(),
-        }
-    }
-
-    pub fn update<T>(mut self, system: T) -> Self
-    where
-        T: 'static + RunNow<'a>,
-    {
-        self.update.push(Box::new(system));
-        self
-    }
-
-    pub fn signal<T>(mut self, system: T) -> Self
-    where
-        T: 'static + RunNow<'a>,
-    {
-        self.signal.push(Box::new(system));
-        self
-    }
-
-    pub(crate) fn build(self) -> SceneState<'a> {
-        let SceneBuilder {
-            world,
-            update,
-            signal,
-        } = self;
-
-        SceneState {
-            world,
-            update,
-            signal,
-        }
-    }
-}
-
-pub struct SceneFactories(HashMap<&'static str, Box<dyn Fn(SceneBuilder) -> SceneBuilder>>);
-
-impl SceneFactories {
+impl SceneStack {
     pub fn new() -> Self {
-        SceneFactories(HashMap::new())
-    }
-
-    pub fn add<F>(&mut self, key: &'static str, factory: F)
-    where
-        F: 'static + Fn(SceneBuilder) -> SceneBuilder,
-    {
-        self.0.insert(key, Box::new(factory));
-    }
-
-    pub fn create<'a>(&self, key: &'static str) -> Option<SceneState<'a>> {
-        let builder = SceneBuilder::new();
-        match self.0.get(key) {
-            Some(ref factory) => Some(factory(builder).build()),
-            None => None,
-        }
-    }
-}
-
-pub struct SceneStack<'a> {
-    factories: SceneFactories,
-    scenes: Vec<SceneState<'a>>,
-    request: Option<TransitionRequest>,
-}
-
-impl<'a> SceneStack<'a> {
-    pub fn new(factories: SceneFactories) -> Self {
         SceneStack {
-            factories,
             scenes: Vec::new(),
             request: None,
         }
@@ -126,24 +24,38 @@ impl<'a> SceneStack<'a> {
     /// Retrieves the scene at the top of the stack.
     ///
     /// Returns `None` when the stack is empty.
-    pub fn current(&self) -> Option<&SceneState<'a>> {
-        self.scenes.last()
+    pub fn current(&self) -> Option<&dyn Scene> {
+        self.scenes.last().map(|scene_box| &**scene_box)
     }
 
     /// Retrieves the scene at the top of the stack.
     ///
     /// Returns `None` when the stack is empty.
-    pub fn current_mut(&mut self) -> Option<&mut SceneState<'a>> {
-        self.scenes.last_mut()
+    pub fn current_mut(&mut self) -> Option<&mut (dyn Scene + 'static)> {
+        self.scenes.last_mut().map(|scene_box| &mut **scene_box)
     }
 
-    /// Instantiates a new instance of the given
-    /// scene type on the top of the stack.
-    pub fn push(&mut self, key: &'static str) -> bool {
+    /// Schedules the given instance of a
+    /// scene on the top of the stack.
+    pub fn push<S>(&mut self, scene: S) -> bool
+    where
+        S: 'static + Scene,
+    {
         if self.request.is_some() {
             false
         } else {
-            self.request = Some(TransitionRequest::Push(key));
+            self.request = Some(Trans::Push(Box::new(scene)));
+            true
+        }
+    }
+
+    /// Schedules the given instance of a
+    /// scene on the top of the stack.
+    pub fn push_box(&mut self, scene_box: Box<dyn Scene>) -> bool {
+        if self.request.is_some() {
+            false
+        } else {
+            self.request = Some(Trans::Push(scene_box));
             true
         }
     }
@@ -167,19 +79,15 @@ impl<'a> SceneStack<'a> {
 
 /// Methods for applying a stack change from
 /// a request, during maintain
-impl<'a> SceneStack<'a> {
+impl SceneStack {
     pub fn maintain(&mut self) -> SceneResult {
         if let Some(request) = self.request.take() {
-            use TransitionRequest::*;
+            use Trans::*;
 
             match request {
-                Push(key) => {
-                    if self.factories.0.contains_key(key) {
-                        self.apply_push(key);
-                        Ok(())
-                    } else {
-                        Err(SceneError::KeyNotRegistered(key))
-                    }
+                Push(scene) => {
+                    self.apply_push(scene);
+                    Ok(())
                 }
                 _ => unimplemented!(),
             }
@@ -188,10 +96,11 @@ impl<'a> SceneStack<'a> {
         }
     }
 
-    fn apply_push(&mut self, key: &'static str) {
-        match self.factories.create(key) {
-            Some(scene) => self.scenes.push(scene),
-            None => {}
+    fn apply_push(&mut self, scene_box: Box<dyn Scene>) {
+        self.scenes.push(scene_box);
+
+        if let Some(ref mut s) = self.current_mut() {
+            s.on_start();
         }
     }
 
@@ -205,18 +114,18 @@ impl<'a> SceneStack<'a> {
 }
 
 /// Methods for dispatching main loop events
-impl<'a> SceneStack<'a> {
+impl SceneStack {
     pub fn dispatch_update(&mut self) {
         if let Some(ref mut scene) = self.current_mut() {
-            scene.dispatch_update();
+            // scene.dispatch_update();
         }
     }
 }
 
-enum TransitionRequest {
-    Push(&'static str),
+enum Trans {
+    Push(Box<dyn Scene>),
     Pop,
-    Replace(&'static str),
+    Replace(Box<dyn Scene>),
 }
 
 pub type SceneResult = Result<(), SceneError>;

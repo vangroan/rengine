@@ -5,7 +5,7 @@ use crate::comp::{X_AXIS, Y_AXIS};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
-use crate::scene::{SceneBuilder, SceneError, SceneFactories, SceneStack};
+use crate::scene::{Scene, SceneError, SceneStack};
 use crate::sys::{CameraResizeSystem, DrawSystem};
 use gfx::traits::FactoryExt;
 use gfx::Device;
@@ -23,22 +23,10 @@ pub struct App<'comp, 'thread> {
     world: World,
     dispatcher: Dispatcher<'comp, 'thread>,
     bkg_color: colors::Color,
-    initial_scene_key: Option<&'static str>,
-    scene_factories: SceneFactories,
+    initial_scene: Option<Box<Scene>>,
 }
 
 impl<'a, 'b> App<'a, 'b> {
-    pub fn init_scene(&mut self, key: &'static str) {
-        self.initial_scene_key = Some(key);
-    }
-
-    pub fn register_scene<F>(&mut self, key: &'static str, factory: F)
-    where
-        F: 'static + Fn(SceneBuilder) -> SceneBuilder,
-    {
-        self.scene_factories.add(key, factory);
-    }
-
     /// Starts the application loop
     ///
     /// Consumes the app
@@ -50,8 +38,7 @@ impl<'a, 'b> App<'a, 'b> {
             mut graphics,
             mut world,
             mut dispatcher,
-            initial_scene_key,
-            scene_factories,
+            initial_scene,
             bkg_color,
             ..
         } = self;
@@ -183,11 +170,11 @@ impl<'a, 'b> App<'a, 'b> {
         let mut renderer = DrawSystem::new(channel.clone(), graphics.render_target.clone());
 
         // Scenes
-        let mut scene_stack = SceneStack::new(scene_factories);
+        let mut scene_stack = SceneStack::new();
 
-        match initial_scene_key {
-            Some(key) => {
-                scene_stack.push(key);
+        match initial_scene {
+            Some(scene_box) => {
+                scene_stack.push_box(scene_box);
             }
             None => return Err(AppError::NoInitialScene),
         }
@@ -206,10 +193,7 @@ impl<'a, 'b> App<'a, 'b> {
             scene_stack.maintain()?;
 
             // Prepare world with frame scoped resources
-            world.add_resource(delta_time.clone());
-            scene_stack
-                .current_mut()
-                .map(|scene| scene.world.add_resource(delta_time));
+            world.add_resource(delta_time);
 
             // Drain user input events
             events_loop.poll_events(|event| match event {
@@ -389,6 +373,7 @@ pub struct AppBuilder {
     size: [u32; 2],
     title: &'static str,
     bkg_color: colors::Color,
+    initial_scene: Option<Box<dyn Scene>>,
 }
 
 impl AppBuilder {
@@ -397,6 +382,7 @@ impl AppBuilder {
             size: [640, 480],
             title: "rengine",
             bkg_color: colors::BLACK,
+            initial_scene: None,
         }
     }
 
@@ -421,8 +407,17 @@ impl AppBuilder {
         self
     }
 
+    #[inline]
+    pub fn init_scene<S>(mut self, scene: S) -> Self
+    where
+        S: 'static + Scene,
+    {
+        self.initial_scene = Some(Box::new(scene));
+        self
+    }
+
     /// Consumes the builder and creates the application
-    pub fn build<'a, 'b>(self) -> Result<App<'a, 'b>, Box<dyn Error>> {
+    pub fn build<'a, 'b>(mut self) -> Result<App<'a, 'b>, Box<dyn Error>> {
         // Event Loop
         let events_loop = EventsLoop::new();
 
@@ -460,14 +455,16 @@ impl AppBuilder {
         // Dispatcher
         let dispatcher = DispatcherBuilder::new().build();
 
+        // Initial Scene
+        let initial_scene = self.initial_scene.take();
+
         Ok(App {
             events_loop,
             graphics,
             world,
             dispatcher,
             bkg_color: self.bkg_color,
-            initial_scene_key: None,
-            scene_factories: SceneFactories::new(),
+            initial_scene,
         })
     }
 }
