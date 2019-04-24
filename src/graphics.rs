@@ -31,6 +31,16 @@ impl GraphicContext {
         &mut self.window
     }
 
+    #[inline]
+    pub fn factory(&self) -> &Factory {
+        &self.factory
+    }
+
+    #[inline]
+    pub fn factory_mut(&mut self) -> &mut Factory {
+        &mut self.factory
+    }
+
     pub fn create_encoder(&mut self) -> Encoder<Resources, CommandBuffer> {
         self.factory.create_command_buffer().into()
     }
@@ -58,10 +68,12 @@ impl GraphicContext {
         }
     }
 
-    pub fn create_texture_cache<'a>() -> TextureAssets<'a, Factory, Resources> {
+    pub fn create_texture_cache() -> TextureAssets<Resources> {
         TextureAssets::new()
     }
 }
+
+pub type GlTextureAssets = TextureAssets<Resources>;
 
 /// Channels for sending graphics encoders accross thread boundries
 pub struct ChannelPair<R: gfx::Resources, C: gfx::CommandBuffer<R>> {

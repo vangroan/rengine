@@ -1,7 +1,7 @@
 use crate::gfx_types::ColorFormat;
 use gfx::texture::{FilterMethod, SamplerInfo, WrapMode};
 use std::collections::BTreeMap;
-use std::marker::PhantomData;
+
 use std::sync::Arc;
 
 const DEFAULT_TEXTURE_KEY: &str = "#";
@@ -13,23 +13,18 @@ const DEFAULT_TEXTURE_KEY: &str = "#";
 /// are immutable, can be sent across thread boundries to
 /// systems, but access to the cache itself must occur from
 /// a single thread.
-pub struct TextureAssets<'a, F: gfx::Factory<R>, R: gfx::Resources> {
+pub struct TextureAssets<R: gfx::Resources> {
     /// Reference counted shared textures.
     cache: BTreeMap<String, Arc<AssetBundle<R>>>,
-    _marker_f: PhantomData<&'a F>,
-    _marker_r: PhantomData<&'a R>,
 }
 
-impl<'a, F, R> TextureAssets<'a, F, R>
+impl<R> TextureAssets<R>
 where
-    F: gfx::Factory<R>,
     R: gfx::Resources,
 {
     pub fn new() -> Self {
         TextureAssets {
             cache: BTreeMap::new(),
-            _marker_f: PhantomData,
-            _marker_r: PhantomData,
         }
     }
 
@@ -39,7 +34,10 @@ where
     /// can be drawn using a shader that expects a texture to be loaded.
     ///
     /// Sampling an empty texture would be undefined behaviour.
-    pub fn default_texture(&mut self, factory: &mut F) -> Arc<AssetBundle<R>> {
+    pub fn default_texture<F>(&mut self, factory: &mut F) -> Arc<AssetBundle<R>>
+    where
+        F: gfx::Factory<R>,
+    {
         // Constant image
         let data: &[&[u8]] = &[&[0xFF, 0xFF, 0xFF, 0xFF]];
         let (width, height) = (1, 1);
@@ -48,7 +46,10 @@ where
     }
 
     /// TODO: Normalise path to something common, like absolute, or relative to CWD; for cache so we don't load same texture twice under differnet looking paths
-    pub fn load_texture(&mut self, factory: &mut F, path: &str) -> Arc<AssetBundle<R>> {
+    pub fn load_texture<F>(&mut self, factory: &mut F, path: &str) -> Arc<AssetBundle<R>>
+    where
+        F: gfx::Factory<R>,
+    {
         // Load from disk
         let img = image::open(path).unwrap().to_rgba();
         let (width, height) = img.dimensions();
@@ -62,14 +63,17 @@ where
     ///
     /// The width and height are the dimensions of the image, and the data
     /// is a slice of pixels, represented as slices.
-    fn create_texture(
+    fn create_texture<F>(
         &mut self,
         factory: &mut F,
         key: &str,
         width: u32,
         height: u32,
         data: &[&[u8]],
-    ) -> Arc<AssetBundle<R>> {
+    ) -> Arc<AssetBundle<R>>
+    where
+        F: gfx::Factory<R>,
+    {
         self.cache
             .entry(key.to_owned())
             .or_insert_with(|| {
@@ -104,9 +108,8 @@ where
     }
 }
 
-impl<'a, F, R> Default for TextureAssets<'a, F, R>
+impl<R> Default for TextureAssets<R>
 where
-    F: gfx::Factory<R>,
     R: 'static + gfx::Resources,
 {
     fn default() -> Self {

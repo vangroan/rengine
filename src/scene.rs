@@ -1,17 +1,27 @@
+use crate::graphics::GraphicContext;
 use specs::World;
 use std::error::Error;
 use std::fmt;
 
 pub trait Scene {
-    fn on_start(&mut self, _world: &World) -> Option<Trans> {
+    fn on_start(&mut self, ctx: &Context<'_>) -> Option<Trans> {
         None
     }
-    fn on_stop(&mut self) {}
+
+    fn on_stop(&mut self, ctx: &Context<'_>) -> Option<Trans> {
+        None
+    }
+
     fn on_resume(&mut self) {}
     fn on_pause(&mut self) {}
     fn on_event(&mut self) {}
     fn on_update(&mut self) {}
     fn on_message(&mut self) {}
+}
+
+pub struct Context<'a> {
+    pub world: &'a World,
+    pub graphics: &'a GraphicContext,
 }
 
 pub struct SceneStack {
@@ -99,21 +109,21 @@ impl SceneStack {
 /// Methods for applying a stack change from
 /// a request, during maintain
 impl SceneStack {
-    pub fn maintain(&mut self, world: &World) -> SceneResult {
+    pub fn maintain(&mut self, world: &World, graphics: &GraphicContext) -> SceneResult {
         if let Some(request) = self.request.take() {
             use Trans::*;
 
             match request {
                 Push(scene_box) => {
-                    self.apply_push(scene_box, world);
+                    self.apply_push(scene_box, world, graphics);
                     Ok(())
                 }
                 Pop => {
-                    self.apply_pop();
+                    self.apply_pop(world, graphics);
                     Ok(())
                 }
                 Replace(scene_box) => {
-                    self.apply_replace(scene_box, world);
+                    self.apply_replace(scene_box, world, graphics);
                     Ok(())
                 }
             }
@@ -122,7 +132,7 @@ impl SceneStack {
         }
     }
 
-    fn apply_push(&mut self, scene_box: Box<dyn Scene>, world: &World) {
+    fn apply_push(&mut self, scene_box: Box<dyn Scene>, world: &World, graphics: &GraphicContext) {
         if let Some(ref mut s) = self.current_mut() {
             s.on_pause();
         }
@@ -131,16 +141,21 @@ impl SceneStack {
         self.scenes.push(scene_box);
 
         if let Some(ref mut s) = self.current_mut() {
-            let trans = s.on_start(world);
+            let ctx = Context { world, graphics };
+            let trans = s.on_start(&ctx);
             if !trans.is_none() {
                 self.request = trans;
             }
         }
     }
 
-    fn apply_pop(&mut self) {
+    fn apply_pop(&mut self, world: &World, graphics: &GraphicContext) {
         if let Some(ref mut s) = self.current_mut() {
-            s.on_stop();
+            let ctx = Context { world, graphics };
+            let trans = s.on_stop(&ctx);
+            if !trans.is_none() {
+                self.request = trans;
+            }
         }
 
         self.scenes.pop();
@@ -150,16 +165,29 @@ impl SceneStack {
         }
     }
 
-    fn apply_replace(&mut self, scene_box: Box<dyn Scene>, world: &World) {
+    fn apply_replace(
+        &mut self,
+        scene_box: Box<dyn Scene>,
+        world: &World,
+        graphics: &GraphicContext,
+    ) {
         if let Some(ref mut s) = self.current_mut() {
-            s.on_stop();
+            let ctx = Context { world, graphics };
+            let trans = s.on_stop(&ctx);
+            if !trans.is_none() {
+                self.request = trans;
+            }
         }
 
         self.scenes.pop();
         self.scenes.push(scene_box);
 
         if let Some(ref mut s) = self.current_mut() {
-            s.on_start(world);
+            let ctx = Context { world, graphics };
+            let trans = s.on_start(&ctx);
+            if !trans.is_none() {
+                self.request = trans;
+            }
         }
     }
 }
