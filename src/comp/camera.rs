@@ -1,4 +1,4 @@
-use nalgebra::{Matrix4, Point3, Vector3};
+use nalgebra::{Matrix4, Point3};
 use specs::{Component, DenseVecStorage};
 
 const DEFAULT_SCALE_PIXELS: f32 = 1000.;

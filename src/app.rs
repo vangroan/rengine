@@ -1,7 +1,7 @@
 use crate::angle::Deg;
 use crate::colors;
-use crate::comp::{Camera, GlTexture, Mesh, MeshBuilder, Transform};
-use crate::comp::{X_AXIS, Y_AXIS};
+use crate::comp::Y_AXIS;
+use crate::comp::{Camera, GlTexture, Mesh, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};

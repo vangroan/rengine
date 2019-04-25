@@ -1,5 +1,4 @@
 use crate::res::AssetBundle;
-use gfx_device::Resources;
 use nalgebra::Vector2;
 use specs::{Component, DenseVecStorage};
 use std::sync::Arc;

@@ -46,6 +46,7 @@ gfx_defines! {
 pub type PipelineStateObject = gfx::PipelineState<gfx_device::Resources, pipe::Meta>;
 pub type ShaderProgram = gfx::handle::Program<gfx_device::Resources>;
 
+#[allow(dead_code)]
 pub struct PipelineBundle {
     pub(crate) pso: PipelineStateObject,
     pub(crate) program: ShaderProgram,
