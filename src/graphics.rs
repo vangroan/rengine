@@ -68,12 +68,12 @@ impl GraphicContext {
         }
     }
 
-    pub fn create_texture_cache() -> TextureAssets<Resources> {
+    pub fn create_texture_cache() -> TextureAssets {
         TextureAssets::new()
     }
 }
 
-pub type GlTextureAssets = TextureAssets<Resources>;
+pub type GlTextureAssets = TextureAssets;
 
 /// Channels for sending graphics encoders accross thread boundries
 pub struct ChannelPair<R: gfx::Resources, C: gfx::CommandBuffer<R>> {

@@ -51,7 +51,7 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Assets
         // TODO: Place in world and allow for loading textures from game without needing factory (operation buffer?)
-        let mut textures = GraphicContext::create_texture_cache();
+        let textures = GraphicContext::create_texture_cache();
         world.add_resource(textures);
 
         // Initial ViewPort Size
@@ -114,52 +114,6 @@ impl<'a, 'b> App<'a, 'b> {
         // lifetime issues with world resources borrowing each other.
         world.add_resource(PipelineBundle::new(pso, shader_program));
 
-        // Test Quad
-        // use specs::Builder;
-        // let tex = GlTexture::from_bundle(
-        //     textures.load_texture(&mut graphics.factory, "examples/block.png"),
-        // );
-        // let tex_rects = {
-        //     let tex_rect = tex.source_rect();
-        //     let back_rect = tex_rect.sub_rect([0, 0], [16, 16]);
-        //     let front_rect = tex_rect.sub_rect([16, 0], [16, 16]);
-        //     let left_rect = tex_rect.sub_rect([32, 0], [16, 16]);
-        //     let right_rect = tex_rect.sub_rect([0, 16], [16, 16]);
-        //     let bottom_rect = tex_rect.sub_rect([16, 16], [16, 16]);
-        //     let top_rect = tex_rect.sub_rect([32, 16], [16, 16]);
-        //     [
-        //         back_rect,
-        //         front_rect,
-        //         left_rect,
-        //         right_rect,
-        //         bottom_rect,
-        //         top_rect,
-        //     ]
-        // };
-        // let _entity = world
-        //     .create_entity()
-        //     .with(
-        //         MeshBuilder::new()
-        //             // .quad(
-        //             //     [0., 0., 0.],
-        //             //     [1., 1.],
-        //             //     // [colors::RED, colors::GREEN, colors::BLUE, colors::MAGENTA],
-        //             //     [colors::WHITE, colors::WHITE, colors::WHITE, colors::WHITE],
-        //             // )
-        //             .pseudocube([0., 0., 0.], [1., 1., 1.], tex_rects)
-        //             .build(&mut graphics),
-        //     )
-        //     .with(
-        //         Transform::default()
-        //             .with_anchor([0.5, 0.5, 0.5])
-        //             .with_position([0.25, 0.25, 0.])
-        //             .with_scale([0.5, 0.5, 0.5])
-        //             .with_rotate_world(Deg(45.), Y_AXIS)
-        //             .with_rotate_world(Deg(30.), X_AXIS),
-        //     )
-        //     .with(tex)
-        //     .build();
-
         // Encoder
         let mut channel = ChannelPair::new();
         if let Err(_) = channel.send_block(graphics.create_encoder()) {
@@ -191,7 +145,7 @@ impl<'a, 'b> App<'a, 'b> {
             last_time = new_time;
 
             // Prepare requested scene
-            scene_stack.maintain(&world, &graphics)?;
+            scene_stack.maintain(&mut world, &mut graphics)?;
 
             // Prepare world with frame scoped resources
             world.add_resource(delta_time);

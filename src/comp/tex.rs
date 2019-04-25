@@ -9,11 +9,11 @@ use std::sync::Arc;
 #[derive(Component)]
 #[storage(DenseVecStorage)]
 pub struct GlTexture {
-    pub(crate) bundle: Arc<AssetBundle<Resources>>,
+    pub(crate) bundle: Arc<AssetBundle>,
 }
 
 impl GlTexture {
-    pub fn from_bundle(bundle: Arc<AssetBundle<Resources>>) -> Self {
+    pub fn from_bundle(bundle: Arc<AssetBundle>) -> Self {
         GlTexture { bundle }
     }
 

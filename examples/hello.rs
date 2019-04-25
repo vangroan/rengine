@@ -10,13 +10,13 @@ use std::fmt;
 struct Intro;
 
 impl Scene for Intro {
-    fn on_start(&mut self, _ctx: &Context<'_>) -> Option<Trans> {
+    fn on_start(&mut self, _ctx: &mut Context<'_>) -> Option<Trans> {
         println!("{:?}: On start", self);
 
         Trans::replace(Game::default())
     }
 
-    fn on_stop(&mut self, _ctx: &Context<'_>) -> Option<Trans> {
+    fn on_stop(&mut self, _ctx: &mut Context<'_>) -> Option<Trans> {
         println!("{:?}: On stop", self);
 
         None
@@ -29,7 +29,7 @@ struct Game {
 }
 
 impl Scene for Game {
-    fn on_start(&mut self, ctx: &Context<'_>) -> Option<Trans> {
+    fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         println!("{}: On start", self);
 
         // Test Pseudocube
