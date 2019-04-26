@@ -138,7 +138,7 @@ impl<'a, 'b> App<'a, 'b> {
         let mut running = true;
         let mut last_time = Instant::now();
 
-        while running {
+        'main: while running {
             // Time elapsed since last iteration
             let new_time = Instant::now();
             let delta_time = DeltaTime(new_time.duration_since(last_time));
@@ -155,7 +155,16 @@ impl<'a, 'b> App<'a, 'b> {
                 WindowEvent {
                     event: glutin::WindowEvent::CloseRequested,
                     ..
-                } => running = false,
+                } => {
+                    println!("Shutting down");
+
+                    running = false;
+
+                    // Allow scenes to cleanup resources
+                    if let Err(err) = scene_stack.clear(&mut world, &mut graphics) {
+                        eprintln!("{:?}", err);
+                    }
+                }
                 WindowEvent {
                     event: glutin::WindowEvent::Resized(logical_size),
                     ..

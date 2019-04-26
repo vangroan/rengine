@@ -55,7 +55,7 @@ impl Scene for Game {
                 top_rect,
             ]
         };
-        let _entity = ctx
+        let entity = ctx
             .world
             .create_entity()
             .with(
@@ -79,6 +79,18 @@ impl Scene for Game {
             )
             .with(tex)
             .build();
+
+        self.entities.push(entity);
+
+        None
+    }
+
+    fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        println!("{}: On stop", self);
+
+        if let Err(err) = ctx.world.delete_entities(&self.entities) {
+            panic!(err);
+        }
 
         None
     }

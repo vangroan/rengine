@@ -132,6 +132,19 @@ impl SceneStack {
         }
     }
 
+    /// Pops each scene off the stack, calling `on_stop` for each.
+    pub fn clear(&mut self, world: &mut World, graphics: &mut GraphicContext) -> SceneResult {
+        while let Some(mut s) = self.scenes.pop() {
+            let mut ctx = Context { world, graphics };
+            let trans = s.on_stop(&mut ctx);
+            if !trans.is_none() {
+                self.request = trans;
+            }
+        }
+
+        Ok(())
+    }
+
     fn apply_push(
         &mut self,
         scene_box: Box<dyn Scene>,
@@ -142,7 +155,6 @@ impl SceneStack {
             s.on_pause();
         }
 
-        println!("Pushing");
         self.scenes.push(scene_box);
 
         if let Some(ref mut s) = self.current_mut() {
