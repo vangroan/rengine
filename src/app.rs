@@ -194,16 +194,8 @@ impl<'a, 'b> App<'a, 'b> {
                 _ => (),
             });
 
-            // TODO: Remove
-            {
-                use specs::Join;
-                let mut trans = world.write_storage::<Transform>();
-                for (ref mut tran,) in (&mut trans,).join() {
-                    tran.rotate(Deg(0.5), Y_AXIS);
-                }
-            }
-
             // Scene Update
+            scene_stack.dispatch_update(&mut world, &mut graphics);
 
             // Pre-render
             match channel.recv_block() {

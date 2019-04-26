@@ -95,8 +95,14 @@ impl Scene for Game {
         None
     }
 
-    fn on_update(&mut self) {
-        println!("{}: On update", self);
+    fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        use specs::Join;
+        let mut trans = ctx.world.write_storage::<Transform>();
+        for (ref mut tran,) in (&mut trans,).join() {
+            tran.rotate(Deg(0.5), Y_AXIS);
+        }
+
+        None
     }
 }
 

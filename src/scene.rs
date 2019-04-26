@@ -15,7 +15,11 @@ pub trait Scene {
     fn on_resume(&mut self) {}
     fn on_pause(&mut self) {}
     fn on_event(&mut self) {}
-    fn on_update(&mut self) {}
+
+    fn on_update(&mut self, _ctx: &mut Context<'_>) -> Option<Trans> {
+        None
+    }
+
     fn on_message(&mut self) {}
 }
 
@@ -211,9 +215,13 @@ impl SceneStack {
 
 /// Methods for dispatching main loop events
 impl SceneStack {
-    pub fn dispatch_update(&mut self) {
-        if let Some(ref mut _scene) = self.current_mut() {
-            // scene.dispatch_update();
+    pub fn dispatch_update(&mut self, world: &mut World, graphics: &mut GraphicContext) {
+        if let Some(ref mut scene) = self.current_mut() {
+            let mut ctx = Context { world, graphics };
+            let trans = scene.on_update(&mut ctx);
+            if !trans.is_none() {
+                self.request = trans;
+            }
         }
     }
 }
