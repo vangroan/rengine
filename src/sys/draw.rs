@@ -46,7 +46,9 @@ impl<'a> System<'a> for DrawSystem {
                     .camera_entity()
                     .and_then(|entity| lift2(cameras.get(entity), transforms.get(entity)))
                     .map(|(camera, transform)| {
-                        (camera.proj_matrix, camera.view_matrix(transform.pos))
+                        let pos = transform.pos;
+
+                        (camera.proj_matrix(pos), camera.view_matrix(pos))
                     })
                     .unwrap_or((Matrix4::identity(), Matrix4::identity()));
 

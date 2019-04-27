@@ -12,6 +12,7 @@ const UP_AXIS: [f32; 3] = [0., 1., 0.];
 pub struct Camera {
     /// The number of physical device pixels that spans a screen unit
     scale_pixels: f32,
+    device_size: [u16; 2],
 
     pub(crate) target_pos: Point3<f32>,
     pub(crate) proj_matrix: Matrix4<f32>,
@@ -24,6 +25,7 @@ impl Camera {
     pub fn with_device_size(device_size: (u16, u16)) -> Self {
         let mut camera = Camera {
             scale_pixels: DEFAULT_SCALE_PIXELS,
+            device_size: [0, 0],
             target_pos: Point3::new(0., 0., 0.),
             proj_matrix: Matrix4::identity(),
         };
@@ -35,17 +37,18 @@ impl Camera {
 
     /// Notify the camera that the view port dimensions have udpated.
     pub fn update_view(&mut self, device_size: (u16, u16)) {
-        let (dev_w, dev_h) = device_size;
-        let scale_pixels = self.scale_pixels;
+        self.device_size = [device_size.0, device_size.1];
+        // let (dev_w, dev_h) = device_size;
+        // let scale_pixels = self.scale_pixels;
 
-        self.proj_matrix = Matrix4::new_orthographic(
-            0.,
-            dev_w as f32 / scale_pixels,
-            0.,
-            dev_h as f32 / scale_pixels,
-            -10.0,
-            10.0,
-        );
+        // self.proj_matrix = Matrix4::new_orthographic(
+        //     -1.,
+        //     dev_w as f32 / scale_pixels,
+        //     -1.,
+        //     dev_h as f32 / scale_pixels,
+        //     -10.0,
+        //     10.0,
+        // );
     }
 
     pub fn target(&self) -> &Point3<f32> {
@@ -73,4 +76,21 @@ impl Camera {
             &UP_AXIS.into(),
         )
     }
+
+    pub fn proj_matrix<V>(&self, camera_pos: V) -> Matrix4<f32>
+    where
+        V: Into<Point3<f32>>,
+    {
+        let pos = camera_pos.into();
+        let [dev_w, dev_h] = self.device_size;
+        let scale_pixels = self.scale_pixels;
+        let (width, height) = (dev_w as f32 / scale_pixels, dev_h as f32 / scale_pixels);
+
+        Matrix4::new_orthographic(pos.x, pos.x + width, pos.y, pos.y + height, -10.0, 10.0)
+    }
 }
+
+/// Camera Projection
+#[derive(Component, Debug)]
+#[storage(DenseVecStorage)]
+pub struct CameraProj {}

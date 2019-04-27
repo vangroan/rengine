@@ -2,11 +2,12 @@ extern crate rengine;
 use rengine::angle::Deg;
 use rengine::comp::Camera;
 use rengine::comp::{GlTexture, MeshBuilder, Transform, X_AXIS, Y_AXIS};
+use rengine::glutin::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use rengine::nalgebra::Vector3;
 use rengine::option::lift2;
-use rengine::res::ActiveCamera;
 use rengine::res::TextureAssets;
-use rengine::specs::{Builder, Entity, ReadExpect, WriteStorage};
+use rengine::res::{ActiveCamera, DeltaTime};
+use rengine::specs::{Builder, Entity, Read, ReadExpect, WriteStorage};
 use rengine::{Context, GlTextureAssets, Scene, Trans};
 use std::error::Error;
 use std::fmt;
@@ -36,9 +37,25 @@ impl Scene for Intro {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Game {
+    // Camera move speed, unit per second
+    camera_speed: f32,
+
+    // Intended direction of camera movement
+    camera_dir: Vector3<f32>,
+
     entities: Vec<Entity>,
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Game {
+            camera_speed: 2.,
+            camera_dir: Vector3::new(0., 0., 0.),
+            entities: Vec::new(),
+        }
+    }
 }
 
 impl Scene for Game {
@@ -113,17 +130,67 @@ impl Scene for Game {
     }
 
     fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        let (dt,): (Read<DeltaTime>,) = ctx.world.system_data();
         let (active_camera, mut cameras, mut transforms): CameraData = ctx.world.system_data();
 
         let maybe_cam = active_camera
             .camera_entity()
             .and_then(|e| lift2(cameras.get_mut(e), transforms.get_mut(e)));
 
-        if let Some((camera, transform)) = maybe_cam {
-            let look_at = camera.target().to_homogeneous();
-
+        if let Some((_camera, transform)) = maybe_cam {
+            let translate = self.camera_dir * self.camera_speed * dt.as_secs_float();
+            transform.translate(translate);
+            // let look_at = camera.target().to_homogeneous();
             // camera.set_target([]);
         }
+
+        // Clear direction for next frame
+        self.camera_dir = Vector3::new(0., 0., 0.);
+
+        None
+    }
+
+    fn on_event(&mut self, ctx: &mut Context<'_>, event: &Event) -> Option<Trans> {
+        let (active_camera, mut cameras, mut transforms): CameraData = ctx.world.system_data();
+
+        let maybe_cam = active_camera
+            .camera_entity()
+            .and_then(|e| lift2(cameras.get_mut(e), transforms.get_mut(e)));
+
+        match event {
+            Event::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                virtual_keycode: Some(key),
+                                state,
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => match state {
+                ElementState::Pressed => match key {
+                    VirtualKeyCode::W => {
+                        self.camera_dir.y = 1.;
+                    }
+                    VirtualKeyCode::S => {
+                        self.camera_dir.y = -1.;
+                    }
+                    VirtualKeyCode::A => {
+                        self.camera_dir.x = -1.;
+                    }
+                    VirtualKeyCode::D => {
+                        self.camera_dir.x = 1.;
+                    }
+                    _ => {}
+                },
+                ElementState::Released => {}
+            },
+            _ => {}
+        }
+        if let Some((_camera, _transform)) = maybe_cam {}
 
         None
     }

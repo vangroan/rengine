@@ -14,7 +14,10 @@ pub trait Scene {
 
     fn on_resume(&mut self) {}
     fn on_pause(&mut self) {}
-    fn on_event(&mut self) {}
+
+    fn on_event(&mut self, _ctx: &mut Context<'_>, _ev: &glutin::Event) -> Option<Trans> {
+        None
+    }
 
     fn on_update(&mut self, _ctx: &mut Context<'_>) -> Option<Trans> {
         None
@@ -219,6 +222,21 @@ impl SceneStack {
         if let Some(ref mut scene) = self.current_mut() {
             let mut ctx = Context { world, graphics };
             let trans = scene.on_update(&mut ctx);
+            if !trans.is_none() {
+                self.request = trans;
+            }
+        }
+    }
+
+    pub fn dispatch_event(
+        &mut self,
+        world: &mut World,
+        graphics: &mut GraphicContext,
+        event: &glutin::Event,
+    ) {
+        if let Some(ref mut scene) = self.current_mut() {
+            let mut ctx = Context { world, graphics };
+            let trans = scene.on_event(&mut ctx, event);
             if !trans.is_none() {
                 self.request = trans;
             }

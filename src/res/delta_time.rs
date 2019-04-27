@@ -9,4 +9,9 @@ impl DeltaTime {
     pub fn duration(&self) -> &Duration {
         &self.0
     }
+
+    #[inline]
+    pub fn as_secs_float(&self) -> f32 {
+        self.0.as_millis() as f32 / 1000.
+    }
 }

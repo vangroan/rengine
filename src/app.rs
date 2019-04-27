@@ -151,47 +151,53 @@ impl<'a, 'b> App<'a, 'b> {
             world.add_resource(delta_time);
 
             // Drain user input events
-            events_loop.poll_events(|event| match event {
-                WindowEvent {
-                    event: glutin::WindowEvent::CloseRequested,
-                    ..
-                } => {
-                    println!("Shutting down");
+            events_loop.poll_events(|event| {
+                // Global event handling
+                match event {
+                    WindowEvent {
+                        event: glutin::WindowEvent::CloseRequested,
+                        ..
+                    } => {
+                        println!("Shutting down");
 
-                    running = false;
+                        running = false;
 
-                    // Allow scenes to cleanup resources
-                    if let Err(err) = scene_stack.clear(&mut world, &mut graphics) {
-                        eprintln!("{:?}", err);
+                        // Allow scenes to cleanup resources
+                        if let Err(err) = scene_stack.clear(&mut world, &mut graphics) {
+                            eprintln!("{:?}", err);
+                        }
                     }
+                    WindowEvent {
+                        event: glutin::WindowEvent::Resized(logical_size),
+                        ..
+                    } => {
+                        // Coordinates use physical size
+                        let dpi_factor = graphics.window.get_hidpi_factor();
+                        let physical_size = logical_size.to_physical(dpi_factor);
+
+                        // Required by some platforms
+                        graphics.window.resize(physical_size);
+
+                        // Update dimensions of frame buffer targets
+                        graphics.update_views();
+
+                        // Ensure no dangling shared references
+                        renderer.render_target = graphics.render_target.clone();
+
+                        // Update view port/scissor rectangle for rendering systems
+                        let (win_w, win_h): (u32, u32) = physical_size.into();
+                        let vp = ViewPort::new((win_w as u16, win_h as u16));
+                        world.add_resource(vp);
+
+                        // Update cameras
+                        world.add_resource(DeviceDimensions::new(dpi_factor, logical_size));
+                        camera_resize_system.run_now(&world.res);
+                    }
+                    _ => (),
                 }
-                WindowEvent {
-                    event: glutin::WindowEvent::Resized(logical_size),
-                    ..
-                } => {
-                    // Coordinates use physical size
-                    let dpi_factor = graphics.window.get_hidpi_factor();
-                    let physical_size = logical_size.to_physical(dpi_factor);
 
-                    // Required by some platforms
-                    graphics.window.resize(physical_size);
-
-                    // Update dimensions of frame buffer targets
-                    graphics.update_views();
-
-                    // Ensure no dangling shared references
-                    renderer.render_target = graphics.render_target.clone();
-
-                    // Update view port/scissor rectangle for rendering systems
-                    let (win_w, win_h): (u32, u32) = physical_size.into();
-                    let vp = ViewPort::new((win_w as u16, win_h as u16));
-                    world.add_resource(vp);
-
-                    // Update cameras
-                    world.add_resource(DeviceDimensions::new(dpi_factor, logical_size));
-                    camera_resize_system.run_now(&world.res);
-                }
-                _ => (),
+                // Scene event handling
+                scene_stack.dispatch_event(&mut world, &mut graphics, &event);
             });
 
             // Scene Update

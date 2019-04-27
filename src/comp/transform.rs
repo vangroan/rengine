@@ -101,6 +101,14 @@ impl Transform {
 /// Methods that mutate the `Transform `in place
 impl Transform {
     #[inline]
+    pub fn translate<V>(&mut self, offset: V)
+    where
+        V: Into<Vec3>,
+    {
+        self.pos += offset.into();
+    }
+
+    #[inline]
     pub fn rotate<A, V>(&mut self, angle: A, axis: V)
     where
         A: Into<Rad<f32>>,
