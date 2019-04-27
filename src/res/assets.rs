@@ -98,6 +98,15 @@ impl TextureAssets {
             })
             .clone()
     }
+
+    /// Remove the given texture from the cache.
+    ///
+    /// Will not be deallocated immediately if it is
+    /// still used. Only reduces the reference count
+    /// on the `Arc`.
+    pub fn remove_texture(&mut self, key: &str) {
+        self.cache.remove(key);
+    }
 }
 
 impl Default for TextureAssets {

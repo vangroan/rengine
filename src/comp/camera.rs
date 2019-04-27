@@ -48,6 +48,10 @@ impl Camera {
         );
     }
 
+    pub fn target(&self) -> &Point3<f32> {
+        &self.target_pos
+    }
+
     pub fn set_target<V>(&mut self, pos: V)
     where
         V: Into<Point3<f32>>,
@@ -59,6 +63,14 @@ impl Camera {
     where
         V: Into<Point3<f32>>,
     {
-        Matrix4::face_towards(&camera_pos.into(), &self.target_pos, &UP_AXIS.into())
+        let camera_pos_point = camera_pos.into();
+
+        // Target is relative to implicit eye position, which is [0, 0, 0]
+        let target_pos = camera_pos_point.to_homogeneous() + self.target_pos.to_homogeneous();
+        Matrix4::face_towards(
+            &camera_pos_point,
+            &Point3::from_homogeneous(target_pos).unwrap(),
+            &UP_AXIS.into(),
+        )
     }
 }

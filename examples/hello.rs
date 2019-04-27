@@ -1,10 +1,23 @@
 extern crate rengine;
 use rengine::angle::Deg;
+use rengine::comp::Camera;
 use rengine::comp::{GlTexture, MeshBuilder, Transform, X_AXIS, Y_AXIS};
-use rengine::specs::{Builder, Entity};
+use rengine::nalgebra::Vector3;
+use rengine::option::lift2;
+use rengine::res::ActiveCamera;
+use rengine::res::TextureAssets;
+use rengine::specs::{Builder, Entity, ReadExpect, WriteStorage};
 use rengine::{Context, GlTextureAssets, Scene, Trans};
 use std::error::Error;
 use std::fmt;
+
+const BLOCK_TEX_PATH: &str = "examples/block.png";
+
+type CameraData<'a> = (
+    ReadExpect<'a, ActiveCamera>,
+    WriteStorage<'a, Camera>,
+    WriteStorage<'a, Transform>,
+);
 
 #[derive(Debug)]
 struct Intro;
@@ -36,7 +49,7 @@ impl Scene for Game {
         let tex = GlTexture::from_bundle(
             ctx.world
                 .write_resource::<GlTextureAssets>()
-                .load_texture(&mut ctx.graphics.factory_mut(), "examples/block.png"),
+                .load_texture(&mut ctx.graphics.factory_mut(), BLOCK_TEX_PATH),
         );
         let tex_rects = {
             let tex_rect = tex.source_rect();
@@ -92,14 +105,24 @@ impl Scene for Game {
             panic!(err);
         }
 
+        ctx.world
+            .write_resource::<TextureAssets>()
+            .remove_texture(BLOCK_TEX_PATH);
+
         None
     }
 
     fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
-        use specs::Join;
-        let mut trans = ctx.world.write_storage::<Transform>();
-        for (ref mut tran,) in (&mut trans,).join() {
-            tran.rotate(Deg(0.5), Y_AXIS);
+        let (active_camera, mut cameras, mut transforms): CameraData = ctx.world.system_data();
+
+        let maybe_cam = active_camera
+            .camera_entity()
+            .and_then(|e| lift2(cameras.get_mut(e), transforms.get_mut(e)));
+
+        if let Some((camera, transform)) = maybe_cam {
+            let look_at = camera.target().to_homogeneous();
+
+            // camera.set_target([]);
         }
 
         None
