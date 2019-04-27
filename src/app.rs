@@ -1,6 +1,6 @@
 use crate::camera::{CameraProjection, CameraView};
 use crate::colors;
-use crate::comp::{Camera, GlTexture, Mesh, Transform};
+use crate::comp::{GlTexture, Mesh, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
@@ -47,7 +47,6 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<Transform>();
         world.register::<CameraView>();
         world.register::<CameraProjection>();
-        world.register::<Camera>();
         world.register::<GlTexture>();
 
         // Assets
@@ -72,12 +71,6 @@ impl<'a, 'b> App<'a, 'b> {
         let camera_entity = world
             .create_entity()
             .with(Transform::new().with_position([0., 0., -2.]))
-            .with({
-                let mut cam = Camera::with_device_size((logical_w as u16, logical_h as u16));
-                cam.set_target([0., 0., 2.]);
-
-                cam
-            })
             .with(CameraProjection::with_device_size((
                 logical_w as u16,
                 logical_h as u16,

@@ -1,5 +1,5 @@
 use crate::camera::{CameraProjection, CameraView};
-use crate::comp::{Camera, GlTexture, Mesh, Transform};
+use crate::comp::{GlTexture, Mesh, Transform};
 use crate::gfx_types::{self, pipe, PipelineBundle, RenderTarget};
 use crate::graphics::ChannelPair;
 use crate::option::lift2;
@@ -33,7 +33,6 @@ impl<'a> System<'a> for DrawSystem {
         ReadStorage<'a, Mesh>,
         ReadStorage<'a, GlTexture>,
         ReadStorage<'a, Transform>,
-        ReadStorage<'a, Camera>,
         ReadStorage<'a, CameraView>,
         ReadStorage<'a, CameraProjection>,
     );
@@ -47,7 +46,6 @@ impl<'a> System<'a> for DrawSystem {
             meshes,
             textures,
             transforms,
-            _cameras,
             cam_views,
             cam_projs,
         ): Self::SystemData,

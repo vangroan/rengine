@@ -1,7 +1,6 @@
 extern crate rengine;
 use rengine::angle::Deg;
 use rengine::camera::{CameraProjection, CameraView};
-use rengine::comp::Camera;
 use rengine::comp::{GlTexture, MeshBuilder, Transform, X_AXIS, Y_AXIS};
 use rengine::glutin::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use rengine::nalgebra::Vector3;
