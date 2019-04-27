@@ -1,6 +1,5 @@
-use crate::angle::Deg;
+use crate::camera::{CameraProjection, CameraView};
 use crate::colors;
-use crate::comp::Y_AXIS;
 use crate::comp::{Camera, GlTexture, Mesh, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
@@ -46,6 +45,8 @@ impl<'a, 'b> App<'a, 'b> {
         // Engine Components
         world.register::<Mesh>();
         world.register::<Transform>();
+        world.register::<CameraView>();
+        world.register::<CameraProjection>();
         world.register::<Camera>();
         world.register::<GlTexture>();
 
@@ -77,6 +78,11 @@ impl<'a, 'b> App<'a, 'b> {
 
                 cam
             })
+            .with(CameraProjection::with_device_size((
+                logical_w as u16,
+                logical_h as u16,
+            )))
+            .with(CameraView::new())
             .build();
         world.add_resource(ActiveCamera::new(camera_entity));
 

@@ -1,5 +1,6 @@
 extern crate rengine;
 use rengine::angle::Deg;
+use rengine::camera::{CameraProjection, CameraView};
 use rengine::comp::Camera;
 use rengine::comp::{GlTexture, MeshBuilder, Transform, X_AXIS, Y_AXIS};
 use rengine::glutin::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
@@ -16,8 +17,8 @@ const BLOCK_TEX_PATH: &str = "examples/block.png";
 
 type CameraData<'a> = (
     ReadExpect<'a, ActiveCamera>,
-    WriteStorage<'a, Camera>,
-    WriteStorage<'a, Transform>,
+    WriteStorage<'a, CameraView>,
+    WriteStorage<'a, CameraProjection>,
 );
 
 #[derive(Debug)]
@@ -131,15 +132,16 @@ impl Scene for Game {
 
     fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         let (dt,): (Read<DeltaTime>,) = ctx.world.system_data();
-        let (active_camera, mut cameras, mut transforms): CameraData = ctx.world.system_data();
+        let (active_camera, mut cam_views, mut _cam_projs): CameraData = ctx.world.system_data();
 
         let maybe_cam = active_camera
             .camera_entity()
-            .and_then(|e| lift2(cameras.get_mut(e), transforms.get_mut(e)));
+            .and_then(|e| lift2(_cam_projs.get_mut(e), cam_views.get_mut(e)));
 
-        if let Some((_camera, transform)) = maybe_cam {
+        if let Some((_proj, view)) = maybe_cam {
             let translate = self.camera_dir * self.camera_speed * dt.as_secs_float();
-            transform.translate(translate);
+            let pos = view.position();
+            view.set_position(pos + translate);
             // let look_at = camera.target().to_homogeneous();
             // camera.set_target([]);
         }

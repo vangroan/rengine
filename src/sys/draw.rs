@@ -1,3 +1,4 @@
+use crate::camera::{CameraProjection, CameraView};
 use crate::comp::{Camera, GlTexture, Mesh, Transform};
 use crate::gfx_types::{self, pipe, PipelineBundle, RenderTarget};
 use crate::graphics::ChannelPair;
@@ -33,22 +34,34 @@ impl<'a> System<'a> for DrawSystem {
         ReadStorage<'a, GlTexture>,
         ReadStorage<'a, Transform>,
         ReadStorage<'a, Camera>,
+        ReadStorage<'a, CameraView>,
+        ReadStorage<'a, CameraProjection>,
     );
 
     fn run(
         &mut self,
-        (pipeline, view_port, active_camera, meshes, textures, transforms, cameras): Self::SystemData,
+        (
+            pipeline,
+            view_port,
+            active_camera,
+            meshes,
+            textures,
+            transforms,
+            _cameras,
+            cam_views,
+            cam_projs,
+        ): Self::SystemData,
     ) {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
                 // Without a camera, we draw according to the default OpenGL behaviour
                 let (proj_matrix, view_matrix) = active_camera
                     .camera_entity()
-                    .and_then(|entity| lift2(cameras.get(entity), transforms.get(entity)))
-                    .map(|(camera, transform)| {
-                        let pos = transform.pos;
+                    .and_then(|entity| lift2(cam_projs.get(entity), cam_views.get(entity)))
+                    .map(|(proj, view)| {
+                        let pos = view.position();
 
-                        (camera.proj_matrix(pos), camera.view_matrix(pos))
+                        (proj.proj_matrix(pos.clone()), view.view_matrix())
                     })
                     .unwrap_or((Matrix4::identity(), Matrix4::identity()));
 

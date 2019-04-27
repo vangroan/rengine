@@ -1,3 +1,4 @@
+use crate::camera::CameraProjection;
 use crate::comp::Camera;
 use crate::res::DeviceDimensions;
 use specs::{Join, Read, System, WriteStorage};
@@ -15,13 +16,17 @@ impl CameraResizeSystem {
 }
 
 impl<'a> System<'a> for CameraResizeSystem {
-    type SystemData = (Read<'a, DeviceDimensions>, WriteStorage<'a, Camera>);
+    type SystemData = (
+        Read<'a, DeviceDimensions>,
+        WriteStorage<'a, Camera>,
+        WriteStorage<'a, CameraProjection>,
+    );
 
-    fn run(&mut self, (dim, mut cameras): Self::SystemData) {
+    fn run(&mut self, (dim, _cameras, mut cam_views): Self::SystemData) {
         let (dev_w, dev_h): (u32, u32) = dim.logical_size.into();
 
-        for (ref mut camera,) in (&mut cameras,).join() {
-            camera.update_view((dev_w as u16, dev_h as u16));
+        for (ref mut view,) in (&mut cam_views,).join() {
+            view.set_device_size((dev_w as u16, dev_h as u16));
         }
     }
 }

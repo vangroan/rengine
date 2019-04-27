@@ -14,6 +14,7 @@ extern crate specs_derive;
 
 pub mod angle;
 mod app;
+pub mod camera;
 pub mod colors;
 pub mod comp;
 mod gfx_types;
