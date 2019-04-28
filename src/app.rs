@@ -1,11 +1,11 @@
-use crate::camera::{CameraProjection, CameraView};
+use crate::camera::{CameraProjection, CameraResizeSystem, CameraView};
 use crate::colors;
 use crate::comp::{GlTexture, Mesh, Transform};
 use crate::gfx_types::*;
 use crate::graphics::{ChannelPair, GraphicContext};
 use crate::res::{ActiveCamera, DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneError, SceneStack};
-use crate::sys::{CameraResizeSystem, DrawSystem};
+use crate::sys::DrawSystem;
 use gfx::traits::FactoryExt;
 use gfx::Device;
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
