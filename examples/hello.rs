@@ -3,13 +3,12 @@ extern crate rengine;
 extern crate specs_derive;
 
 use rengine::angle::Deg;
-use rengine::camera::{CameraProjection, CameraView};
+use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
 use rengine::comp::{GlTexture, MeshBuilder, Transform, X_AXIS, Y_AXIS};
 use rengine::glutin::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use rengine::nalgebra::Vector3;
 use rengine::option::lift2;
-use rengine::res::TextureAssets;
-use rengine::res::{ActiveCamera, DeltaTime};
+use rengine::res::{DeltaTime, TextureAssets};
 use rengine::specs::{
     Builder, Component, DenseVecStorage, Entity, Join, Read, ReadExpect, ReadStorage, WriteStorage,
 };

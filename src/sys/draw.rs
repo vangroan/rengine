@@ -1,9 +1,9 @@
-use crate::camera::{CameraProjection, CameraView};
+use crate::camera::{ActiveCamera, CameraProjection, CameraView};
 use crate::comp::{GlTexture, Mesh, Transform};
 use crate::gfx_types::{self, pipe, PipelineBundle, RenderTarget};
 use crate::graphics::ChannelPair;
 use crate::option::lift2;
-use crate::res::{ActiveCamera, ViewPort};
+use crate::res::ViewPort;
 use nalgebra::Matrix4;
 use specs::{Join, Read, ReadExpect, ReadStorage, System};
 use std::error::Error;
