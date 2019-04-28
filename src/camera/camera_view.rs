@@ -27,6 +27,11 @@ impl CameraView {
         self.update_right();
     }
 
+    #[inline]
+    pub fn target(&self) -> &Point3<f32> {
+        &self.target
+    }
+
     pub fn look_at(&mut self, target: Point3<f32>) {
         self.target = target;
         self.update_right();
@@ -39,10 +44,10 @@ impl CameraView {
     pub fn view_matrix(&self) -> Matrix4<f32> {
         let position: Vector4<f32> = self.position.into();
 
-        let face_towards = Matrix4::face_towards(&self.position, &self.target, &self.up);
+        // Right handed matrix must be used with perspective or orthographic projections
+        let face_towards = Matrix4::look_at_rh(&self.position, &self.target, &self.up);
 
         let translate = Matrix4::new_translation(&position.xyz());
-
         face_towards * translate
     }
 }
