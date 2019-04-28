@@ -80,7 +80,7 @@ impl Scene for Game {
                     .and_then(|e| lift2(_cam_projs.get_mut(e), cam_views.get_mut(e)));
 
                 if let Some((_, view)) = maybe_cam {
-                    view.set_position([0., 1., 0.].into());
+                    view.set_position([0., 0., 0.].into());
                     view.look_at([0., 0., -1.].into());
                 }
             },
