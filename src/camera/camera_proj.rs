@@ -37,8 +37,16 @@ impl CameraProjection {
         let [dev_w, dev_h] = self.device_size;
         let scale_pixels = self.scale_pixels;
         let (width, height) = (dev_w as f32 / scale_pixels, dev_h as f32 / scale_pixels);
+        let (x, y) = (pos.x - (width / 2.), pos.y - (height / 2.));
 
-        Matrix4::new_orthographic(pos.x, pos.x + width, pos.y, pos.y + height, near, far)
+        Matrix4::new_orthographic(x, x + width, y, y + height, near, far)
+    }
+
+    pub fn prespective_matrix<V>(&self, _position: V) -> Matrix4<f32>
+    where
+        V: Into<Point3<f32>>,
+    {
+        unimplemented!()
     }
 }
 

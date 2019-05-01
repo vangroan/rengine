@@ -47,8 +47,8 @@ impl CameraView {
         // Right handed matrix must be used with perspective or orthographic projections
         let face_towards = Matrix4::look_at_rh(&self.position, &self.target, &self.up);
 
-        let translate = Matrix4::new_translation(&position.xyz());
-        face_towards * translate
+        // let translate = Matrix4::new_translation(&position.xyz());
+        face_towards // * translate
     }
 }
 
