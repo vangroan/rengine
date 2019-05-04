@@ -2,7 +2,8 @@ use crate::camera::{ActiveCamera, CameraProjection, CameraResizeSystem, CameraVi
 use crate::colors;
 use crate::comp::{GlTexture, Mesh, Transform};
 use crate::gfx_types::*;
-use crate::graphics::{ChannelPair, GraphicContext};
+use crate::graphics::GraphicContext;
+use crate::render::ChannelPair;
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneError, SceneStack};
 use crate::sys::DrawSystem;

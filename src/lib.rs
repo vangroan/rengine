@@ -20,6 +20,7 @@ pub mod comp;
 mod gfx_types;
 mod graphics;
 pub mod option;
+pub mod render;
 pub mod res;
 mod scene;
 pub mod sys;
