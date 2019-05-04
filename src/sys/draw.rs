@@ -57,9 +57,9 @@ impl<'a> System<'a> for DrawSystem {
                     .camera_entity()
                     .and_then(|entity| lift2(cam_projs.get(entity), cam_views.get(entity)))
                     .map(|(proj, view)| {
-                        let pos = view.position();
-
-                        (proj.proj_matrix(pos.clone()), view.view_matrix())
+                        // let pos = view.position();
+                        // (proj.proj_matrix(pos.clone()), view.view_matrix())
+                        (proj.prespective_matrix(), view.view_matrix())
                     })
                     .unwrap_or((Matrix4::identity(), Matrix4::identity()));
 

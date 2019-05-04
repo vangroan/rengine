@@ -1,3 +1,4 @@
+use crate::angle::Deg;
 use nalgebra::{Matrix4, Point3};
 use specs::{Component, DenseVecStorage};
 
@@ -10,6 +11,8 @@ pub struct CameraProjection {
     far: f32,
     scale_pixels: f32,
     device_size: [u16; 2],
+    fovy: Deg<f32>,
+    aspect_ratio: f32,
 }
 
 impl CameraProjection {
@@ -25,6 +28,9 @@ impl CameraProjection {
 
     pub fn set_device_size(&mut self, device_size: (u16, u16)) {
         self.device_size = [device_size.0, device_size.1];
+        if device_size.1 != 0 {
+            self.aspect_ratio = device_size.0 as f32 / device_size.1 as f32;
+        }
     }
 
     pub fn proj_matrix<V>(&self, position: V) -> Matrix4<f32>
@@ -42,21 +48,25 @@ impl CameraProjection {
         Matrix4::new_orthographic(x, x + width, y, y + height, near, far)
     }
 
-    pub fn prespective_matrix<V>(&self, _position: V) -> Matrix4<f32>
-    where
-        V: Into<Point3<f32>>,
-    {
-        unimplemented!()
+    pub fn prespective_matrix(&self) -> Matrix4<f32> {
+        let near = self.near;
+        let far = self.far;
+        let fovy = self.fovy.as_radians();
+        let aspect = self.aspect_ratio;
+
+        Matrix4::new_perspective(aspect, fovy, near, far)
     }
 }
 
 impl Default for CameraProjection {
     fn default() -> Self {
         CameraProjection {
-            near: -10.,
-            far: 10.,
+            near: 0.1,
+            far: 1000.,
             scale_pixels: DEFAULT_SCALE_PIXELS,
             device_size: [0, 0],
+            fovy: Deg(10.),
+            aspect_ratio: 16. / 9.,
         }
     }
 }
