@@ -192,14 +192,14 @@ impl Scene for Game {
                 let target = view.target();
                 view.look_at(target + translate);
 
-                {
-                    let pos = view.position();
-                    let target = view.target();
-                    println!(
-                        "Camera Pos ({}, {}, {}); Target ({}, {}, {})",
-                        pos.x, pos.y, pos.z, target.x, target.y, target.z
-                    );
-                }
+                // {
+                //     let pos = view.position();
+                //     let target = view.target();
+                //     println!(
+                //         "Camera Pos ({}, {}, {}); Target ({}, {}, {})",
+                //         pos.x, pos.y, pos.z, target.x, target.y, target.z
+                //     );
+                // }
             }
         }
 
