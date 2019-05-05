@@ -89,8 +89,8 @@ impl Scene for Game {
         // Position camera away from cubes
         ctx.world.exec(
             |(active_camera, mut cam_views, mut _cam_projs): CameraData| {
-                let pos = isometric_camera_position() * 10.;
-                // let pos = Point3::new(0., 0., 5.);
+                // let pos = isometric_camera_position() * 10.;
+                let pos = Point3::new(0., 0., 5.);
 
                 let maybe_cam = active_camera
                     .camera_entity()

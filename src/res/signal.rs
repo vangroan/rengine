@@ -19,6 +19,8 @@
 //!          v                              v
 //! ```
 
+// TODO: Rename to Message and use simple crossbeam channel
+
 use core::marker::PhantomData;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use specs::{RunNow, System};

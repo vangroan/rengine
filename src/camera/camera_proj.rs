@@ -7,12 +7,8 @@ const DEFAULT_SCALE_PIXELS: f32 = 1000.;
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
 pub struct CameraProjection {
-    near: f32,
-    far: f32,
-    scale_pixels: f32,
-    device_size: [u16; 2],
-    fovy: Deg<f32>,
-    aspect_ratio: f32,
+    ortho: OrthographicSettings,
+    persp: PerspectiveSettings,
 }
 
 impl CameraProjection {
@@ -27,32 +23,36 @@ impl CameraProjection {
     }
 
     pub fn set_device_size(&mut self, device_size: (u16, u16)) {
-        self.device_size = [device_size.0, device_size.1];
+        // Orthographic
+        self.ortho.device_size = [device_size.0, device_size.1];
+
+        // Perspective
         if device_size.1 != 0 {
-            self.aspect_ratio = device_size.0 as f32 / device_size.1 as f32;
+            self.persp.aspect_ratio = device_size.0 as f32 / device_size.1 as f32;
         }
     }
 
-    pub fn proj_matrix<V>(&self, position: V) -> Matrix4<f32>
+    pub fn orthographic<V>(&self, position: V) -> Matrix4<f32>
     where
         V: Into<Point3<f32>>,
     {
-        let near = self.near;
-        let far = self.far;
+        let near = self.ortho.nearz;
+        let far = self.ortho.farz;
         let pos = position.into();
-        let [dev_w, dev_h] = self.device_size;
-        let scale_pixels = self.scale_pixels;
+        let [dev_w, dev_h] = self.ortho.device_size;
+        let scale_pixels = self.ortho.scale_pixels;
+
         let (width, height) = (dev_w as f32 / scale_pixels, dev_h as f32 / scale_pixels);
         let (x, y) = (pos.x - (width / 2.), pos.y - (height / 2.));
 
         Matrix4::new_orthographic(x, x + width, y, y + height, near, far)
     }
 
-    pub fn prespective_matrix(&self) -> Matrix4<f32> {
-        let near = self.near;
-        let far = self.far;
-        let fovy = self.fovy.as_radians();
-        let aspect = self.aspect_ratio;
+    pub fn prespective(&self) -> Matrix4<f32> {
+        let near = self.persp.nearz;
+        let far = self.persp.farz;
+        let fovy = self.persp.fovy.as_radians();
+        let aspect = self.persp.aspect_ratio;
 
         Matrix4::new_perspective(aspect, fovy, near, far)
     }
@@ -61,12 +61,36 @@ impl CameraProjection {
 impl Default for CameraProjection {
     fn default() -> Self {
         CameraProjection {
-            near: 0.1,
-            far: 1000.,
-            scale_pixels: DEFAULT_SCALE_PIXELS,
-            device_size: [0, 0],
-            fovy: Deg(10.),
-            aspect_ratio: 16. / 9.,
+            ortho: OrthographicSettings {
+                nearz: -10.0,
+                farz: 10.0,
+                scale_pixels: DEFAULT_SCALE_PIXELS,
+                device_size: [0, 0],
+            },
+            persp: PerspectiveSettings {
+                nearz: 0.1,
+                farz: 1000.,
+                fovy: Deg(10.),
+
+                // Aspect ratio must never be 0
+                aspect_ratio: 16. / 9.,
+            },
         }
     }
+}
+
+#[derive(Debug)]
+struct OrthographicSettings {
+    nearz: f32,
+    farz: f32,
+    scale_pixels: f32,
+    device_size: [u16; 2],
+}
+
+#[derive(Debug)]
+struct PerspectiveSettings {
+    nearz: f32,
+    farz: f32,
+    fovy: Deg<f32>,
+    aspect_ratio: f32,
 }
