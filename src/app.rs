@@ -3,7 +3,7 @@ use crate::colors;
 use crate::comp::{GlTexture, Mesh, Transform};
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
-use crate::render::ChannelPair;
+use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneError, SceneStack};
 use crate::sys::DrawSystem;
@@ -114,6 +114,35 @@ impl<'a, 'b> App<'a, 'b> {
         // lifetime issues with world resources borrowing each other.
         world.add_resource(PipelineBundle::new(pso, shader_program));
 
+        // Gizmo Wireframe PSO
+        {
+            let wireframe_shader = graphics
+                .factory
+                .link_program(
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gizmo_150.glslv"
+                    )),
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gizmo_150.glslf"
+                    )),
+                )
+                .unwrap();
+
+            let wireframe_pso = graphics
+                .factory
+                .create_pipeline_from_program(
+                    &wireframe_shader,
+                    gfx::Primitive::TriangleList,
+                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    pipe::new(),
+                )
+                .unwrap();
+
+            world.add_resource(GizmoPipelineBundle::new(wireframe_pso, wireframe_shader));
+        }
+
         // Encoder
         let mut channel = ChannelPair::new();
         if let Err(_) = channel.send_block(graphics.create_encoder()) {
@@ -123,6 +152,8 @@ impl<'a, 'b> App<'a, 'b> {
         // Renderer
         // TODO: Consider having a `Renderer` trait since it's being treated differently than other systems
         let mut renderer = DrawSystem::new(channel.clone(), graphics.render_target.clone());
+        let mut gizmo_renderer =
+            GizmoDrawSystem::new(channel.clone(), graphics.render_target.clone());
 
         // Scenes
         let mut scene_stack = SceneStack::new();
