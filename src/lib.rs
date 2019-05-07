@@ -24,6 +24,7 @@ pub mod render;
 pub mod res;
 mod scene;
 pub mod sys;
+pub mod voxel;
 
 pub use app::*;
 pub use gfx_types::*;
