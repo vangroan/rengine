@@ -1,6 +1,6 @@
 use crate::voxel::{VoxelChunk, VoxelCoord, VoxelData};
 use specs::{Component, Entity, WriteStorage};
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::marker::PhantomData;
 
 /// Global control of multiple chunks, to enforce
@@ -14,7 +14,7 @@ pub struct ChunkControl<D: VoxelData, C: VoxelChunk<D>> {
     /// Mapping of chunks to entities
     /// linked to `VoxelChunk` instances.
     chunks: HashMap<VoxelCoord, Entity>,
-    cmds: VecDeque<LazyCommand<D>>,
+    cmds: Vec<LazyCommand<D>>,
     _marker: PhantomData<(D, C)>,
 }
 
@@ -51,7 +51,7 @@ where
     fn default() -> Self {
         ChunkControl {
             chunks: HashMap::new(),
-            cmds: VecDeque::new(),
+            cmds: Vec::new(),
             _marker: PhantomData,
         }
     }
