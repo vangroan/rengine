@@ -20,6 +20,14 @@ pub trait VoxelData {
 /// automatically controlled, and must be enforced by
 /// an upper container that has knoweldge of chunks.
 ///
+/// Adjacency information can be used to occlude cuboid
+/// faces that are obstructed by neighouring voxels, and
+/// thus don't have to be drawn.
+///
+/// By bookkeeping the adjacency information, the time
+/// taken is sinked during updating of the chunk, freeing
+/// up the iteration from performing neighbour lookups.
+///
 /// No deduplication or compression is applied to the
 /// data.
 #[derive(Component)]
