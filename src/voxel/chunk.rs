@@ -1,14 +1,12 @@
-use crate::voxel::VoxelCoord;
+use crate::voxel::{ChunkCoord, VoxelCoord, VoxelData};
 use specs::{Component, DenseVecStorage};
 
 pub const ChunkSize8: usize = 8 * 8 * 8;
 
-pub trait VoxelChunk<D: VoxelData> {}
-
-pub trait VoxelData {
-    /// Indicates whether the voxel
-    /// is considered occupied, or empty.
-    fn occupied(&self) -> bool;
+pub trait VoxelChunk<D: VoxelData> {
+    fn index(&self) -> &ChunkCoord;
+    fn get<V: Into<VoxelCoord>>(&self, coord: V) -> &D;
+    fn set<V: Into<VoxelCoord>>(&self, coord: V, data: D);
 }
 
 /// Implementation of `VoxelChunk` that naively keeps
@@ -36,12 +34,50 @@ pub struct VoxelArrayChunk<D: 'static + VoxelData + Sync + Send> {
     /// Global position of the bottom, left,
     /// back voxel. Coordinate (0, 0, 0) in
     /// the chunk's local space.
-    coord: VoxelCoord,
+    coord: ChunkCoord,
 
     /// Voxel data packed with adjacency map,
     /// describing whether neighbours are occupied
     /// or empty.
     data: [(VoxelAdjacency, D); ChunkSize8],
+}
+
+impl<D> VoxelArrayChunk<D>
+where
+    D: 'static + VoxelData + Sync + Send + Default + Copy,
+{
+    pub fn new<V>(coord: V) -> Self
+    where
+        V: Into<ChunkCoord>,
+    {
+        VoxelArrayChunk {
+            coord: coord.into(),
+            data: [Default::default(); ChunkSize8],
+        }
+    }
+}
+
+impl<D> VoxelChunk<D> for VoxelArrayChunk<D>
+where
+    D: 'static + VoxelData + Sync + Send,
+{
+    fn index(&self) -> &ChunkCoord {
+        &self.coord
+    }
+
+    fn get<V>(&self, coord: V) -> &D
+    where
+        V: Into<VoxelCoord>,
+    {
+        unimplemented!()
+    }
+
+    fn set<V>(&self, coord: V, data: D)
+    where
+        V: Into<VoxelCoord>,
+    {
+        unimplemented!()
+    }
 }
 
 type VoxelAdjacency = u32;

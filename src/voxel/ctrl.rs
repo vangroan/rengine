@@ -1,4 +1,4 @@
-use crate::voxel::{VoxelChunk, VoxelCoord, VoxelData};
+use crate::voxel::{ChunkCoord, VoxelChunk, VoxelCoord, VoxelData};
 use specs::{Component, Entity, WriteStorage};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 pub struct ChunkControl<D: VoxelData, C: VoxelChunk<D>> {
     /// Mapping of chunks to entities
     /// linked to `VoxelChunk` instances.
-    chunks: HashMap<VoxelCoord, Entity>,
+    chunks: HashMap<ChunkCoord, Entity>,
     cmds: Vec<LazyCommand<D>>,
     _marker: PhantomData<(D, C)>,
 }
@@ -27,19 +27,44 @@ where
         Default::default()
     }
 
+    /// Adds a reverse mapping from the chunk's coordinate
+    /// to the `Entity`.
+    pub fn add_chunk(&mut self, entity: Entity, chunk: C) {
+        self.chunks.insert(chunk.index().clone(), entity);
+    }
+
     /// Queues an update to voxel data at the given
     /// position, potentially for multiple chunks.
-    pub fn lazy_update(&mut self, coord: VoxelCoord, data: D) {
-        unimplemented!()
+    pub fn lazy_update<V>(&mut self, coord: V, data: D)
+    where
+        V: Into<VoxelCoord>,
+    {
+        self.cmds.push(LazyCommand::UpdateData(coord.into(), data));
+    }
+
+    /// Returns number of commands waiting in the queue.
+    pub fn cmd_len(&self) -> usize {
+        self.cmds.len()
     }
 
     /// Applies queued updates to chunks, and regenerates
     /// the chunk's mesh.
-    pub fn maintain(&self, chunks: &WriteStorage<'_, C>)
+    pub fn maintain(&mut self, _chunks: &mut WriteStorage<'_, C>)
     where
         C: Component,
     {
-        unimplemented!()
+        use LazyCommand::*;
+
+        for cmd in self.cmds.drain(..).into_iter() {
+            match cmd {
+                UpdateData(_coord, _data) => {
+                    // TODO: Convert voxel coordinate to chunk coordinate
+                    // TODO: Retgrieve chunk entity
+                    // TODO: Retireve chunk component
+                    // TODO: Update chunk data
+                }
+            }
+        }
     }
 }
 
