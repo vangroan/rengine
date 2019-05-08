@@ -54,6 +54,18 @@ impl Sub for VoxelCoord {
     }
 }
 
+impl Sub<&VoxelCoord> for VoxelCoord {
+    type Output = VoxelCoord;
+
+    fn sub(self, rhs: &VoxelCoord) -> Self::Output {
+        VoxelCoord {
+            i: self.i - rhs.i,
+            j: self.j - rhs.j,
+            k: self.k - rhs.k,
+        }
+    }
+}
+
 impl Into<nalgebra::Point3<i32>> for VoxelCoord {
     fn into(self) -> nalgebra::Point3<i32> {
         nalgebra::Point3::new(self.i, self.j, self.k)

@@ -1,4 +1,4 @@
-use crate::voxel::{ChunkCoord, VoxelChunk, VoxelCoord, VoxelData};
+use crate::voxel::{voxel_to_chunk, ChunkCoord, VoxelChunk, VoxelCoord, VoxelData};
 use specs::{Component, Entity, WriteStorage};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -29,7 +29,7 @@ where
 
     /// Adds a reverse mapping from the chunk's coordinate
     /// to the `Entity`.
-    pub fn add_chunk(&mut self, entity: Entity, chunk: C) {
+    pub fn add_chunk(&mut self, entity: Entity, chunk: &C) {
         self.chunks.insert(chunk.index().clone(), entity);
     }
 
@@ -49,7 +49,7 @@ where
 
     /// Applies queued updates to chunks, and regenerates
     /// the chunk's mesh.
-    pub fn maintain(&mut self, _chunks: &mut WriteStorage<'_, C>)
+    pub fn maintain(&mut self, chunks: &mut WriteStorage<'_, C>)
     where
         C: Component,
     {
@@ -57,11 +57,18 @@ where
 
         for cmd in self.cmds.drain(..).into_iter() {
             match cmd {
-                UpdateData(_coord, _data) => {
-                    // TODO: Convert voxel coordinate to chunk coordinate
-                    // TODO: Retgrieve chunk entity
-                    // TODO: Retireve chunk component
-                    // TODO: Update chunk data
+                UpdateData(voxel_coord, voxel_data) => {
+                    // Convert voxel coordinate to chunk coordinate
+                    let chunk_coord = voxel_to_chunk(&voxel_coord);
+
+                    // Retrieve chunk entity
+                    if let Some(entity) = self.chunks.get(&chunk_coord) {
+                        // Retireve chunk component
+                        if let Some(chunk) = chunks.get_mut(*entity) {
+                            // Update chunk data
+                            chunk.set(voxel_coord, voxel_data);
+                        }
+                    }
                 }
             }
         }

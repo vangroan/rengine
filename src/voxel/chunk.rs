@@ -1,8 +1,8 @@
 use crate::voxel::{ChunkCoord, VoxelCoord, VoxelData};
 use specs::{Component, DenseVecStorage};
 
-pub const ChunkDim8: usize = 8;
-pub const ChunkSize8: usize = ChunkDim8 * ChunkDim8 * ChunkDim8;
+pub const CHUNK_DIM8: usize = 8;
+pub const CHUNK_SIZE8: usize = CHUNK_DIM8 * CHUNK_DIM8 * CHUNK_DIM8;
 // pub type VoxelOffsets: [VoxelCoord]
 
 /// Given a global voxel coordinate, return
@@ -13,9 +13,9 @@ pub fn voxel_to_chunk(v: &VoxelCoord) -> ChunkCoord {
     // a pass through floating point maths to get
     // floor behaviour.
     ChunkCoord {
-        i: (v.i as f32 / ChunkDim8 as f32).floor() as i32,
-        j: (v.j as f32 / ChunkDim8 as f32).floor() as i32,
-        k: (v.k as f32 / ChunkDim8 as f32).floor() as i32,
+        i: (v.i as f32 / CHUNK_DIM8 as f32).floor() as i32,
+        j: (v.j as f32 / CHUNK_DIM8 as f32).floor() as i32,
+        k: (v.k as f32 / CHUNK_DIM8 as f32).floor() as i32,
     }
 }
 
@@ -59,7 +59,7 @@ pub struct VoxelArrayChunk<D: 'static + VoxelData + Sync + Send> {
     /// Voxel data packed with adjacency map,
     /// describing whether neighbours are occupied
     /// or empty.
-    data: [(VoxelAdjacency, D); ChunkSize8],
+    data: [(VoxelAdjacency, D); CHUNK_SIZE8],
 }
 
 impl<D> VoxelArrayChunk<D>
@@ -74,15 +74,15 @@ where
 
         // Translate chunk coordinates to voxel coordinates
         let voxel_offset = VoxelCoord::new(
-            chunk_coord.i * ChunkDim8 as i32,
-            chunk_coord.j * ChunkDim8 as i32,
-            chunk_coord.k * ChunkDim8 as i32,
+            chunk_coord.i * CHUNK_DIM8 as i32,
+            chunk_coord.j * CHUNK_DIM8 as i32,
+            chunk_coord.k * CHUNK_DIM8 as i32,
         );
 
         VoxelArrayChunk {
             coord: chunk_coord,
             voxel_offset,
-            data: [Default::default(); ChunkSize8],
+            data: [Default::default(); CHUNK_SIZE8],
         }
     }
 }
@@ -95,6 +95,9 @@ where
         &self.coord
     }
 
+    /// Checks whether the given global voxel
+    /// coordinates are contained within the
+    /// bounds of the chunk.
     fn in_bounds<V>(&self, coord: V) -> bool
     where
         V: Into<VoxelCoord>,
@@ -102,9 +105,9 @@ where
         let VoxelCoord { i, j, k } = coord.into();
         let (i1, j1, k1) = self.voxel_offset.clone().into();
         let (i2, j2, k2) = (
-            i1 + ChunkDim8 as i32,
-            j1 + ChunkDim8 as i32,
-            k1 + ChunkDim8 as i32,
+            i1 + CHUNK_DIM8 as i32,
+            j1 + CHUNK_DIM8 as i32,
+            k1 + CHUNK_DIM8 as i32,
         );
 
         i >= i1 && j >= j1 && k >= k1 && i < i2 && j < j2 && k < k2
@@ -117,10 +120,14 @@ where
         let voxel_coord: VoxelCoord = coord.into();
 
         if self.in_bounds(voxel_coord.clone()) {
-            let index: usize = (voxel_coord.i
-                + voxel_coord.j * ChunkDim8 as i32
-                + voxel_coord.k * ChunkDim8 as i32 * ChunkDim8 as i32)
+            // Convert to local space
+            let local_coord = voxel_coord - &self.voxel_offset;
+
+            let index: usize = (local_coord.i
+                + local_coord.j * CHUNK_DIM8 as i32
+                + local_coord.k * CHUNK_DIM8 as i32 * CHUNK_DIM8 as i32)
                 as usize;
+
             self.data.get(index).map(|el| &el.1)
         } else {
             None
@@ -134,10 +141,14 @@ where
         let voxel_coord: VoxelCoord = coord.into();
         // TODO: Set all adjacent
         if self.in_bounds(voxel_coord.clone()) {
-            let index: usize = (voxel_coord.i
-                + voxel_coord.j * ChunkDim8 as i32
-                + voxel_coord.k * ChunkDim8 as i32 * ChunkDim8 as i32)
+            // Convert to local space
+            let local_coord = voxel_coord - &self.voxel_offset;
+
+            let index: usize = (local_coord.i
+                + local_coord.j * CHUNK_DIM8 as i32
+                + local_coord.k * CHUNK_DIM8 as i32 * CHUNK_DIM8 as i32)
                 as usize;
+
             self.data[index] = (Default::default(), data);
         }
     }
