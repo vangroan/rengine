@@ -1,9 +1,11 @@
 use crate::voxel::{ChunkCoord, VoxelCoord, VoxelData};
 use specs::{Component, DenseVecStorage};
 
+/// Length of each side of a chunk
 pub const CHUNK_DIM8: usize = 8;
+
+/// Total number of voxels in a chunk
 pub const CHUNK_SIZE8: usize = CHUNK_DIM8 * CHUNK_DIM8 * CHUNK_DIM8;
-// pub type VoxelOffsets: [VoxelCoord]
 
 /// Given a global voxel coordinate, return
 /// the chunk coordinate that contains it.
@@ -19,10 +21,39 @@ pub fn voxel_to_chunk(v: &VoxelCoord) -> ChunkCoord {
     }
 }
 
+/// Interface for a chunk, which acts as storage for
+/// voxels.
+///
+/// Chunk is identified by an index, which is its
+/// 3-dimensional coordinate in the chunk space.
+///
+/// Since a chunk is aware of its own index, and the
+/// size of all chunks, it is expected to know its
+/// position in global voxel coordinates as well.
 pub trait VoxelChunk<D: VoxelData> {
+    /// Unique identifier and 3D position
+    /// in chunk space.
     fn index(&self) -> &ChunkCoord;
+
+    /// Position of chunk in global voxel space.
+    ///
+    /// This position is should be located in the
+    /// left, bottom, back corner of the chunk,
+    /// which is (0, 0, 0) in local coordinates.
+    fn voxel_offset(&self) -> &VoxelCoord;
+
+    /// Checks whether the given global voxel
+    /// coordinates are contained within the
+    /// bounds of the chunk.
     fn in_bounds<V: Into<VoxelCoord>>(&self, coord: V) -> bool;
+
+    /// Retrieve voxel data at the given coordinate.
+    ///
+    /// Returns `None` when coordinate is outside of
+    /// the chunks bounds.
     fn get<V: Into<VoxelCoord>>(&self, coord: V) -> Option<&D>;
+
+    /// Sets the voxel data at the given coordinate.
     fn set<V: Into<VoxelCoord>>(&mut self, coord: V, data: D);
 }
 
@@ -95,9 +126,10 @@ where
         &self.coord
     }
 
-    /// Checks whether the given global voxel
-    /// coordinates are contained within the
-    /// bounds of the chunk.
+    fn voxel_offset(&self) -> &VoxelCoord {
+        &self.voxel_offset
+    }
+
     fn in_bounds<V>(&self, coord: V) -> bool
     where
         V: Into<VoxelCoord>,
