@@ -17,7 +17,7 @@ type VoxelAdjacencyMask = u32;
 ///
 /// Supports offsets for immediate neighbours (Moore neighbourhood
 /// radius = 1)
-fn create_mask(voxel_offset: [i32; 3]) -> VoxelAdjacencyMask {
+fn create_mask(voxel_offset: &[i32; 3]) -> VoxelAdjacencyMask {
     // Translate center to bottom, left, back. Coordinate (-1, -1, -1)
     // will become (0, 0, 0).
     let trans = [
@@ -78,6 +78,12 @@ pub trait VoxelChunk<D: VoxelData> {
     /// the chunks bounds.
     fn get<V: Into<VoxelCoord>>(&self, coord: V) -> Option<&D>;
 
+    /// Retrieve mutable voxel data at the given coordinate.
+    ///
+    /// Returns `None` when coordinate is outside of
+    /// the chunks bounds.
+    fn get_mut<V: Into<VoxelCoord>>(&mut self, coord: V) -> Option<&mut D>;
+
     /// Sets the voxel data at the given coordinate.
     fn set<V: Into<VoxelCoord>>(&mut self, coord: V, data: D);
 }
@@ -120,11 +126,12 @@ pub struct VoxelArrayChunk<D: 'static + VoxelData + Sync + Send> {
 
 impl<D> VoxelArrayChunk<D>
 where
-    D: 'static + VoxelData + Sync + Send + Default + Copy,
+    D: 'static + VoxelData + Sync + Send,
 {
     pub fn new<V>(coord: V) -> Self
     where
         V: Into<ChunkCoord>,
+        D: Default + Copy,
     {
         let chunk_coord = coord.into();
 
@@ -140,6 +147,12 @@ where
             voxel_offset,
             data: [Default::default(); CHUNK_SIZE8],
         }
+    }
+
+    fn data_index(&self, local_coord: &VoxelCoord) -> usize {
+        (local_coord.i
+            + local_coord.j * CHUNK_DIM8 as i32
+            + local_coord.k * CHUNK_DIM8 as i32 * CHUNK_DIM8 as i32) as usize
     }
 }
 
@@ -179,13 +192,26 @@ where
         if self.in_bounds(voxel_coord.clone()) {
             // Convert to local space
             let local_coord = voxel_coord - &self.voxel_offset;
-
-            let index: usize = (local_coord.i
-                + local_coord.j * CHUNK_DIM8 as i32
-                + local_coord.k * CHUNK_DIM8 as i32 * CHUNK_DIM8 as i32)
-                as usize;
+            let index = self.data_index(&local_coord);
 
             self.data.get(index).map(|el| &el.1)
+        } else {
+            None
+        }
+    }
+
+    fn get_mut<V: Into<VoxelCoord>>(&mut self, coord: V) -> Option<&mut D>
+    where
+        V: Into<VoxelCoord>,
+    {
+        let voxel_coord: VoxelCoord = coord.into();
+
+        if self.in_bounds(voxel_coord.clone()) {
+            // Convert to local space
+            let local_coord = voxel_coord - &self.voxel_offset;
+            let index = self.data_index(&local_coord);
+
+            self.data.get_mut(index).map(|el| &mut el.1)
         } else {
             None
         }
@@ -196,17 +222,49 @@ where
         V: Into<VoxelCoord>,
     {
         let voxel_coord: VoxelCoord = coord.into();
-        // TODO: Set all adjacent
-        if self.in_bounds(voxel_coord.clone()) {
-            // Convert to local space
-            let local_coord = voxel_coord - &self.voxel_offset;
 
-            let index: usize = (local_coord.i
-                + local_coord.j * CHUNK_DIM8 as i32
-                + local_coord.k * CHUNK_DIM8 as i32 * CHUNK_DIM8 as i32)
-                as usize;
+        // Convert to local space
+        let local_coord = voxel_coord.clone() - &self.voxel_offset;
+        let center_index = self.data_index(&local_coord);
+        let occupied = data.occupied();
 
-            self.data[index] = (Default::default(), data);
+        if self.in_bounds(voxel_coord) {
+            self.data[center_index] = (Default::default(), data);
+        }
+
+        // Regardless whether the coordinate is in bounds or
+        // not, we set the adjacency masks of surrounding voxels.
+        //
+        // Allows for adjacency information to keep up-to-date when
+        // neighbouring chunks are updated.
+        //
+        // Iterate neighbourhood, with given coordinate as the center.
+        for x in -1..2 {
+            for y in -1..2 {
+                for z in -1..2 {
+                    // We don't consider the given coordinate. It will
+                    // be updated if its neighbours are updated later.
+                    if [x, y, z] == [0, 0, 0] {
+                        continue;
+                    }
+
+                    // Set the neighbour's mask according to whether the center
+                    // is occupied.
+                    let neigh_coord = local_coord.clone() + [x, y, z].into();
+                    let index = self.data_index(&neigh_coord);
+                    if let Some(mut voxel_bundle) = self.data.get_mut(index) {
+                        // Prepare a mask from the perspective of the neighbour.
+                        let center_as_neighbour = [-x, -y, -z];
+                        let mask = create_mask(&center_as_neighbour);
+
+                        if occupied {
+                            voxel_bundle.0 = voxel_bundle.0 | mask;
+                        } else {
+                            voxel_bundle.0 = voxel_bundle.0 & !mask;
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -229,22 +287,22 @@ mod test {
 
     #[test]
     fn test_create_mask() {
-        let m_bottom_left_back = create_mask([-1, -1, -1]);
+        let m_bottom_left_back = create_mask(&[-1, -1, -1]);
         assert_eq!(
             0b_0000_0000_0000_0000_0000_0000_0000_0001,
             m_bottom_left_back
         );
 
-        let m_middle_left_back = create_mask([0, -1, -1]);
+        let m_middle_left_back = create_mask(&[0, -1, -1]);
         assert_eq!(
             0b_0000_0000_0000_0000_0000_0000_0000_0010,
             m_middle_left_back
         );
 
-        let m_center = create_mask([0, 0, 0]);
+        let m_center = create_mask(&[0, 0, 0]);
         assert_eq!(0b_0000_0000_0000_0000_0010_0000_0000_0000, m_center);
 
-        let m_top_right_front = create_mask([1, 1, 1]);
+        let m_top_right_front = create_mask(&[1, 1, 1]);
         assert_eq!(
             0b_0000_0100_0000_0000_0000_0000_0000_0000,
             m_top_right_front
