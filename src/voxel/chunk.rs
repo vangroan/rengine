@@ -7,6 +7,31 @@ pub const CHUNK_DIM8: usize = 8;
 /// Total number of voxels in a chunk
 pub const CHUNK_SIZE8: usize = CHUNK_DIM8 * CHUNK_DIM8 * CHUNK_DIM8;
 
+/// Stores the occupancy information for
+/// the 26 surrounding neighbours in
+/// 3-dimensions.
+type VoxelAdjacencyMask = u32;
+
+/// Given a voxel coordinate offset, create the bit mask
+/// where the appropriate bit is set to occupied.
+///
+/// Supports offsets for immediate neighbours (Moore neighbourhood
+/// radius = 1)
+fn create_mask(voxel_offset: [i32; 3]) -> VoxelAdjacencyMask {
+    // Translate center to bottom, left, back. Coordinate (-1, -1, -1)
+    // will become (0, 0, 0).
+    let trans = [
+        voxel_offset[0] + 1,
+        voxel_offset[1] + 1,
+        voxel_offset[2] + 1,
+    ];
+
+    // Neighbourhood is treated as a 3x3x3 cube
+    let index = trans[0] + trans[1] * 3 + trans[2] * 3 * 3;
+
+    1 << index
+}
+
 /// Given a global voxel coordinate, return
 /// the chunk coordinate that contains it.
 pub fn voxel_to_chunk(v: &VoxelCoord) -> ChunkCoord {
@@ -90,7 +115,7 @@ pub struct VoxelArrayChunk<D: 'static + VoxelData + Sync + Send> {
     /// Voxel data packed with adjacency map,
     /// describing whether neighbours are occupied
     /// or empty.
-    data: [(VoxelAdjacency, D); CHUNK_SIZE8],
+    data: [(VoxelAdjacencyMask, D); CHUNK_SIZE8],
 }
 
 impl<D> VoxelArrayChunk<D>
@@ -186,8 +211,6 @@ where
     }
 }
 
-type VoxelAdjacency = u32;
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -202,5 +225,29 @@ mod test {
 
         let v3 = VoxelCoord::new(-7, 8, 5);
         assert_eq!(ChunkCoord::new(-1, 1, 0), voxel_to_chunk(&v3));
+    }
+
+    #[test]
+    fn test_create_mask() {
+        let m_bottom_left_back = create_mask([-1, -1, -1]);
+        assert_eq!(
+            0b_0000_0000_0000_0000_0000_0000_0000_0001,
+            m_bottom_left_back
+        );
+
+        let m_middle_left_back = create_mask([0, -1, -1]);
+        assert_eq!(
+            0b_0000_0000_0000_0000_0000_0000_0000_0010,
+            m_middle_left_back
+        );
+
+        let m_center = create_mask([0, 0, 0]);
+        assert_eq!(0b_0000_0000_0000_0000_0010_0000_0000_0000, m_center);
+
+        let m_top_right_front = create_mask([1, 1, 1]);
+        assert_eq!(
+            0b_0000_0100_0000_0000_0000_0000_0000_0000,
+            m_top_right_front
+        );
     }
 }
