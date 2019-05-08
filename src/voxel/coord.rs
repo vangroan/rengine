@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::{Add, Sub};
 
 /// Position of a voxel in the grid.
 ///
@@ -29,14 +30,54 @@ impl fmt::Display for VoxelCoord {
     }
 }
 
+impl Add for VoxelCoord {
+    type Output = VoxelCoord;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        VoxelCoord {
+            i: self.i + rhs.i,
+            j: self.j + rhs.j,
+            k: self.k + rhs.k,
+        }
+    }
+}
+
+impl Sub for VoxelCoord {
+    type Output = VoxelCoord;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        VoxelCoord {
+            i: self.i - rhs.i,
+            j: self.j - rhs.j,
+            k: self.k - rhs.k,
+        }
+    }
+}
+
 impl Into<nalgebra::Point3<i32>> for VoxelCoord {
     fn into(self) -> nalgebra::Point3<i32> {
         nalgebra::Point3::new(self.i, self.j, self.k)
     }
 }
 
+impl Into<(i32, i32, i32)> for VoxelCoord {
+    fn into(self) -> (i32, i32, i32) {
+        (self.i, self.j, self.k)
+    }
+}
+
 impl From<[i32; 3]> for VoxelCoord {
     fn from(val: [i32; 3]) -> VoxelCoord {
+        VoxelCoord {
+            i: val[0],
+            j: val[1],
+            k: val[2],
+        }
+    }
+}
+
+impl From<&[i32; 3]> for VoxelCoord {
+    fn from(val: &[i32; 3]) -> VoxelCoord {
         VoxelCoord {
             i: val[0],
             j: val[1],

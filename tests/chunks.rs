@@ -21,4 +21,8 @@ fn test_lazy_update() {
         .create_entity()
         .with(IntVoxelChunk::new([0, 0, 0]))
         .build();
+
+    // Maintain
+    ctrl.maintain(&mut world.write_storage::<IntVoxelChunk>());
+    assert_eq!(0, ctrl.cmd_len());
 }
