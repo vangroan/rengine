@@ -1,9 +1,11 @@
 extern crate rengine;
 
 use rengine::specs::{Builder, World};
-use rengine::voxel::{ChunkControl, VoxelArrayChunk, VoxelChunk};
+use rengine::voxel::{ChunkControl, ChunkUpkeepSystem, VoxelArrayChunk, VoxelBoxGen, VoxelChunk};
 
-type IntVoxelChunk = VoxelArrayChunk<u16>;
+type IntVoxel = u16;
+type IntVoxelChunk = VoxelArrayChunk<IntVoxel>;
+type IntUpkeepSystem = ChunkUpkeepSystem<IntVoxel, IntVoxelChunk, VoxelBoxGen>;
 
 /// Ensure update queue is drained on maintain
 #[test]
@@ -17,6 +19,7 @@ fn test_lazy_update() {
     // ECS integration
     let mut world = World::new();
     world.register::<IntVoxelChunk>();
+    world.register();
     let entity = world
         .create_entity()
         .with(IntVoxelChunk::new([0, 0, 0]))

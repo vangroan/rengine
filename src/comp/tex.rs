@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 // TODO: Consider renaming to TextureSampler, TextureHandle or ImmutableTexture
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[storage(DenseVecStorage)]
 pub struct GlTexture {
     pub(crate) bundle: Arc<AssetBundle>,

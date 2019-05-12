@@ -60,6 +60,12 @@ pub trait VoxelChunk<D: VoxelData> {
     /// in chunk space.
     fn index(&self) -> &ChunkCoord;
 
+    /// Returns the dimension of the chunk.
+    ///
+    /// The length returned is used by each of the
+    /// three axes.
+    fn dim(&self) -> usize;
+
     /// Position of chunk in global voxel space.
     ///
     /// This position is should be located in the
@@ -160,8 +166,14 @@ impl<D> VoxelChunk<D> for VoxelArrayChunk<D>
 where
     D: 'static + VoxelData + Sync + Send,
 {
+    #[inline]
     fn index(&self) -> &ChunkCoord {
         &self.coord
+    }
+
+    #[inline]
+    fn dim(&self) -> usize {
+        CHUNK_DIM8
     }
 
     fn voxel_offset(&self) -> &VoxelCoord {
