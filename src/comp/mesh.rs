@@ -350,7 +350,7 @@ impl MeshUpkeepSystem {
         MeshUpkeepSystem
     }
 
-    pub fn maintain(&mut self, graphics_context: &mut GraphicContext, data: MeshUpkeepData) {
+    pub fn maintain(&self, graphics_context: &mut GraphicContext, data: MeshUpkeepData) {
         let MeshUpkeepData {
             mut mesh_cmds,
             mut meshes,

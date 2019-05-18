@@ -8,7 +8,7 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/examples/hello.exe",
+            "program": "${workspaceFolder}/target/debug/examples/voxels.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

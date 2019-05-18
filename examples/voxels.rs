@@ -1,11 +1,14 @@
 extern crate rengine;
 
-use rengine::comp::GlTexture;
+use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
+use rengine::comp::{GlTexture, Transform};
+use rengine::nalgebra::Point3;
+use rengine::option::lift2;
 use rengine::res::{AssetBundle, TextureAssets};
 use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
 use rengine::voxel::{
     ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem, VoxelArrayChunk, VoxelBoxGen,
-    VoxelData,
+    VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, Scene, Trans};
 use std::error::Error;
@@ -15,6 +18,11 @@ type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
 type TileVoxelChunk = VoxelArrayChunk<TileVoxel>;
 type TileUpkeepSystem = ChunkUpkeepSystem<TileVoxel, TileVoxelChunk, VoxelBoxGen>;
 const EMPTY_TILE: u16 = 0;
+type CameraData<'a> = (
+    Read<'a, ActiveCamera>,
+    WriteStorage<'a, CameraView>,
+    WriteStorage<'a, CameraProjection>,
+);
 
 #[derive(Copy, Clone, Default)]
 struct TileVoxel {
@@ -33,6 +41,7 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex_bundle: Arc<AssetBu
         .create_entity()
         .with(GlTexture::from_bundle(tex_bundle))
         .with(TileVoxelChunk::new(chunk_id.clone()))
+        .with(Transform::new())
         .build();
 
     world
@@ -75,7 +84,34 @@ impl Scene for Game {
         )));
 
         // Create Chunks
-        create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex_bundle);
+        let e = create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex_bundle);
+
+        // Fill chunk with some data
+        ctx.world.exec(|(mut ctrl,): (Write<'_, TileVoxelCtrl>,)| {
+            for x in 0..CHUNK_DIM8 {
+                for y in 0..CHUNK_DIM8 {
+                    for z in 0..CHUNK_DIM8 {
+                        ctrl.lazy_update([x as i32, y as i32, z as i32], TileVoxel { tile_id: 1 });
+                    }
+                }
+            }
+        });
+
+        // Position Camera
+        ctx.world.exec(
+            |(active_camera, mut cam_views, mut _cam_projs): CameraData| {
+                let pos = Point3::new(0.2, 0.1, 5.);
+
+                let maybe_cam = active_camera
+                    .camera_entity()
+                    .and_then(|e| lift2(_cam_projs.get_mut(e), cam_views.get_mut(e)));
+
+                if let Some((_, view)) = maybe_cam {
+                    view.set_position(pos);
+                    view.look_at([0., 0., 0.].into());
+                }
+            },
+        );
 
         None
     }

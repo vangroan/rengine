@@ -1,6 +1,8 @@
 use crate::camera::{ActiveCamera, CameraProjection, CameraResizeSystem, CameraView};
 use crate::colors;
-use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Transform};
+use crate::comp::{
+    GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepData, MeshUpkeepSystem, Transform,
+};
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
@@ -53,6 +55,7 @@ impl<'a, 'b> App<'a, 'b> {
         // Graphics Commands to allow allocating resources
         // from systems to draw thread.
         world.add_resource(MeshCommandBuffer::new());
+        let mesh_upkeep = MeshUpkeepSystem;
 
         // Assets
         // TODO: Place in world and allow for loading textures from game without needing factory (operation buffer?)
@@ -253,6 +256,14 @@ impl<'a, 'b> App<'a, 'b> {
             dispatcher.dispatch(&world.res);
 
             // Allocate Graphic Resources
+            // world.exec(
+            //     |(mesh_cmds, data): (specs::Read<'_, MeshCommandBuffer>, MeshUpkeepData)| {
+            //         mesh_upkeep.maintain(&mut graphics, data);
+            //     },
+            // );
+            // .read_resource::<MeshCommandBuffer>()
+            // .maintain(&mut graphics, world.system_data());
+            mesh_upkeep.maintain(&mut graphics, world.system_data());
 
             // Render Components
             renderer.run_now(&world.res);
