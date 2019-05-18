@@ -1,8 +1,10 @@
 extern crate rengine;
 
+use rengine::angle::{Deg, Rad};
 use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
 use rengine::comp::{GlTexture, Transform};
-use rengine::nalgebra::Point3;
+use rengine::glm;
+use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::res::{AssetBundle, TextureAssets};
 use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
@@ -14,6 +16,7 @@ use rengine::{AppBuilder, Context, Scene, Trans};
 use std::error::Error;
 use std::sync::Arc;
 
+const BLOCK_TEX_PATH: &str = "examples/block.png";
 type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
 type TileVoxelChunk = VoxelArrayChunk<TileVoxel>;
 type TileUpkeepSystem = ChunkUpkeepSystem<TileVoxel, TileVoxelChunk, VoxelBoxGen>;
@@ -36,10 +39,24 @@ impl VoxelData for TileVoxel {
     }
 }
 
-fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex_bundle: Arc<AssetBundle>) -> Entity {
+fn isometric_camera_position() -> Point3<f32> {
+    let _45 = Deg(45.);
+    let _35 = Rad((1. / 2.0_f32.sqrt()).atan());
+
+    let p = Point3::new(0., 0., 1.);
+
+    let rot_45 = glm::quat_angle_axis(_45.as_radians(), &Vector3::y_axis());
+    let rot_35 = glm::quat_angle_axis(-_35.as_radians(), &Vector3::x_axis());
+
+    let m = glm::quat_to_mat4(&rot_45) * glm::quat_to_mat4(&rot_35);
+
+    m.transform_point(&p)
+}
+
+fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Entity {
     let entity = world
         .create_entity()
-        .with(GlTexture::from_bundle(tex_bundle))
+        .with(tex)
         .with(TileVoxelChunk::new(chunk_id.clone()))
         .with(Transform::new())
         .build();
@@ -73,25 +90,51 @@ impl Scene for Game {
         ctx.world.register::<VoxelArrayChunk<TileVoxel>>();
 
         // Load Texture
-        let tex_bundle = ctx
-            .world
-            .write_resource::<TextureAssets>()
-            .default_texture(ctx.graphics.factory_mut());
+        let tex = GlTexture::from_bundle(
+            ctx.world
+                .write_resource::<TextureAssets>()
+                .load_texture(&mut ctx.graphics.factory_mut(), BLOCK_TEX_PATH),
+        );
+
+        // Block Texture
+        let tex_rects = {
+            let tex_rect = tex.source_rect();
+            let back_rect = tex_rect.sub_rect([0, 0], [16, 16]);
+            let front_rect = tex_rect.sub_rect([16, 0], [16, 16]);
+            let left_rect = tex_rect.sub_rect([32, 0], [16, 16]);
+            let right_rect = tex_rect.sub_rect([0, 16], [16, 16]);
+            let bottom_rect = tex_rect.sub_rect([16, 16], [16, 16]);
+            let top_rect = tex_rect.sub_rect([32, 16], [16, 16]);
+            [
+                back_rect,
+                front_rect,
+                left_rect,
+                right_rect,
+                bottom_rect,
+                top_rect,
+            ]
+        };
 
         // Setup system
         self.chunk_upkeep_sys = Some(TileUpkeepSystem::new(VoxelBoxGen::new(
-            GlTexture::from_bundle(tex_bundle.clone()),
+            tex.clone(),
+            tex_rects,
         )));
 
         // Create Chunks
-        let e = create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex_bundle);
+        let e = create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex);
 
         // Fill chunk with some data
         ctx.world.exec(|(mut ctrl,): (Write<'_, TileVoxelCtrl>,)| {
             for x in 0..CHUNK_DIM8 {
                 for y in 0..CHUNK_DIM8 {
                     for z in 0..CHUNK_DIM8 {
-                        ctrl.lazy_update([x as i32, y as i32, z as i32], TileVoxel { tile_id: 1 });
+                        if x < 4 || y < 4 || z < 4 {
+                            ctrl.lazy_update(
+                                [x as i32, y as i32, z as i32],
+                                TileVoxel { tile_id: 1 },
+                            );
+                        }
                     }
                 }
             }
@@ -100,7 +143,7 @@ impl Scene for Game {
         // Position Camera
         ctx.world.exec(
             |(active_camera, mut cam_views, mut _cam_projs): CameraData| {
-                let pos = Point3::new(0.2, 0.1, 5.);
+                let pos = isometric_camera_position() * 70.;
 
                 let maybe_cam = active_camera
                     .camera_entity()

@@ -1,4 +1,4 @@
-use crate::comp::{GlTexture, MeshBuilder};
+use crate::comp::{GlTexture, MeshBuilder, TexRect};
 use crate::voxel::{VoxelChunk, VoxelData};
 
 /// Mesh generator for voxel chunks.
@@ -17,11 +17,14 @@ pub trait VoxelMeshGen {
 /// performed.
 pub struct VoxelBoxGen {
     texture: GlTexture,
+
+    /// Texture rectangles to be uesd for each voxel cuboid
+    tex_rects: [TexRect; 6],
 }
 
 impl VoxelBoxGen {
-    pub fn new(texture: GlTexture) -> Self {
-        VoxelBoxGen { texture }
+    pub fn new(texture: GlTexture, tex_rects: [TexRect; 6]) -> Self {
+        VoxelBoxGen { texture, tex_rects }
     }
 }
 
@@ -31,25 +34,23 @@ impl VoxelMeshGen for VoxelBoxGen {
         D: VoxelData,
         C: VoxelChunk<D>,
     {
-        let dim = chunk.dim();
+        let dim = chunk.dim() as i32;
 
         for x in 0..dim {
             for y in 0..dim {
                 for z in 0..dim {
-                    let tex_rects = [
-                        self.texture.source_rect(),
-                        self.texture.source_rect(),
-                        self.texture.source_rect(),
-                        self.texture.source_rect(),
-                        self.texture.source_rect(),
-                        self.texture.source_rect(),
-                    ];
+                    let occupied = chunk
+                        .get([x, y, z])
+                        .map(|data| data.occupied())
+                        .unwrap_or(false);
 
-                    builder = builder.pseudocube(
-                        [x as f32, y as f32, z as f32],
-                        [1.0, 1.0, 1.0],
-                        tex_rects,
-                    );
+                    if occupied {
+                        builder = builder.pseudocube(
+                            [x as f32, y as f32, z as f32],
+                            [1.0, 1.0, 1.0],
+                            self.tex_rects.clone(),
+                        );
+                    }
                 }
             }
         }

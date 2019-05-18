@@ -31,13 +31,10 @@ impl MeshBuilder {
         }
     }
 
-    // New vertices will be inserted starting here
+    /// New vertices will be inserted starting here
+    #[inline]
     fn next_index(&self) -> u16 {
-        if self.vertices.len() > 0 {
-            (self.vertices.len() - 1) as u16
-        } else {
-            0
-        }
+        self.vertices.len() as u16
     }
 
     pub fn pseudocube<V>(mut self, position: V, size: [f32; 3], texture_rects: [TexRect; 6]) -> Self

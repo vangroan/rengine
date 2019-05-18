@@ -27,6 +27,7 @@ impl GlTexture {
     }
 }
 
+#[derive(Clone)]
 pub struct TexRect {
     pixel_size: Vector2<u32>,
     pos: Vector2<f32>,
