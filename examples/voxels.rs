@@ -43,14 +43,14 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex_bundle: Arc<AssetBu
 }
 
 pub struct Game {
-    chunk_upkeep_sys: TileUpkeepSystem,
+    chunk_upkeep_sys: Option<TileUpkeepSystem>,
     voxel_tex: Option<GlTexture>,
 }
 
 impl Game {
     fn new() -> Self {
         Game {
-            chunk_upkeep_sys: TileUpkeepSystem::new(),
+            chunk_upkeep_sys: None,
             voxel_tex: None,
         }
     }
@@ -69,6 +69,11 @@ impl Scene for Game {
             .write_resource::<TextureAssets>()
             .default_texture(ctx.graphics.factory_mut());
 
+        // Setup system
+        self.chunk_upkeep_sys = Some(TileUpkeepSystem::new(VoxelBoxGen::new(
+            GlTexture::from_bundle(tex_bundle.clone()),
+        )));
+
         // Create Chunks
         create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex_bundle);
 
@@ -76,7 +81,9 @@ impl Scene for Game {
     }
 
     fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
-        self.chunk_upkeep_sys.run_now(&ctx.world.res);
+        if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
+            chunk_upkeep_sys.run_now(&ctx.world.res);
+        }
 
         None
     }

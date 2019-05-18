@@ -1,4 +1,4 @@
-use crate::comp::{Mesh, MeshBuilder};
+use crate::comp::{Mesh, MeshBuilder, MeshCmd, MeshCommandBuffer};
 use crate::voxel::{voxel_to_chunk, ChunkCoord, VoxelChunk, VoxelCoord, VoxelData, VoxelMeshGen};
 use specs::{Component, Entity, Read, System, Write, WriteStorage};
 use std::collections::{HashMap, HashSet};
@@ -82,7 +82,10 @@ pub struct ChunkUpkeepSystem<D: VoxelData, C: VoxelChunk<D>, G: VoxelMeshGen> {
     ///
     /// Kept in struct to avoid constnt allocation.
     dirty: HashSet<ChunkCoord>,
-    _marker: PhantomData<(D, C, G)>,
+
+    /// Mesh generator invoked when generating chunks.
+    mesh_gen: G,
+    _marker: PhantomData<(D, C)>,
 }
 
 impl<D, C, G> ChunkUpkeepSystem<D, C, G>
@@ -91,9 +94,10 @@ where
     C: VoxelChunk<D>,
     G: 'static + VoxelMeshGen + Send + Sync,
 {
-    pub fn new() -> Self {
+    pub fn new(mesh_gen: G) -> Self {
         ChunkUpkeepSystem {
             dirty: HashSet::new(),
+            mesh_gen,
             _marker: PhantomData,
         }
     }
@@ -109,12 +113,12 @@ where
         Write<'a, ChunkControl<D, C>>,
         Write<'a, ChunkMapping>,
         WriteStorage<'a, C>,
-        WriteStorage<'a, Mesh>,
+        Write<'a, MeshCommandBuffer>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
         use LazyCommand::*;
-        let (mut chunk_ctrl, chunk_map, mut chunks, mut _mesh_gen) = data;
+        let (mut chunk_ctrl, chunk_map, mut chunks, mut mesh_cmds) = data;
 
         for cmd in chunk_ctrl.cmds.drain(..).into_iter() {
             match cmd {
@@ -141,9 +145,10 @@ where
                 if let Some(entity) = chunk_map.0.get(&chunk_coord) {
                     // Retireve chunk component
                     if let Some(chunk) = chunks.get_mut(*entity) {
-
-                        // mesh_gen.generate(chunk, MeshBuilder::new())
-                        //     .build();
+                        mesh_cmds.submit(MeshCmd::AllocateMesh(
+                            *entity,
+                            self.mesh_gen.generate(chunk, MeshBuilder::new()),
+                        ));
                     }
                 }
             }

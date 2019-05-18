@@ -8,6 +8,9 @@ extern crate image;
 pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
 extern crate num_traits;
+extern crate shred;
+#[macro_use]
+extern crate shred_derive;
 pub extern crate specs;
 #[macro_use]
 extern crate specs_derive;

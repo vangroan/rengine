@@ -5,7 +5,8 @@ use crate::graphics::GraphicContext;
 use gfx::handle::Buffer;
 use gfx::traits::FactoryExt;
 use gfx::Slice;
-use specs::{Component, DenseVecStorage};
+use specs::prelude::*;
+use std::collections::VecDeque;
 
 // http://ilkinulas.github.io/development/unity/2016/05/06/uv-mapping.html
 
@@ -319,4 +320,58 @@ impl MeshBuilder {
             transbuf,
         }
     }
+}
+
+#[derive(Default)]
+pub struct MeshCommandBuffer(VecDeque<MeshCmd>);
+
+impl MeshCommandBuffer {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn submit(&mut self, cmd: MeshCmd) {
+        self.0.push_back(cmd);
+    }
+
+    pub fn pop(&mut self) -> Option<MeshCmd> {
+        self.0.pop_front()
+    }
+}
+
+pub enum MeshCmd {
+    AllocateMesh(Entity, MeshBuilder),
+}
+
+pub struct MeshUpkeepSystem;
+
+impl MeshUpkeepSystem {
+    pub fn new() -> Self {
+        MeshUpkeepSystem
+    }
+
+    pub fn maintain(&mut self, graphics_context: &mut GraphicContext, data: MeshUpkeepData) {
+        let MeshUpkeepData {
+            mut mesh_cmds,
+            mut meshes,
+        } = data;
+
+        while let Some(cmd) = mesh_cmds.pop() {
+            use MeshCmd::*;
+
+            match cmd {
+                AllocateMesh(entity, builder) => {
+                    meshes
+                        .insert(entity, builder.build(graphics_context))
+                        .expect("Failed to insert mesh");
+                }
+            }
+        }
+    }
+}
+
+#[derive(SystemData)]
+pub struct MeshUpkeepData<'a> {
+    mesh_cmds: Write<'a, MeshCommandBuffer>,
+    meshes: WriteStorage<'a, Mesh>,
 }

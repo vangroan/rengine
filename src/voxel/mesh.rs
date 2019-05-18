@@ -19,6 +19,12 @@ pub struct VoxelBoxGen {
     texture: GlTexture,
 }
 
+impl VoxelBoxGen {
+    pub fn new(texture: GlTexture) -> Self {
+        VoxelBoxGen { texture }
+    }
+}
+
 impl VoxelMeshGen for VoxelBoxGen {
     fn generate<D, C>(&self, chunk: &C, mut builder: MeshBuilder) -> MeshBuilder
     where
