@@ -6,15 +6,14 @@ use rengine::comp::{GlTexture, Transform};
 use rengine::glm;
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
-use rengine::res::{AssetBundle, TextureAssets};
-use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
+use rengine::res::TextureAssets;
+use rengine::specs::{Builder, Entity, Read, RunNow, World, Write, WriteStorage};
 use rengine::voxel::{
     ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem, VoxelArrayChunk, VoxelBoxGen,
     VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, Scene, Trans};
 use std::error::Error;
-use std::sync::Arc;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
 type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
@@ -54,11 +53,21 @@ fn isometric_camera_position() -> Point3<f32> {
 }
 
 fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Entity {
+    // Note: Mesh is generated later
     let entity = world
         .create_entity()
         .with(tex)
         .with(TileVoxelChunk::new(chunk_id.clone()))
-        .with(Transform::new())
+        .with(Transform::new().with_position([
+            chunk_id.i as f32 * CHUNK_DIM8 as f32,
+            chunk_id.j as f32 * CHUNK_DIM8 as f32,
+            chunk_id.k as f32 * CHUNK_DIM8 as f32,
+        ]))
+        // .with(Transform::new().with_position([
+        //     chunk_id.i as f32,
+        //     chunk_id.j as f32,
+        //     chunk_id.k as f32,
+        // ]))
         .build();
 
     world
@@ -70,14 +79,12 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Enti
 
 pub struct Game {
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
-    voxel_tex: Option<GlTexture>,
 }
 
 impl Game {
     fn new() -> Self {
         Game {
             chunk_upkeep_sys: None,
-            voxel_tex: None,
         }
     }
 }
@@ -122,19 +129,26 @@ impl Scene for Game {
         )));
 
         // Create Chunks
-        let e = create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex);
+        create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex.clone());
+        create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 0), tex.clone());
+        create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 1), tex.clone());
+        create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 1), tex.clone());
+
+        {
+            let mapping = ctx.world.write_resource::<ChunkMapping>();
+            let inner = mapping.inner();
+            for kvp in inner.iter() {
+                println!("{:?}", kvp);
+            }
+        }
 
         // Fill chunk with some data
+        let size2 = CHUNK_DIM8 * 2;
         ctx.world.exec(|(mut ctrl,): (Write<'_, TileVoxelCtrl>,)| {
-            for x in 0..CHUNK_DIM8 {
+            for x in 0..size2 {
                 for y in 0..CHUNK_DIM8 {
-                    for z in 0..CHUNK_DIM8 {
-                        if x < 4 || y < 4 || z < 4 {
-                            ctrl.lazy_update(
-                                [x as i32, y as i32, z as i32],
-                                TileVoxel { tile_id: 1 },
-                            );
-                        }
+                    for z in 0..size2 {
+                        ctrl.lazy_update([x as i32, y as i32, z as i32], TileVoxel { tile_id: 1 });
                     }
                 }
             }

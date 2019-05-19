@@ -1,6 +1,6 @@
-use crate::comp::{Mesh, MeshBuilder, MeshCmd, MeshCommandBuffer};
+use crate::comp::{MeshBuilder, MeshCmd, MeshCommandBuffer};
 use crate::voxel::{voxel_to_chunk, ChunkCoord, VoxelChunk, VoxelCoord, VoxelData, VoxelMeshGen};
-use specs::{Component, Entity, Read, System, Write, WriteStorage};
+use specs::{Component, Entity, System, Write, WriteStorage};
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 
@@ -73,6 +73,10 @@ impl ChunkMapping {
     {
         self.0.insert(chunk_coord.into(), entity);
     }
+
+    pub fn inner(&self) -> &HashMap<ChunkCoord, Entity> {
+        &self.0
+    }
 }
 
 /// Applies queued updates to chunks, and regenerates
@@ -134,6 +138,8 @@ where
                             chunk.set(voxel_coord, voxel_data);
                             self.dirty.insert(chunk_coord.clone());
                         }
+                    } else {
+                        println!("Chunk not found for {}", chunk_coord);
                     }
                 }
             }

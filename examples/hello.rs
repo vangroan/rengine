@@ -4,7 +4,7 @@ extern crate specs_derive;
 
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
-use rengine::comp::{GlTexture, MeshBuilder, Transform, X_AXIS, Y_AXIS};
+use rengine::comp::{GlTexture, MeshBuilder, TexRect, Transform, X_AXIS, Y_AXIS};
 use rengine::glm;
 use rengine::glutin::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use rengine::nalgebra::{Point3, Vector3};
@@ -38,6 +38,32 @@ type CameraData<'a> = (
     WriteStorage<'a, CameraView>,
     WriteStorage<'a, CameraProjection>,
 );
+
+fn create_block(
+    ctx: &mut Context<'_>,
+    pos: [f32; 3],
+    tex: GlTexture,
+    tex_rects: [TexRect; 6],
+) -> Entity {
+    ctx
+        .world
+        .create_entity()
+        .with(
+            MeshBuilder::new()
+                .pseudocube([0., 0., 0.], [0.5, 0.5, 0.5], tex_rects)
+                .build(&mut ctx.graphics),
+        )
+        .with(
+            Transform::default()
+                .with_anchor([0.0, 0.0, 0.0])
+                .with_position(pos)
+                // .with_scale([0.5, 0.5, 0.5])
+                // .with_rotate_world(Deg(45.), Y_AXIS)
+                // .with_rotate_world(Deg(30.), X_AXIS),
+        )
+        .with(tex)
+        .build()
+}
 
 #[derive(Component)]
 pub struct Block;
@@ -126,32 +152,20 @@ impl Scene for Game {
                 top_rect,
             ]
         };
-        let entity = ctx
-            .world
-            .create_entity()
-            .with(
-                MeshBuilder::new()
-                    // .quad(
-                    //     [0., 0., 0.],
-                    //     [1., 1.],
-                    //     // [colors::RED, colors::GREEN, colors::BLUE, colors::MAGENTA],
-                    //     [colors::WHITE, colors::WHITE, colors::WHITE, colors::WHITE],
-                    // )
-                    .pseudocube([0., 0., 0.], [0.5, 0.5, 0.5], tex_rects)
-                    .build(&mut ctx.graphics),
-            )
-            .with(
-                Transform::default()
-                    .with_anchor([0.0, 0.0, 0.0])
-                    .with_position([0.0, 0.0, 0.0])
-                    // .with_scale([0.5, 0.5, 0.5])
-                    // .with_rotate_world(Deg(45.), Y_AXIS)
-                    // .with_rotate_world(Deg(30.), X_AXIS),
-            )
-            .with(tex)
-            .build();
 
-        self.entities.push(entity);
+        self.entities.push(create_block(
+            ctx,
+            [0., 0., 0.],
+            tex.clone(),
+            tex_rects.clone(),
+        ));
+
+        self.entities.push(create_block(
+            ctx,
+            [-0.6, 0., 0.],
+            tex.clone(),
+            tex_rects.clone(),
+        ));
 
         None
     }

@@ -78,11 +78,19 @@ pub trait VoxelChunk<D: VoxelData> {
     /// bounds of the chunk.
     fn in_bounds<V: Into<VoxelCoord>>(&self, coord: V) -> bool;
 
+    /// Checks whether the given local voxel
+    /// coordinates are contained within the
+    /// bounds of the chunk.
+    fn in_bounds_local<V: Into<VoxelCoord>>(&self, coord: V) -> bool;
+
     /// Retrieve voxel data at the given coordinate.
     ///
     /// Returns `None` when coordinate is outside of
     /// the chunks bounds.
     fn get<V: Into<VoxelCoord>>(&self, coord: V) -> Option<&D>;
+
+    /// Retrieve voxel data at the given local coordinate.
+    fn get_local<V: Into<VoxelCoord>>(&self, coord: V) -> Option<&D>;
 
     /// Retrieve mutable voxel data at the given coordinate.
     ///
@@ -195,6 +203,15 @@ where
         i >= i1 && j >= j1 && k >= k1 && i < i2 && j < j2 && k < k2
     }
 
+    fn in_bounds_local<V>(&self, coord: V) -> bool
+    where
+        V: Into<VoxelCoord>,
+    {
+        let VoxelCoord { i, j, k } = coord.into();
+        let dim = self.dim() as i32;
+        i >= 0 && j >= 0 && k >= 0 && i < dim && j < dim && k < dim
+    }
+
     fn get<V>(&self, coord: V) -> Option<&D>
     where
         V: Into<VoxelCoord>,
@@ -212,7 +229,22 @@ where
         }
     }
 
-    fn get_mut<V: Into<VoxelCoord>>(&mut self, coord: V) -> Option<&mut D>
+    fn get_local<V: Into<VoxelCoord>>(&self, coord: V) -> Option<&D>
+    where
+        V: Into<VoxelCoord>,
+    {
+        let local_coord: VoxelCoord = coord.into();
+
+        if self.in_bounds_local(local_coord.clone()) {
+            let index = self.data_index(&local_coord);
+
+            self.data.get(index).map(|el| &el.1)
+        } else {
+            None
+        }
+    }
+
+    fn get_mut<V>(&mut self, coord: V) -> Option<&mut D>
     where
         V: Into<VoxelCoord>,
     {

@@ -40,7 +40,7 @@ impl VoxelMeshGen for VoxelBoxGen {
             for y in 0..dim {
                 for z in 0..dim {
                     let occupied = chunk
-                        .get([x, y, z])
+                        .get_local([x, y, z])
                         .map(|data| data.occupied())
                         .unwrap_or(false);
 
@@ -54,6 +54,8 @@ impl VoxelMeshGen for VoxelBoxGen {
                 }
             }
         }
+
+        println!("Generated mesh for {}", chunk.index());
 
         builder
     }
