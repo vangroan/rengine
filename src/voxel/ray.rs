@@ -1,69 +1,51 @@
-use nalgebra::{Point3, Vector3};
+use nalgebra::{Point3, Unit, Vector3};
+use std::f32::INFINITY;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct VoxelRayInfo;
 
+// https://lodev.org/cgtutor/raycasting.html
 #[allow(dead_code)]
-fn voxel_raycast<P, V, F>(
-    origin: P,
-    direction: V,
+fn voxel_raycast<P, V>(
+    origin: Point3<f32>,
+    direction: Unit<Vector3<f32>>,
     steps: usize,
-    predicate: F,
-) -> Option<VoxelRayInfo>
-where
-    P: Into<Point3<f32>>,
-    V: Into<Vector3<f32>>,
-    F: Fn(i32, i32, i32) -> bool,
-{
-    let origin_p: Point3<f32> = origin.into();
-    let dir_v: Vector3<f32> = direction.into();
-
+) -> Option<VoxelRayInfo> {
     // Determine direction for steps -1 or 1
-    // Round initial step to closest voxel boundry
-    let (x_delta, mut x_max) = if dir_v.x >= 0.0 {
-        (1.0, origin_p.x.ceil())
+    let step_x = if direction.x > 0.0 { 1 } else { -1 };
+    let step_y = if direction.y > 0.0 { 1 } else { -1 };
+    let step_z = if direction.z > 0.0 { 1 } else { -1 };
+
+    // The length along the ray we need to travel to
+    // cross a voxel border along a specific axis.
+    //
+    // When the direction is 0.0 along an axis, then
+    // it is parallel, and will never cross the axis.
+    let delta_x = if direction.x != 0.0 {
+        (1.0 / direction.x).abs()
     } else {
-        (-1.0, origin_p.x.floor())
+        INFINITY
     };
 
-    let (y_delta, mut y_max) = if dir_v.y >= 0.0 {
-        (1.0, origin_p.y.ceil())
+    let delta_y = if direction.y != 0.0 {
+        (1.0 / direction.y).abs()
     } else {
-        (-1.0, origin_p.y.floor())
+        INFINITY
     };
 
-    let (z_delta, mut z_max) = if dir_v.z >= 0.0 {
-        (1.0, origin_p.z.ceil())
+    let delta_z = if direction.z != 0.0 {
+        (1.0 / direction.z).abs()
     } else {
-        (-1.0, origin_p.z.floor())
+        INFINITY
     };
 
-    let mut i = 0;
-    while i < steps {
-        let x = x_max as i32;
-        let y = y_max as i32;
-        let z = z_max as i32;
+    // Calculate initial lengths from origin
+    // to first crossing of boundries.
+    let mix_x = if direction.x > 0.0 {
 
-        if predicate(x, y, z) {
-            return Some(VoxelRayInfo);
-        } else {
-            if x < y {
-                if x < z {
-                    x_max += x_delta;
-                } else {
-                    z_max += z_delta;
-                }
-            } else {
-                if y < z {
-                    y_max += y_delta;
-                } else {
-                    z_max += z_delta;
-                }
-            }
+    } else {
 
-            i += 1;
-        }
-    }
+    };
 
     None
 }
@@ -74,7 +56,11 @@ mod test {
 
     #[test]
     fn test_basic_cast() {
-        let info = voxel_raycast([0., 0., 0.], [0.5, 0.25, 0.0], 10, |x, y, z| false);
+        let info = voxel_raycast(
+            [0., 0., 0.].into(),
+            Unit::new_normalize([0.5, 0.25, 0.0].into()),
+            10,
+        );
         assert_eq!(None, info);
     }
 }
