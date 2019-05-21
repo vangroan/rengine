@@ -11,11 +11,6 @@ fn voxel_raycast<P, V>(
     direction: Unit<Vector3<f32>>,
     steps: usize,
 ) -> Option<VoxelRayInfo> {
-    // Determine direction for steps -1 or 1
-    let step_x = if direction.x > 0.0 { 1 } else { -1 };
-    let step_y = if direction.y > 0.0 { 1 } else { -1 };
-    let step_z = if direction.z > 0.0 { 1 } else { -1 };
-
     // The length along the ray we need to travel to
     // cross a voxel border along a specific axis.
     //
@@ -39,12 +34,26 @@ fn voxel_raycast<P, V>(
         INFINITY
     };
 
+    // Determine which direction we are stepping.
+    //
     // Calculate initial lengths from origin
     // to first crossing of boundries.
-    let mix_x = if direction.x > 0.0 {
+    let (step_x, max_x) = if direction.x > 0.0 { 
+        (1, (origin.x.ceil() - origin.x) * delta_x)
+    } else { 
+        (-1, (origin.x.floor() - origin.x) * delta_x)
+    };
 
-    } else {
+    let (step_y, max_y) = if direction.y > 0.0 { 
+        (1, (origin.y.ceil() - origin.y) * delta_y)
+    } else { 
+        (-1, (origin.y.floor() - origin.y) * delta_y)
+    };
 
+    let (step_z, max_z) = if direction.z > 0.0 { 
+        (1, (origin.z.ceil() - origin.z) * delta_z)
+    } else { 
+        (-1, (origin.z.floor() - origin.z) * delta_z)
     };
 
     None
