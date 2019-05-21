@@ -47,21 +47,21 @@ fn voxel_raycast(
     // Calculate initial lengths from origin
     // to first crossing of boundries.
     let (step_x, mut max_x) = if direction.x > 0.0 {
-        (1, (origin.x.ceil() - origin.x) * delta_x)
+        (1, (origin.x.ceil() - origin.x).abs() * delta_x)
     } else {
-        (-1, (origin.x.floor() - origin.x) * delta_x)
+        (-1, (origin.x.floor() - origin.x).abs() * delta_x)
     };
 
     let (step_y, mut max_y) = if direction.y > 0.0 {
-        (1, (origin.y.ceil() - origin.y) * delta_y)
+        (1, (origin.y.ceil() - origin.y).abs() * delta_y)
     } else {
-        (-1, (origin.y.floor() - origin.y) * delta_y)
+        (-1, (origin.y.floor() - origin.y).abs() * delta_y)
     };
 
     let (step_z, mut max_z) = if direction.z > 0.0 {
-        (1, (origin.z.ceil() - origin.z) * delta_z)
+        (1, (origin.z.ceil() - origin.z).abs() * delta_z)
     } else {
-        (-1, (origin.z.floor() - origin.z) * delta_z)
+        (-1, (origin.z.floor() - origin.z).abs() * delta_z)
     };
 
     println!("step ({}, {}, {})", step_x, step_y, step_z);
@@ -102,8 +102,8 @@ mod test {
     #[test]
     fn test_basic_cast() {
         let info = voxel_raycast(
-            [0.5, 0.5, 0.1].into(),
-            Unit::new_normalize([0.5, 0.866, 0.0].into()),
+            [1.5, 0.5, 0.1].into(),
+            Unit::new_normalize([0.5, 0.866025403, 0.0].into()),
             10,
         );
         assert_eq!(None, info);
