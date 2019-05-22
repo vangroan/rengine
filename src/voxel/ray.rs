@@ -130,7 +130,7 @@ impl Iterator for VoxelRaycast {
                     self.voxel[0] += self.step[0];
                     VoxelRayInfo {
                         t: self.t[0],
-                        intersect: Point3::new(0., 0., 0.),
+                        intersect: self.origin + self.direction.into_inner() * self.t[0],
                         voxel: self.voxel.clone().into(),
                     }
                 } else {
@@ -139,7 +139,7 @@ impl Iterator for VoxelRaycast {
                     self.voxel[2] += self.step[2];
                     VoxelRayInfo {
                         t: self.t[2],
-                        intersect: Point3::new(0., 0., 0.),
+                        intersect: self.origin + self.direction.into_inner() * self.t[2],
                         voxel: self.voxel.clone().into(),
                     }
                 }
@@ -150,7 +150,7 @@ impl Iterator for VoxelRaycast {
                     self.voxel[1] += self.step[1];
                     VoxelRayInfo {
                         t: self.t[1],
-                        intersect: Point3::new(0., 0., 0.),
+                        intersect: self.origin + self.direction.into_inner() * self.t[1],
                         voxel: self.voxel.clone().into(),
                     }
                 } else {
@@ -159,7 +159,7 @@ impl Iterator for VoxelRaycast {
                     self.voxel[2] += self.step[2];
                     VoxelRayInfo {
                         t: self.t[2],
-                        intersect: Point3::new(0., 0., 0.),
+                        intersect: self.origin + self.direction.into_inner() * self.t[2],
                         voxel: self.voxel.clone().into(),
                     }
                 }
@@ -179,7 +179,7 @@ mod test {
     #[test]
     fn test_basic_cast() {
         let ray = voxel_raycast(
-            [1.5, 0.5, 0.1].into(),
+            [1.5, 0.5, 0.0].into(),
             Unit::new_normalize([0.5, 0.866025403, 0.0].into()),
             10,
         );
@@ -195,6 +195,7 @@ mod test {
 
         assert!(found.is_some());
         let (cursor, info) = found.unwrap();
+        println!("{}", info.intersect);
         assert_eq!(target, info.voxel);
         assert_eq!(3, cursor);
     }
