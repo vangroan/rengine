@@ -11,7 +11,8 @@ use rengine::res::{DeviceDimensions, TextureAssets};
 use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
 use rengine::voxel::{
     voxel_raycast, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
-    VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelData, VoxelRayInfo, VoxelRaycast, CHUNK_DIM8,
+    VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData, VoxelRayInfo, VoxelRaycast,
+    CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, Scene, Trans};
 use std::error::Error;
@@ -86,6 +87,7 @@ fn mouse_raycast(
         ReadStorage<'_, CameraProjection>,
     ),
     screen_pos: PhysicalPosition,
+    steps: u32,
 ) -> Option<VoxelRaycast> {
     let (active_camera, device_dim, cam_views, cam_projs) = data;
 
@@ -120,20 +122,18 @@ fn mouse_raycast(
         );
         println!("  Device Dimensions: {:?}", (device_w, device_h));
 
+        // Convert glutin screen position to computer graphics screen coordinates
+        let (screen_w, screen_h) = (
+            screen_pos.x as f32 - (device_w / 2.),
+            -(screen_pos.y as f32 - (device_h / 2.)),
+        );
+
         // Use screen position to compute two points in clip space, where near
         // and far are -1 and 1 respectively.
         //
         // "ndc" = normalized device coordinates
-        let near_ndc_point = Point3::new(
-            screen_pos.x as f32 / device_w,
-            screen_pos.y as f32 / device_h,
-            -1.0,
-        );
-        let far_ndc_point = Point3::new(
-            screen_pos.x as f32 / device_w,
-            screen_pos.y as f32 / device_h,
-            1.0,
-        );
+        let near_ndc_point = Point3::new(screen_w / device_w, screen_h / device_h, -1.0);
+        let far_ndc_point = Point3::new(screen_w / device_w, screen_h / device_h, 1.0);
         println!("  Normalized Device Points:");
         println!("    Near: {}", near_ndc_point);
         println!("    Far: {}", far_ndc_point);
@@ -172,7 +172,7 @@ fn mouse_raycast(
         return Some(voxel_raycast(
             world_point,
             Unit::new_normalize(world_direction),
-            100,
+            steps,
         ));
     }
 
@@ -182,6 +182,8 @@ fn mouse_raycast(
 pub struct Game {
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
     cursor_pos: PhysicalPosition,
+    carve: bool,
+    add: bool,
 }
 
 impl Game {
@@ -189,6 +191,8 @@ impl Game {
         Game {
             chunk_upkeep_sys: None,
             cursor_pos: PhysicalPosition::new(0., 0.),
+            carve: false,
+            add: false,
         }
     }
 }
@@ -234,9 +238,9 @@ impl Scene for Game {
 
         // Create Chunks
         create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex.clone());
-        // create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 0), tex.clone());
-        // create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 1), tex.clone());
-        // create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 1), tex.clone());
+        create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 0), tex.clone());
+        create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 1), tex.clone());
+        create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 1), tex.clone());
 
         {
             let mapping = ctx.world.write_resource::<ChunkMapping>();
@@ -290,38 +294,10 @@ impl Scene for Game {
                     self.cursor_pos = position.to_physical(device_dim.dpi_factor());
                 }
                 MouseInput { button, state, .. } => {
-                    if button == &MouseButton::Left && state == &ElementState::Released {
-                        if let Some(raycast) =
-                            mouse_raycast(ctx.world.system_data(), self.cursor_pos.clone())
-                        {
-                            let (chunk_map, mut chunk_ctrl, chunks): (
-                                Read<'_, ChunkMapping>,
-                                Write<'_, TileVoxelCtrl>,
-                                ReadStorage<'_, VoxelArrayChunk<TileVoxel>>,
-                            ) = ctx.world.system_data();
-
-                            for raycast_info in raycast {
-                                // Determine chunk coordinate
-                                let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
-                                let occupied = chunk_map
-                                    .chunk_entity(chunk_coord)
-                                    .and_then(|e| chunks.get(e))
-                                    .and_then(|c| c.get(raycast_info.voxel_coord().clone()))
-                                    .map(|d| d.occupied())
-                                    .unwrap_or(false);
-
-                                // Carve out line in path of ray
-                                if occupied {
-                                    println!("!! Carving {}", raycast_info.voxel_coord());
-                                    chunk_ctrl.lazy_update(
-                                        raycast_info.voxel_coord().clone(),
-                                        TileVoxel {
-                                            tile_id: EMPTY_TILE,
-                                        },
-                                    );
-                                }
-                            }
-                        }
+                    if button == &MouseButton::Right {
+                        self.carve = state == &ElementState::Pressed;
+                    } else if button == &MouseButton::Left {
+                        self.add = state == &ElementState::Pressed;
                     }
                 }
                 _ => {}
@@ -335,6 +311,85 @@ impl Scene for Game {
     fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
             chunk_upkeep_sys.run_now(&ctx.world.res);
+        }
+
+        if self.carve {
+            if let Some(raycast) =
+                mouse_raycast(ctx.world.system_data(), self.cursor_pos.clone(), 200)
+            {
+                let (chunk_map, mut chunk_ctrl, chunks): (
+                    Read<'_, ChunkMapping>,
+                    Write<'_, TileVoxelCtrl>,
+                    ReadStorage<'_, VoxelArrayChunk<TileVoxel>>,
+                ) = ctx.world.system_data();
+
+                for raycast_info in raycast {
+                    println!("Voxel: {}", raycast_info.voxel_coord());
+
+                    // Determine chunk coordinate
+                    let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
+                    let occupied = chunk_map
+                        .chunk_entity(chunk_coord)
+                        .and_then(|e| chunks.get(e))
+                        .and_then(|c| c.get(raycast_info.voxel_coord().clone()))
+                        .map(|d| d.occupied())
+                        .unwrap_or(false);
+
+                    // Carve out line in path of ray
+                    if occupied {
+                        println!("!! Carving {}", raycast_info.voxel_coord());
+                        chunk_ctrl.lazy_update(
+                            raycast_info.voxel_coord().clone(),
+                            TileVoxel {
+                                tile_id: EMPTY_TILE,
+                            },
+                        );
+                    }
+                }
+            }
+        }
+
+        if self.add {
+            if let Some(raycast) =
+                mouse_raycast(ctx.world.system_data(), self.cursor_pos.clone(), 200)
+            {
+                let (chunk_map, mut chunk_ctrl, chunks): (
+                    Read<'_, ChunkMapping>,
+                    Write<'_, TileVoxelCtrl>,
+                    ReadStorage<'_, VoxelArrayChunk<TileVoxel>>,
+                ) = ctx.world.system_data();
+
+                let mut last_voxel = VoxelCoord::new(9999, 9999, 9999);
+
+                'cast: for raycast_info in raycast {
+                    println!("Voxel: {}", raycast_info.voxel_coord());
+
+                    // Determine chunk coordinate
+                    let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
+                    let occupied = chunk_map
+                        .chunk_entity(chunk_coord)
+                        .and_then(|e| chunks.get(e))
+                        .and_then(|c| c.get(raycast_info.voxel_coord().clone()))
+                        .map(|d| d.occupied())
+                        .unwrap_or(false);
+
+                    // Tile hit, add to previous
+                    if occupied {
+                        println!("!! Adding {}", last_voxel);
+                        chunk_ctrl.lazy_update(
+                            last_voxel.clone(),
+                            TileVoxel {
+                                tile_id: EMPTY_TILE,
+                            },
+                        );
+
+                        // Stop
+                        break 'cast;
+                    } else {
+                        last_voxel = raycast_info.voxel_coord().clone();
+                    }
+                }
+            }
         }
 
         None
