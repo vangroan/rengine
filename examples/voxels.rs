@@ -160,20 +160,14 @@ fn mouse_raycast(
 
         // Inverse matrix to transform device space to world space
         let world_point = inverse_view_mat.transform_point(&line_point);
-        let world_direction = inverse_view_mat.transform_vector(&line_direction);
+        let world_direction =
+            Unit::new_normalize(inverse_view_mat.transform_vector(&line_direction));
         println!("  World Line:");
         println!("    Position: {}", world_point);
-        println!(
-            "    Direction: {}",
-            Unit::new_normalize(world_direction).as_ref()
-        );
+        println!("    Direction: {}", world_direction.as_ref());
 
         // Create ray walker
-        return Some(voxel_raycast(
-            world_point,
-            Unit::new_normalize(world_direction),
-            steps,
-        ));
+        return Some(voxel_raycast(world_point, world_direction, steps));
     }
 
     None
@@ -376,12 +370,7 @@ impl Scene for Game {
                     // Tile hit, add to previous
                     if occupied {
                         println!("!! Adding {}", last_voxel);
-                        chunk_ctrl.lazy_update(
-                            last_voxel.clone(),
-                            TileVoxel {
-                                tile_id: EMPTY_TILE,
-                            },
-                        );
+                        chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
 
                         // Stop
                         break 'cast;
