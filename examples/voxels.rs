@@ -132,8 +132,21 @@ fn mouse_raycast(
         // and far are -1 and 1 respectively.
         //
         // "ndc" = normalized device coordinates
-        let near_ndc_point = Point3::new(screen_w / device_w, screen_h / device_h, -1.0);
-        let far_ndc_point = Point3::new(screen_w / device_w, screen_h / device_h, 1.0);
+        //
+        // Multiplying with 2 is required because dividing the screen position
+        // with the device size yields a value between 0.0 and 1.0. Normalized
+        // device coordinates are a double unit cube, meaning each axis has a
+        // range between -1.0 and 1.0.
+        let near_ndc_point = Point3::new(
+            (screen_w / device_w) * 2.0,
+            (screen_h / device_h) * 2.0,
+            -1.0,
+        );
+        let far_ndc_point = Point3::new(
+            (screen_w / device_w) * 2.0,
+            (screen_h / device_h) * 2.0,
+            1.0,
+        );
         println!("  Normalized Device Points:");
         println!("    Near: {}", near_ndc_point);
         println!("    Far: {}", far_ndc_point);
