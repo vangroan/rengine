@@ -4,13 +4,14 @@ use rengine::angle::{Deg, Rad};
 use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
 use rengine::comp::{GlTexture, Transform};
 use rengine::glm;
-use rengine::nalgebra::{Point3, Vector3};
+use rengine::glutin::dpi::PhysicalPosition;
+use rengine::nalgebra::{Matrix4, Perspective3, Point3, Unit, Vector3};
 use rengine::option::lift2;
-use rengine::res::TextureAssets;
-use rengine::specs::{Builder, Entity, Read, RunNow, World, Write, WriteStorage};
+use rengine::res::{DeviceDimensions, TextureAssets};
+use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
 use rengine::voxel::{
-    ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem, VoxelArrayChunk, VoxelBoxGen,
-    VoxelData, CHUNK_DIM8,
+    voxel_raycast, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
+    VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelData, VoxelRayInfo, VoxelRaycast, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, Scene, Trans};
 use std::error::Error;
@@ -77,14 +78,117 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Enti
     entity
 }
 
+fn mouse_raycast(
+    data: (
+        Read<'_, ActiveCamera>,
+        Read<'_, DeviceDimensions>,
+        ReadStorage<'_, CameraView>,
+        ReadStorage<'_, CameraProjection>,
+    ),
+    screen_pos: PhysicalPosition,
+) -> Option<VoxelRaycast> {
+    let (active_camera, device_dim, cam_views, cam_projs) = data;
+
+    let maybe_cam = active_camera
+        .camera_entity()
+        .and_then(|e| lift2(cam_projs.get(e), cam_views.get(e)));
+
+    if let Some((cam_proj, cam_view)) = maybe_cam {
+        println!("# Casting Ray");
+
+        println!("  Screen Position: {:?}", (screen_pos.x, screen_pos.y));
+
+        // Build perspective projection that matches camera
+        let projection = {
+            let persp_settings = cam_proj.perspective_settings();
+            Perspective3::new(
+                persp_settings.aspect_ratio(),
+                persp_settings.fovy().as_radians(),
+                persp_settings.nearz(),
+                persp_settings.farz(),
+            )
+        };
+
+        // Get Camera World position
+        let camera_pos = cam_view.position().clone();
+        println!("  Camera Position: {}", camera_pos);
+
+        // Point must be between [0.0, 1.0] to unproject
+        let (device_w, device_h) = (
+            device_dim.physical_size().width as f32,
+            device_dim.physical_size().height as f32,
+        );
+        println!("  Device Dimensions: {:?}", (device_w, device_h));
+
+        // Use screen position to compute two points in clip space, where near
+        // and far are -1 and 1 respectively.
+        //
+        // "ndc" = normalized device coordinates
+        let near_ndc_point = Point3::new(
+            screen_pos.x as f32 / device_w,
+            screen_pos.y as f32 / device_h,
+            -1.0,
+        );
+        let far_ndc_point = Point3::new(
+            screen_pos.x as f32 / device_w,
+            screen_pos.y as f32 / device_h,
+            1.0,
+        );
+        println!("  Normalized Device Points:");
+        println!("    Near: {}", near_ndc_point);
+        println!("    Far: {}", far_ndc_point);
+
+        // Unproject clip space points to view space
+        let near_view_point = projection.unproject_point(&near_ndc_point);
+        let far_view_point = projection.unproject_point(&far_ndc_point);
+        println!("  View Space Points:");
+        println!("    Near: {}", near_view_point);
+        println!("    Far: {}", far_view_point);
+
+        // Compute line in view space
+        let line_point = near_view_point;
+        let line_direction = Unit::new_normalize(far_view_point - near_view_point);
+        println!("  Camera Local Line:");
+        println!("    Point: {}", line_point);
+        println!("    Direction: {}", line_direction.as_ref());
+
+        // Transform line from local camera space to world space
+        let inverse_view_mat = cam_view
+            .view_matrix()
+            .try_inverse()
+            .expect("Failed to compute inverse of view matrix");
+
+        // Inverse matrix to transform device space to world space
+        let world_point = inverse_view_mat.transform_point(&line_point);
+        let world_direction = inverse_view_mat.transform_vector(&line_direction);
+        println!("  World Line:");
+        println!("    Position: {}", world_point);
+        println!(
+            "    Direction: {}",
+            Unit::new_normalize(world_direction).as_ref()
+        );
+
+        // Create ray walker
+        return Some(voxel_raycast(
+            world_point,
+            Unit::new_normalize(world_direction),
+            100,
+        ));
+    }
+
+    None
+}
+
 pub struct Game {
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
+    cursor_pos: PhysicalPosition,
 }
 
 impl Game {
     fn new() -> Self {
         Game {
             chunk_upkeep_sys: None,
+            cursor_pos: PhysicalPosition::new(0., 0.),
         }
     }
 }
@@ -130,9 +234,9 @@ impl Scene for Game {
 
         // Create Chunks
         create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex.clone());
-        create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 0), tex.clone());
-        create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 1), tex.clone());
-        create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 1), tex.clone());
+        // create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 0), tex.clone());
+        // create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 1), tex.clone());
+        // create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 1), tex.clone());
 
         {
             let mapping = ctx.world.write_resource::<ChunkMapping>();
@@ -169,6 +273,61 @@ impl Scene for Game {
                 }
             },
         );
+
+        None
+    }
+
+    fn on_event(&mut self, ctx: &mut Context<'_>, ev: &glutin::Event) -> Option<Trans> {
+        use glutin::ElementState;
+        use glutin::Event::*;
+        use glutin::MouseButton;
+        use glutin::WindowEvent::*;
+
+        match ev {
+            WindowEvent { event, .. } => match event {
+                CursorMoved { position, .. } => {
+                    let (device_dim,): (Read<'_, DeviceDimensions>,) = ctx.world.system_data();
+                    self.cursor_pos = position.to_physical(device_dim.dpi_factor());
+                }
+                MouseInput { button, state, .. } => {
+                    if button == &MouseButton::Left && state == &ElementState::Released {
+                        if let Some(raycast) =
+                            mouse_raycast(ctx.world.system_data(), self.cursor_pos.clone())
+                        {
+                            let (chunk_map, mut chunk_ctrl, chunks): (
+                                Read<'_, ChunkMapping>,
+                                Write<'_, TileVoxelCtrl>,
+                                ReadStorage<'_, VoxelArrayChunk<TileVoxel>>,
+                            ) = ctx.world.system_data();
+
+                            for raycast_info in raycast {
+                                // Determine chunk coordinate
+                                let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
+                                let occupied = chunk_map
+                                    .chunk_entity(chunk_coord)
+                                    .and_then(|e| chunks.get(e))
+                                    .and_then(|c| c.get(raycast_info.voxel_coord().clone()))
+                                    .map(|d| d.occupied())
+                                    .unwrap_or(false);
+
+                                // Carve out line in path of ray
+                                if occupied {
+                                    println!("!! Carving {}", raycast_info.voxel_coord());
+                                    chunk_ctrl.lazy_update(
+                                        raycast_info.voxel_coord().clone(),
+                                        TileVoxel {
+                                            tile_id: EMPTY_TILE,
+                                        },
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
 
         None
     }

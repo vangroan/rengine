@@ -15,9 +15,19 @@ pub struct VoxelRayInfo {
     voxel: VoxelCoord,
 }
 
+impl VoxelRayInfo {
+    pub fn voxel_coord(&self) -> &VoxelCoord {
+        &self.voxel
+    }
+}
+
 // https://lodev.org/cgtutor/raycasting.html
 #[allow(dead_code)]
-fn voxel_raycast(origin: Point3<f32>, direction: Unit<Vector3<f32>>, steps: u32) -> VoxelRaycast {
+pub fn voxel_raycast(
+    origin: Point3<f32>,
+    direction: Unit<Vector3<f32>>,
+    steps: u32,
+) -> VoxelRaycast {
     // Initial voxel coordinate.
     //
     // Implicitly the origin is intersecting the

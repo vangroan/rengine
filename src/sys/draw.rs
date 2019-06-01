@@ -59,7 +59,7 @@ impl<'a> System<'a> for DrawSystem {
                     .map(|(proj, view)| {
                         // let pos = view.position();
                         // TODO: Allow user to select between orthographic and perspective at runtime
-                        (proj.prespective(), view.view_matrix())
+                        (proj.perspective(), view.view_matrix())
                     })
                     .unwrap_or((Matrix4::identity(), Matrix4::identity()));
 

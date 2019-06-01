@@ -27,6 +27,14 @@ impl DeviceDimensions {
             None => None,
         }
     }
+
+    pub fn dpi_factor(&self) -> f64 {
+        self.dpi_factor
+    }
+
+    pub fn physical_size(&self) -> &PhysicalSize {
+        &self.physical_size
+    }
 }
 
 impl Default for DeviceDimensions {

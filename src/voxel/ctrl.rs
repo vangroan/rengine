@@ -77,6 +77,14 @@ impl ChunkMapping {
     pub fn inner(&self) -> &HashMap<ChunkCoord, Entity> {
         &self.0
     }
+
+    #[inline]
+    pub fn chunk_entity<V>(&self, chunk_coord: V) -> Option<Entity>
+    where
+        V: Into<ChunkCoord>,
+    {
+        self.0.get(&chunk_coord.into()).map(|e| e.clone())
+    }
 }
 
 /// Applies queued updates to chunks, and regenerates

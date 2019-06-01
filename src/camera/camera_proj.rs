@@ -48,13 +48,17 @@ impl CameraProjection {
         Matrix4::new_orthographic(x, x + width, y, y + height, near, far)
     }
 
-    pub fn prespective(&self) -> Matrix4<f32> {
+    pub fn perspective(&self) -> Matrix4<f32> {
         let near = self.persp.nearz;
         let far = self.persp.farz;
         let fovy = self.persp.fovy.as_radians();
         let aspect = self.persp.aspect_ratio;
 
         Matrix4::new_perspective(aspect, fovy, near, far)
+    }
+
+    pub fn perspective_settings(&self) -> &PerspectiveSettings {
+        &self.persp
     }
 }
 
@@ -88,9 +92,31 @@ struct OrthographicSettings {
 }
 
 #[derive(Debug)]
-struct PerspectiveSettings {
+pub struct PerspectiveSettings {
     nearz: f32,
     farz: f32,
     fovy: Deg<f32>,
     aspect_ratio: f32,
+}
+
+impl PerspectiveSettings {
+    #[inline]
+    pub fn nearz(&self) -> f32 {
+        self.nearz
+    }
+
+    #[inline]
+    pub fn farz(&self) -> f32 {
+        self.farz
+    }
+
+    #[inline]
+    pub fn fovy(&self) -> Deg<f32> {
+        self.fovy
+    }
+
+    #[inline]
+    pub fn aspect_ratio(&self) -> f32 {
+        self.aspect_ratio
+    }
 }
