@@ -123,7 +123,7 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Gizmo Wireframe PSO
         {
-            let wireframe_shader = graphics
+            let gizmo_shader = graphics
                 .factory
                 .link_program(
                     include_bytes!(concat!(
@@ -137,17 +137,17 @@ impl<'a, 'b> App<'a, 'b> {
                 )
                 .unwrap();
 
-            let wireframe_pso = graphics
+            let gizmo_pso = graphics
                 .factory
                 .create_pipeline_from_program(
-                    &wireframe_shader,
+                    &gizmo_shader,
                     gfx::Primitive::TriangleList,
                     gfx::state::Rasterizer::new_fill().with_cull_back(),
-                    pipe::new(),
+                    gizmo_pipe::new(),
                 )
                 .unwrap();
 
-            world.add_resource(GizmoPipelineBundle::new(wireframe_pso, wireframe_shader));
+            world.add_resource(GizmoPipelineBundle::new(gizmo_pso, gizmo_shader));
         }
 
         // Encoder

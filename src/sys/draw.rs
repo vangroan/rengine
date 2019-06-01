@@ -27,7 +27,7 @@ impl DrawSystem {
 
 impl<'a> System<'a> for DrawSystem {
     type SystemData = (
-        ReadExpect<'a, PipelineBundle>,
+        ReadExpect<'a, PipelineBundle<pipe::Meta>>,
         ReadExpect<'a, ViewPort>,
         Read<'a, ActiveCamera>,
         ReadStorage<'a, Mesh>,

@@ -1,5 +1,5 @@
 use crate::gfx_types::RenderTarget;
-use crate::gfx_types::{PipelineBundle, PipelineStateObject, ShaderProgram};
+use crate::gfx_types::{gizmo_pipe, GizmoPso, PipelineBundle, PipelineStateObject, ShaderProgram};
 use crate::render::channel::ChannelPair;
 use crate::render::DrawFactory;
 
@@ -27,15 +27,15 @@ impl DrawFactory for GizmoDrawSystem {
 }
 
 /// New type for Gizmo specific pipeline
-pub struct GizmoPipelineBundle(PipelineBundle);
+pub struct GizmoPipelineBundle(PipelineBundle<gizmo_pipe::Meta>);
 
 impl GizmoPipelineBundle {
-    pub fn new(pso: PipelineStateObject, program: ShaderProgram) -> Self {
+    pub fn new(pso: GizmoPso, program: ShaderProgram) -> Self {
         GizmoPipelineBundle(PipelineBundle { pso, program })
     }
 
     #[inline]
-    pub fn bundle(&self) -> &PipelineBundle {
+    pub fn bundle(&self) -> &PipelineBundle<gizmo_pipe::Meta> {
         &self.0
     }
 }

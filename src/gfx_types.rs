@@ -7,6 +7,7 @@ pub type GraphicsEncoder = gfx::Encoder<gfx_device::Resources, gfx_device::Comma
 pub type RenderTarget<R> = gfx::handle::RenderTargetView<R, ColorFormat>;
 
 /// Note that document comments inside this block breaks the macro
+#[cfg_attr(rustfmt, rustfmt_skip)]
 gfx_defines! {
     vertex Vertex {
         pos: [f32; 3] = "a_Pos",
@@ -41,19 +42,59 @@ gfx_defines! {
         // This makes the BlendMode part of the pipeline, which is fine for the simple case
         out: gfx::BlendTarget<ColorFormat> = ("Target0", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
     }
+
+    pipeline gizmo_pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+
+        // Model Transform Matrix
+        model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
+
+        // View
+        view: gfx::Global<[[f32; 4]; 4]> = "u_View",
+
+        // Projection
+        proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",
+
+        // Enables the scissor test
+        scissor: gfx::Scissor = (),
+
+        // This makes the BlendMode part of the pipeline, which is fine for the simple case
+        out: gfx::RenderTarget<ColorFormat> = "Target0",
+    }
+
+    pipeline line_pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+
+        // Model Transform Matrix
+        model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
+
+        // View
+        view: gfx::Global<[[f32; 4]; 4]> = "u_View",
+
+        // Projection
+        proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",
+
+        // Enables the scissor test
+        scissor: gfx::Scissor = (),
+
+        // This makes the BlendMode part of the pipeline, which is fine for the simple case
+        out: gfx::RenderTarget<ColorFormat> = "Target0",
+    }
 }
 
 pub type PipelineStateObject = gfx::PipelineState<gfx_device::Resources, pipe::Meta>;
+pub type GizmoPso = gfx::PipelineState<gfx_device::Resources, gizmo_pipe::Meta>;
+pub type LinePso = gfx::PipelineState<gfx_device::Resources, line_pipe::Meta>;
 pub type ShaderProgram = gfx::handle::Program<gfx_device::Resources>;
 
 #[allow(dead_code)]
-pub struct PipelineBundle {
-    pub(crate) pso: PipelineStateObject,
+pub struct PipelineBundle<M> {
+    pub(crate) pso: gfx::PipelineState<gfx_device::Resources, M>,
     pub(crate) program: ShaderProgram,
 }
 
-impl PipelineBundle {
-    pub fn new(pso: PipelineStateObject, program: ShaderProgram) -> Self {
+impl<M> PipelineBundle<M> {
+    pub fn new(pso: gfx::PipelineState<gfx_device::Resources, M>, program: ShaderProgram) -> Self {
         PipelineBundle { pso, program }
     }
 }
