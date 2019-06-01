@@ -96,9 +96,9 @@ fn mouse_raycast(
         .and_then(|e| lift2(cam_projs.get(e), cam_views.get(e)));
 
     if let Some((cam_proj, cam_view)) = maybe_cam {
-        println!("# Casting Ray");
+        // println!("# Casting Ray");
 
-        println!("  Screen Position: {:?}", (screen_pos.x, screen_pos.y));
+        // println!("  Screen Position: {:?}", (screen_pos.x, screen_pos.y));
 
         // Build perspective projection that matches camera
         let projection = {
@@ -113,14 +113,14 @@ fn mouse_raycast(
 
         // Get Camera World position
         let camera_pos = cam_view.position().clone();
-        println!("  Camera Position: {}", camera_pos);
+        // println!("  Camera Position: {}", camera_pos);
 
         // Point must be between [0.0, 1.0] to unproject
         let (device_w, device_h) = (
             device_dim.physical_size().width as f32,
             device_dim.physical_size().height as f32,
         );
-        println!("  Device Dimensions: {:?}", (device_w, device_h));
+        // println!("  Device Dimensions: {:?}", (device_w, device_h));
 
         // Convert glutin screen position to computer graphics screen coordinates
         let (screen_w, screen_h) = (
@@ -147,23 +147,23 @@ fn mouse_raycast(
             (screen_h / device_h) * 2.0,
             1.0,
         );
-        println!("  Normalized Device Points:");
-        println!("    Near: {}", near_ndc_point);
-        println!("    Far: {}", far_ndc_point);
+        // println!("  Normalized Device Points:");
+        // println!("    Near: {}", near_ndc_point);
+        // println!("    Far: {}", far_ndc_point);
 
         // Unproject clip space points to view space
         let near_view_point = projection.unproject_point(&near_ndc_point);
         let far_view_point = projection.unproject_point(&far_ndc_point);
-        println!("  View Space Points:");
-        println!("    Near: {}", near_view_point);
-        println!("    Far: {}", far_view_point);
+        // println!("  View Space Points:");
+        // println!("    Near: {}", near_view_point);
+        // println!("    Far: {}", far_view_point);
 
         // Compute line in view space
         let line_point = near_view_point;
         let line_direction = Unit::new_normalize(far_view_point - near_view_point);
-        println!("  Camera Local Line:");
-        println!("    Point: {}", line_point);
-        println!("    Direction: {}", line_direction.as_ref());
+        // println!("  Camera Local Line:");
+        // println!("    Point: {}", line_point);
+        // println!("    Direction: {}", line_direction.as_ref());
 
         // Transform line from local camera space to world space
         let inverse_view_mat = cam_view
@@ -175,9 +175,9 @@ fn mouse_raycast(
         let world_point = inverse_view_mat.transform_point(&line_point);
         let world_direction =
             Unit::new_normalize(inverse_view_mat.transform_vector(&line_direction));
-        println!("  World Line:");
-        println!("    Position: {}", world_point);
-        println!("    Direction: {}", world_direction.as_ref());
+        // println!("  World Line:");
+        // println!("    Position: {}", world_point);
+        // println!("    Direction: {}", world_direction.as_ref());
 
         // Create ray walker
         return Some(voxel_raycast(world_point, world_direction, steps));
@@ -331,7 +331,7 @@ impl Scene for Game {
                 ) = ctx.world.system_data();
 
                 for raycast_info in raycast {
-                    println!("Voxel: {}", raycast_info.voxel_coord());
+                    // println!("Voxel: {}", raycast_info.voxel_coord());
 
                     // Determine chunk coordinate
                     let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
@@ -344,7 +344,7 @@ impl Scene for Game {
 
                     // Carve out line in path of ray
                     if occupied {
-                        println!("!! Carving {}", raycast_info.voxel_coord());
+                        // println!("!! Carving {}", raycast_info.voxel_coord());
                         chunk_ctrl.lazy_update(
                             raycast_info.voxel_coord().clone(),
                             TileVoxel {
@@ -369,7 +369,7 @@ impl Scene for Game {
                 let mut last_voxel = VoxelCoord::new(9999, 9999, 9999);
 
                 'cast: for raycast_info in raycast {
-                    println!("Voxel: {}", raycast_info.voxel_coord());
+                    // println!("Voxel: {}", raycast_info.voxel_coord());
 
                     // Determine chunk coordinate
                     let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
@@ -382,7 +382,7 @@ impl Scene for Game {
 
                     // Tile hit, add to previous
                     if occupied {
-                        println!("!! Adding {}", last_voxel);
+                        // println!("!! Adding {}", last_voxel);
                         chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
 
                         // Stop
