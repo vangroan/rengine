@@ -5,14 +5,13 @@ use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
 use rengine::comp::{GlTexture, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
-use rengine::nalgebra::{Matrix4, Perspective3, Point3, Unit, Vector3};
+use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::res::{DeviceDimensions, TextureAssets};
 use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
 use rengine::voxel::{
-    raycast_from_camera, voxel_raycast, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping,
-    ChunkUpkeepSystem, VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData,
-    VoxelRayInfo, VoxelRaycast, CHUNK_DIM8,
+    raycast_from_camera, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
+    VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, Scene, Trans};
 use std::error::Error;
