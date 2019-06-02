@@ -10,9 +10,9 @@ use rengine::option::lift2;
 use rengine::res::{DeviceDimensions, TextureAssets};
 use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
 use rengine::voxel::{
-    voxel_raycast, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
-    VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData, VoxelRayInfo, VoxelRaycast,
-    CHUNK_DIM8,
+    raycast_from_camera, voxel_raycast, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping,
+    ChunkUpkeepSystem, VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData,
+    VoxelRayInfo, VoxelRaycast, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, Scene, Trans};
 use std::error::Error;
@@ -77,113 +77,6 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Enti
         .add_chunk(entity, chunk_id);
 
     entity
-}
-
-fn mouse_raycast(
-    data: (
-        Read<'_, ActiveCamera>,
-        Read<'_, DeviceDimensions>,
-        ReadStorage<'_, CameraView>,
-        ReadStorage<'_, CameraProjection>,
-    ),
-    screen_pos: PhysicalPosition,
-    steps: u32,
-) -> Option<VoxelRaycast> {
-    let (active_camera, device_dim, cam_views, cam_projs) = data;
-
-    let maybe_cam = active_camera
-        .camera_entity()
-        .and_then(|e| lift2(cam_projs.get(e), cam_views.get(e)));
-
-    if let Some((cam_proj, cam_view)) = maybe_cam {
-        // println!("# Casting Ray");
-
-        // println!("  Screen Position: {:?}", (screen_pos.x, screen_pos.y));
-
-        // Build perspective projection that matches camera
-        let projection = {
-            let persp_settings = cam_proj.perspective_settings();
-            Perspective3::new(
-                persp_settings.aspect_ratio(),
-                persp_settings.fovy().as_radians(),
-                persp_settings.nearz(),
-                persp_settings.farz(),
-            )
-        };
-
-        // Get Camera World position
-        let camera_pos = cam_view.position().clone();
-        // println!("  Camera Position: {}", camera_pos);
-
-        // Point must be between [0.0, 1.0] to unproject
-        let (device_w, device_h) = (
-            device_dim.physical_size().width as f32,
-            device_dim.physical_size().height as f32,
-        );
-        // println!("  Device Dimensions: {:?}", (device_w, device_h));
-
-        // Convert glutin screen position to computer graphics screen coordinates
-        let (screen_w, screen_h) = (
-            screen_pos.x as f32 - (device_w / 2.),
-            -(screen_pos.y as f32 - (device_h / 2.)),
-        );
-
-        // Use screen position to compute two points in clip space, where near
-        // and far are -1 and 1 respectively.
-        //
-        // "ndc" = normalized device coordinates
-        //
-        // Multiplying with 2 is required because dividing the screen position
-        // with the device size yields a value between 0.0 and 1.0. Normalized
-        // device coordinates are a double unit cube, meaning each axis has a
-        // range between -1.0 and 1.0.
-        let near_ndc_point = Point3::new(
-            (screen_w / device_w) * 2.0,
-            (screen_h / device_h) * 2.0,
-            -1.0,
-        );
-        let far_ndc_point = Point3::new(
-            (screen_w / device_w) * 2.0,
-            (screen_h / device_h) * 2.0,
-            1.0,
-        );
-        // println!("  Normalized Device Points:");
-        // println!("    Near: {}", near_ndc_point);
-        // println!("    Far: {}", far_ndc_point);
-
-        // Unproject clip space points to view space
-        let near_view_point = projection.unproject_point(&near_ndc_point);
-        let far_view_point = projection.unproject_point(&far_ndc_point);
-        // println!("  View Space Points:");
-        // println!("    Near: {}", near_view_point);
-        // println!("    Far: {}", far_view_point);
-
-        // Compute line in view space
-        let line_point = near_view_point;
-        let line_direction = Unit::new_normalize(far_view_point - near_view_point);
-        // println!("  Camera Local Line:");
-        // println!("    Point: {}", line_point);
-        // println!("    Direction: {}", line_direction.as_ref());
-
-        // Transform line from local camera space to world space
-        let inverse_view_mat = cam_view
-            .view_matrix()
-            .try_inverse()
-            .expect("Failed to compute inverse of view matrix");
-
-        // Inverse matrix to transform device space to world space
-        let world_point = inverse_view_mat.transform_point(&line_point);
-        let world_direction =
-            Unit::new_normalize(inverse_view_mat.transform_vector(&line_direction));
-        // println!("  World Line:");
-        // println!("    Position: {}", world_point);
-        // println!("    Direction: {}", world_direction.as_ref());
-
-        // Create ray walker
-        return Some(voxel_raycast(world_point, world_direction, steps));
-    }
-
-    None
 }
 
 pub struct Game {
@@ -322,7 +215,7 @@ impl Scene for Game {
 
         if self.carve {
             if let Some(raycast) =
-                mouse_raycast(ctx.world.system_data(), self.cursor_pos.clone(), 200)
+                raycast_from_camera(ctx.world.system_data(), self.cursor_pos.clone(), 200)
             {
                 let (chunk_map, mut chunk_ctrl, chunks): (
                     Read<'_, ChunkMapping>,
@@ -358,7 +251,7 @@ impl Scene for Game {
 
         if self.add {
             if let Some(raycast) =
-                mouse_raycast(ctx.world.system_data(), self.cursor_pos.clone(), 200)
+                raycast_from_camera(ctx.world.system_data(), self.cursor_pos.clone(), 200)
             {
                 let (chunk_map, mut chunk_ctrl, chunks): (
                     Read<'_, ChunkMapping>,

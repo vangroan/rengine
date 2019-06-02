@@ -55,8 +55,6 @@ impl VoxelMeshGen for VoxelBoxGen {
             }
         }
 
-        println!("Generated mesh for {}", chunk.index());
-
         builder
     }
 }
