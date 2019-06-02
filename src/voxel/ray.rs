@@ -1,6 +1,6 @@
 use crate::voxel::VoxelCoord;
 use nalgebra::{Point3, Unit, Vector3};
-use std::f32::{INFINITY, MAX};
+use std::f32::MAX;
 use std::iter::Iterator;
 
 #[derive(Debug, PartialEq)]
@@ -46,19 +46,19 @@ pub fn voxel_raycast(
     let delta_x = if direction.x != 0.0 {
         (1.0 / direction.x).abs()
     } else {
-        INFINITY
+        MAX
     };
 
     let delta_y = if direction.y != 0.0 {
         (1.0 / direction.y).abs()
     } else {
-        INFINITY
+        MAX
     };
 
     let delta_z = if direction.z != 0.0 {
         (1.0 / direction.z).abs()
     } else {
-        INFINITY
+        MAX
     };
 
     // Determine which direction we are stepping.
@@ -133,45 +133,59 @@ impl Iterator for VoxelRaycast {
         if self.cursor >= self.max_steps {
             None
         } else {
+            // Takes current state of shortest axis ray, advances state for
+            // next interation, then unaltered returns state.
             let voxel_info = if self.t[0] < self.t[1] {
                 if self.t[0] < self.t[2] {
                     // X-axis
-                    self.t[0] += self.delta[0];
-                    self.voxel[0] += self.step[0];
-                    VoxelRayInfo {
+                    let i = VoxelRayInfo {
                         t: self.t[0],
                         intersect: self.origin + self.direction.into_inner() * self.t[0],
                         voxel: self.voxel.clone().into(),
-                    }
+                    };
+
+                    self.t[0] += self.delta[0];
+                    self.voxel[0] += self.step[0];
+
+                    i
                 } else {
                     // Z-axis
-                    self.t[2] += self.delta[2];
-                    self.voxel[2] += self.step[2];
-                    VoxelRayInfo {
+                    let i = VoxelRayInfo {
                         t: self.t[2],
                         intersect: self.origin + self.direction.into_inner() * self.t[2],
                         voxel: self.voxel.clone().into(),
-                    }
+                    };
+
+                    self.t[2] += self.delta[2];
+                    self.voxel[2] += self.step[2];
+
+                    i
                 }
             } else {
                 if self.t[1] < self.t[2] {
                     // Y-axis
-                    self.t[1] += self.delta[1];
-                    self.voxel[1] += self.step[1];
-                    VoxelRayInfo {
+                    let i = VoxelRayInfo {
                         t: self.t[1],
                         intersect: self.origin + self.direction.into_inner() * self.t[1],
                         voxel: self.voxel.clone().into(),
-                    }
+                    };
+
+                    self.t[1] += self.delta[1];
+                    self.voxel[1] += self.step[1];
+
+                    i
                 } else {
                     // Z-axis
-                    self.t[2] += self.delta[2];
-                    self.voxel[2] += self.step[2];
-                    VoxelRayInfo {
+                    let i = VoxelRayInfo {
                         t: self.t[2],
                         intersect: self.origin + self.direction.into_inner() * self.t[2],
                         voxel: self.voxel.clone().into(),
-                    }
+                    };
+
+                    self.t[2] += self.delta[2];
+                    self.voxel[2] += self.step[2];
+
+                    i
                 }
             };
 
@@ -189,7 +203,7 @@ mod test {
     #[test]
     fn test_basic_cast() {
         let ray = voxel_raycast(
-            [1.5, 0.5, 0.0].into(),
+            [1.5, 0.5, 0.5].into(),
             Unit::new_normalize([0.5, 0.866025403, 0.0].into()),
             10,
         );
@@ -197,6 +211,7 @@ mod test {
         let mut found: Option<(usize, VoxelRayInfo)> = None;
 
         for (i, ray_info) in ray.enumerate() {
+            println!("Voxel Coord: {}", ray_info.voxel_coord());
             if ray_info.voxel == target {
                 found = Some((i, ray_info));
                 break;
@@ -207,6 +222,6 @@ mod test {
         let (cursor, info) = found.unwrap();
         println!("{}", info.intersect);
         assert_eq!(target, info.voxel);
-        assert_eq!(3, cursor);
+        assert_eq!(4, cursor);
     }
 }
