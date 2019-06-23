@@ -2,18 +2,20 @@ extern crate rengine;
 
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
-use rengine::comp::{GlTexture, Transform};
+use rengine::colors::WHITE;
+use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::res::{DeviceDimensions, TextureAssets};
 use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
+use rengine::sprite::{Billboard, BillboardSystem};
 use rengine::voxel::{
     raycast_from_camera, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
     VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
-use rengine::{AppBuilder, Context, Scene, Trans};
+use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
 use std::error::Error;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
@@ -64,11 +66,6 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Enti
             chunk_id.j as f32 * CHUNK_DIM8 as f32,
             chunk_id.k as f32 * CHUNK_DIM8 as f32,
         ]))
-        // .with(Transform::new().with_position([
-        //     chunk_id.i as f32,
-        //     chunk_id.j as f32,
-        //     chunk_id.k as f32,
-        // ]))
         .build();
 
     world
@@ -78,20 +75,45 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Enti
     entity
 }
 
+fn create_sprite(world: &mut World, graphics: &mut GraphicContext, tex: GlTexture) -> Entity {
+    let entity = world
+        .create_entity()
+        .with(tex)
+        .with(Billboard)
+        .with(
+            MeshBuilder::new()
+                .quad_with_uvs(
+                    [0.0, 0.0, 0.0],
+                    [1.0, 1.0],
+                    [WHITE, WHITE, WHITE, WHITE],
+                    [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+                )
+                .build(graphics),
+        )
+        .with(Transform::default().with_position([4.0, 4.0, 4.0]))
+        .build();
+
+    entity
+}
+
 pub struct Game {
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
+    billboard_sys: BillboardSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
     add: bool,
+    entities: Vec<Entity>,
 }
 
 impl Game {
     fn new() -> Self {
         Game {
             chunk_upkeep_sys: None,
+            billboard_sys: BillboardSystem,
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
             add: false,
+            entities: vec![],
         }
     }
 }
@@ -102,6 +124,7 @@ impl Scene for Game {
         ctx.world.add_resource(TileVoxelCtrl::new());
         ctx.world.add_resource(ChunkMapping::new());
         ctx.world.register::<VoxelArrayChunk<TileVoxel>>();
+        ctx.world.register::<Billboard>();
 
         // Load Texture
         let tex = GlTexture::from_bundle(
@@ -136,10 +159,26 @@ impl Scene for Game {
         )));
 
         // Create Chunks
-        create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 0), tex.clone());
-        create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 0), tex.clone());
-        create_chunk(&mut ctx.world, ChunkCoord::new(0, 0, 1), tex.clone());
-        create_chunk(&mut ctx.world, ChunkCoord::new(1, 0, 1), tex.clone());
+        self.entities.push(create_chunk(
+            &mut ctx.world,
+            ChunkCoord::new(0, 0, 0),
+            tex.clone(),
+        ));
+        self.entities.push(create_chunk(
+            &mut ctx.world,
+            ChunkCoord::new(1, 0, 0),
+            tex.clone(),
+        ));
+        self.entities.push(create_chunk(
+            &mut ctx.world,
+            ChunkCoord::new(0, 0, 1),
+            tex.clone(),
+        ));
+        self.entities.push(create_chunk(
+            &mut ctx.world,
+            ChunkCoord::new(1, 0, 1),
+            tex.clone(),
+        ));
 
         {
             let mapping = ctx.world.write_resource::<ChunkMapping>();
@@ -177,6 +216,18 @@ impl Scene for Game {
             },
         );
 
+        // Create Sprites
+        let default_texture = GlTexture::from_bundle(
+            ctx.world
+                .write_resource::<TextureAssets>()
+                .default_texture(&mut ctx.graphics.factory_mut()),
+        );
+        self.entities.push(create_sprite(
+            &mut ctx.world,
+            &mut ctx.graphics,
+            default_texture,
+        ));
+
         None
     }
 
@@ -211,6 +262,9 @@ impl Scene for Game {
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
             chunk_upkeep_sys.run_now(&ctx.world.res);
         }
+
+        // Orient sprites toward camera
+        self.billboard_sys.run_now(&ctx.world.res);
 
         if self.carve {
             if let Some(raycast) =

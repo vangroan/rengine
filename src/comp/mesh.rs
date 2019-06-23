@@ -263,33 +263,55 @@ impl MeshBuilder {
     where
         V: Into<glm::Vec3>,
     {
+        self.quad_with_uvs(
+            position,
+            size,
+            colors,
+            [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+        )
+    }
+
+    pub fn quad_with_uvs<V>(
+        mut self,
+        position: V,
+        size: [f32; 2],
+        colors: [Color; 4],
+        uvs: [[f32; 2]; 4],
+    ) -> Self
+    where
+        V: Into<glm::Vec3>,
+    {
         let pos = position.into();
         let (w, h) = (size[0], size[1]);
         let index = self.next_index();
         let normal = glm::vec3(0., 0., 1.).into();
 
         self.vertices.extend(&[
+            // Bottom Left
             Vertex {
                 pos: [pos.x, pos.y, pos.z],
-                uv: [0.0, 0.0],
+                uv: uvs[0],
                 normal,
                 color: colors[0],
             },
+            // Bottom Right
             Vertex {
                 pos: [pos.x + w, pos.y, pos.z],
-                uv: [1.0, 0.0],
+                uv: uvs[1],
                 normal,
                 color: colors[1],
             },
+            // Top Right
             Vertex {
                 pos: [pos.x + w, pos.y + h, pos.z],
-                uv: [1.0, 1.0],
+                uv: uvs[2],
                 normal,
                 color: colors[2],
             },
+            // Top Left
             Vertex {
                 pos: [pos.x, pos.y + h, pos.z],
-                uv: [0.0, 1.0],
+                uv: uvs[3],
                 normal,
                 color: colors[3],
             },

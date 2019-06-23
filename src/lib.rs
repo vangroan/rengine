@@ -26,6 +26,7 @@ pub mod option;
 pub mod render;
 pub mod res;
 mod scene;
+pub mod sprite;
 pub mod sys;
 pub mod voxel;
 
