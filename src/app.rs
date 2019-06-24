@@ -158,8 +158,12 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Renderer
         // TODO: Consider having a `Renderer` trait since it's being treated differently than other systems
-        let mut renderer = DrawSystem::new(channel.clone(), graphics.render_target.clone());
-        let mut gizmo_renderer =
+        let mut renderer = DrawSystem::new(
+            channel.clone(),
+            graphics.render_target.clone(),
+            graphics.depth_stencil.clone(),
+        );
+        let mut _gizmo_renderer =
             GizmoDrawSystem::new(channel.clone(), graphics.render_target.clone());
 
         // Scenes
@@ -221,6 +225,7 @@ impl<'a, 'b> App<'a, 'b> {
 
                         // Ensure no dangling shared references
                         renderer.render_target = graphics.render_target.clone();
+                        renderer.depth_target = graphics.depth_stencil.clone();
 
                         // Update view port/scissor rectangle for rendering systems
                         let (win_w, win_h): (u32, u32) = physical_size.into();
@@ -245,6 +250,7 @@ impl<'a, 'b> App<'a, 'b> {
             match channel.recv_block() {
                 Ok(mut encoder) => {
                     encoder.clear(&graphics.render_target, bkg_color);
+                    encoder.clear_depth(&graphics.depth_stencil, 1.0);
 
                     // Send encoder back
                     channel.send_block(encoder)?;

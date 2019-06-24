@@ -1,6 +1,6 @@
 use crate::camera::{ActiveCamera, CameraProjection, CameraView};
 use crate::comp::{GlTexture, Mesh, Transform};
-use crate::gfx_types::{self, pipe, PipelineBundle, RenderTarget};
+use crate::gfx_types::{self, pipe, DepthTarget, PipelineBundle, RenderTarget};
 use crate::option::lift2;
 use crate::render::ChannelPair;
 use crate::res::ViewPort;
@@ -11,16 +11,19 @@ use std::error::Error;
 pub struct DrawSystem {
     channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,
     pub(crate) render_target: RenderTarget<gfx_device::Resources>,
+    pub(crate) depth_target: DepthTarget<gfx_device::Resources>,
 }
 
 impl DrawSystem {
     pub fn new(
         channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,
         render_target: RenderTarget<gfx_device::Resources>,
+        depth_target: DepthTarget<gfx_device::Resources>,
     ) -> Self {
         DrawSystem {
             channel,
             render_target,
+            depth_target,
         }
     }
 }
@@ -84,7 +87,8 @@ impl<'a> System<'a> for DrawSystem {
                         proj: proj_matrix.into(),
                         // The rectangle to allow rendering within
                         scissor: view_port.rect,
-                        out: self.render_target.clone(),
+                        render_target: self.render_target.clone(),
+                        depth_target: self.depth_target.clone(),
                     };
 
                     encoder.draw(&mesh.slice, &pipeline.pso, &data);

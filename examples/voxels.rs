@@ -90,7 +90,7 @@ fn create_sprite(world: &mut World, graphics: &mut GraphicContext, tex: GlTextur
                 )
                 .build(graphics),
         )
-        .with(Transform::default().with_position([4.0, 4.0, 4.0]))
+        .with(Transform::default().with_position([4.0, 7.0, 4.0]))
         .build();
 
     entity
