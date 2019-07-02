@@ -75,7 +75,12 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Enti
     entity
 }
 
-fn create_sprite(world: &mut World, graphics: &mut GraphicContext, tex: GlTexture) -> Entity {
+fn create_sprite<V: Into<glm::Vec3>>(
+    world: &mut World,
+    graphics: &mut GraphicContext,
+    pos: V,
+    tex: GlTexture,
+) -> Entity {
     let entity = world
         .create_entity()
         .with(tex)
@@ -86,11 +91,16 @@ fn create_sprite(world: &mut World, graphics: &mut GraphicContext, tex: GlTextur
                     [0.0, 0.0, 0.0],
                     [1.0, 1.0],
                     [WHITE, WHITE, WHITE, WHITE],
-                    [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+                    [[0.0, 0.25], [0.25, 0.25], [0.25, 0.0], [0.0, 0.0]],
                 )
                 .build(graphics),
         )
-        .with(Transform::default().with_position([4.0, 7.0, 4.0]))
+        .with(
+            Transform::default()
+                .with_position(pos)
+                .with_rotate(Deg(45.0), rengine::comp::Y_AXIS)
+                .with_rotate(Deg(-35.0), rengine::comp::X_AXIS),
+        )
         .build();
 
     entity
@@ -217,16 +227,27 @@ impl Scene for Game {
         );
 
         // Create Sprites
-        let default_texture = GlTexture::from_bundle(
+        let _default_texture = GlTexture::from_bundle(
             ctx.world
                 .write_resource::<TextureAssets>()
                 .default_texture(&mut ctx.graphics.factory_mut()),
         );
-        self.entities.push(create_sprite(
-            &mut ctx.world,
-            &mut ctx.graphics,
-            default_texture,
-        ));
+        let skelly_tex = GlTexture::from_bundle(
+            ctx.world
+                .write_resource::<TextureAssets>()
+                .load_texture(&mut ctx.graphics.factory_mut(), "examples/skelly.png"),
+        );
+
+        for x in 1..5 {
+            for z in 1..5 {
+                self.entities.push(create_sprite(
+                    &mut ctx.world,
+                    &mut ctx.graphics,
+                    [x as f32 * 2.5, 8.0, z as f32 * 2.5],
+                    skelly_tex.clone(),
+                ));
+            }
+        }
 
         None
     }
