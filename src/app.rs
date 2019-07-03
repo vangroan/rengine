@@ -290,6 +290,9 @@ impl<'a, 'b> App<'a, 'b> {
             // Deallocate
             graphics.device.cleanup();
             world.maintain();
+
+            // Cooperatively give up CPU time
+            ::std::thread::yield_now();
         }
 
         Ok(())
