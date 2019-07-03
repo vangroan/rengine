@@ -25,6 +25,16 @@ impl CameraView {
     }
 
     #[inline]
+    pub fn eye(&self) -> &Point3<f32> {
+        &self.eye
+    }
+
+    #[inline]
+    pub fn up(&self) -> &Unit<Vector3<f32>> {
+        &self.up
+    }
+
+    #[inline]
     pub fn target(&self) -> &Point3<f32> {
         &self.target
     }

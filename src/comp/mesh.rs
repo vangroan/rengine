@@ -296,14 +296,14 @@ impl MeshBuilder {
             },
             // Bottom Right
             Vertex {
-                pos: [pos.x + w, pos.y, pos.z],
+                pos: [pos.x, pos.y, pos.z + w],
                 uv: uvs[1],
                 normal,
                 color: colors[1],
             },
             // Top Right
             Vertex {
-                pos: [pos.x + w, pos.y + h, pos.z],
+                pos: [pos.x, pos.y + h, pos.z + w],
                 uv: uvs[2],
                 normal,
                 color: colors[2],

@@ -130,6 +130,17 @@ impl Transform {
         );
         self.rot = world_rot * self.rot;
     }
+
+    /// Orient the transformation towards the given
+    /// position in local space.
+    #[inline]
+    pub fn look_at<V>(&mut self, direction: V, up: V)
+    where
+        V: Into<Vec3>,
+    {
+        // TODO: Left hand or right hand
+        self.rot = glm::quat_look_at_rh(&direction.into(), &up.into());
+    }
 }
 
 impl Default for Transform {

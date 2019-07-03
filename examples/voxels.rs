@@ -98,8 +98,8 @@ fn create_sprite<V: Into<glm::Vec3>>(
         .with(
             Transform::default()
                 .with_position(pos)
-                .with_rotate(Deg(45.0), rengine::comp::Y_AXIS)
-                .with_rotate(Deg(-35.0), rengine::comp::X_AXIS),
+                // .with_rotate(Deg(45.0), rengine::comp::Y_AXIS)
+                // .with_rotate(Deg(-35.0), rengine::comp::X_AXIS),
         )
         .build();
 
