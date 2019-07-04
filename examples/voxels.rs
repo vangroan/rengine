@@ -95,12 +95,7 @@ fn create_sprite<V: Into<glm::Vec3>>(
                 )
                 .build(graphics),
         )
-        .with(
-            Transform::default()
-                .with_position(pos)
-                // .with_rotate(Deg(45.0), rengine::comp::Y_AXIS)
-                // .with_rotate(Deg(-35.0), rengine::comp::X_AXIS),
-        )
+        .with(Transform::default().with_position(pos))
         .build();
 
     entity
@@ -243,7 +238,7 @@ impl Scene for Game {
                 self.entities.push(create_sprite(
                     &mut ctx.world,
                     &mut ctx.graphics,
-                    [x as f32 * 2.5, 8.0, z as f32 * 2.5],
+                    [x as f32 * 2.5, 8.0 + 0.5, z as f32 * 2.5],
                     skelly_tex.clone(),
                 ));
             }

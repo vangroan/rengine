@@ -88,6 +88,16 @@ impl Transform {
     }
 
     #[inline]
+    pub fn with_rotation<A, V>(mut self, angle: A, axis: V) -> Self
+    where
+        A: Into<Rad<f32>>,
+        V: Into<Vec3>,
+    {
+        self.set_rotation(angle, axis);
+        self
+    }
+
+    #[inline]
     pub fn with_rotate_world<A, V>(mut self, angle: A, axis: V) -> Self
     where
         A: Into<Rad<f32>>,
@@ -118,6 +128,19 @@ impl Transform {
     }
 
     #[inline]
+    pub fn set_rotation<A, V>(&mut self, angle: A, axis: V)
+    where
+        A: Into<Rad<f32>>,
+        V: Into<Vec3>,
+    {
+        self.rot = glm::quat_rotate(
+            &Qua::<f32>::identity(),
+            angle.into().as_radians(),
+            &axis.into(),
+        );
+    }
+
+    #[inline]
     pub fn rotate_world<A, V>(&mut self, angle: A, axis: V)
     where
         A: Into<Rad<f32>>,
@@ -138,8 +161,28 @@ impl Transform {
     where
         V: Into<Vec3>,
     {
-        // TODO: Left hand or right hand
-        self.rot = glm::quat_look_at_rh(&direction.into(), &up.into());
+        // FIXME: This solution works for now. Later we must look
+        //        into simply creating the look at matrix ourselves
+        //        so it's correct immediately.
+        //        Currently we have to point the direction away from
+        //        the target, and invesrse the quaternion to avoid
+        //        flipping the axese.
+
+        // Look at matrix will orient the object away from
+        // the camera. We point the direction away from the
+        // target for correct orientation.
+        let backward = direction.into() * -1.0;
+        let lookat = glm::quat_look_at_rh(&backward, &up.into());
+
+        // look_at is designed for cameras, which move the
+        // entire world, keeping the camera at the origin.
+        //
+        // Inverse is required because we're not transforming
+        // the camera, but objects in the world.
+        if let Some(inverse_quat) = lookat.try_inverse() {
+            // Inverse is None when Quaternion is zero
+            self.rot = inverse_quat;
+        }
     }
 }
 

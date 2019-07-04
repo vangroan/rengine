@@ -281,6 +281,8 @@ impl MeshBuilder {
     where
         V: Into<glm::Vec3>,
     {
+        // TODO: Add argument to allow custom anchor point.
+
         let pos = position.into();
         let (w, h) = (size[0] / 2.0, size[1] / 2.0);
         let index = self.next_index();
