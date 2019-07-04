@@ -27,6 +27,23 @@ pub struct App<'comp, 'thread> {
 }
 
 impl<'a, 'b> App<'a, 'b> {
+    /// The global world associated with the appliction.
+    ///
+    /// Used for registering application level component
+    /// types and resources, intended to be used by the
+    /// whole game.
+    ///
+    /// ## Example
+    ///
+    /// ```ignore
+    /// app.world().add_resource(Myresource::new());
+    /// app.world().register::<MyComponent>();
+    /// ```
+    #[inline]
+    pub fn world(&mut self) -> &mut World {
+        &mut self.world
+    }
+
     /// Starts the application loop
     ///
     /// Consumes the app
