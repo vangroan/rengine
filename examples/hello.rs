@@ -2,10 +2,8 @@ extern crate rengine;
 #[macro_use]
 extern crate specs_derive;
 
-use rengine::angle::{Deg, Rad};
 use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
-use rengine::comp::{GlTexture, MeshBuilder, TexRect, Transform, X_AXIS, Y_AXIS};
-use rengine::glm;
+use rengine::comp::{GlTexture, MeshBuilder, TexRect, Transform};
 use rengine::glutin::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
@@ -18,20 +16,6 @@ use std::error::Error;
 use std::fmt;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
-
-fn isometric_camera_position() -> Point3<f32> {
-    let _45 = Deg(45.);
-    let _35 = Rad((1. / 2.0_f32.sqrt()).atan());
-
-    let p = Point3::new(0., 0., 1.);
-
-    let rot_45 = glm::quat_angle_axis(_45.as_radians(), &Vector3::y_axis());
-    let rot_35 = glm::quat_angle_axis(-_35.as_radians(), &Vector3::x_axis());
-
-    let m = glm::quat_to_mat4(&rot_45) * glm::quat_to_mat4(&rot_35);
-
-    m.transform_point(&p)
-}
 
 type CameraData<'a> = (
     ReadExpect<'a, ActiveCamera>,
@@ -220,7 +204,7 @@ impl Scene for Game {
         // Block
         ctx.world.exec(
             |(_blocks, mut transforms): (ReadStorage<Block>, WriteStorage<Transform>)| {
-                for (ref mut transform,) in (&mut transforms,).join() {
+                for (ref mut _transform,) in (&mut transforms,).join() {
                     // let translate = Vector3::new(0.0, 0.1, 0.0) * dt;
                     // transform.translate(translate);
                 }

@@ -32,7 +32,7 @@ pub fn voxel_raycast(
     //
     // Implicitly the origin is intersecting the
     // starting voxel.
-    let (mut x, mut y, mut z) = (
+    let (x, y, z) = (
         origin.x.floor() as i32,
         origin.y.floor() as i32,
         origin.z.floor() as i32,

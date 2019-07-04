@@ -259,7 +259,7 @@ impl MeshBuilder {
         self
     }
 
-    pub fn quad<V>(mut self, position: V, size: [f32; 2], colors: [Color; 4]) -> Self
+    pub fn quad<V>(self, position: V, size: [f32; 2], colors: [Color; 4]) -> Self
     where
         V: Into<glm::Vec3>,
     {

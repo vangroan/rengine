@@ -1,8 +1,6 @@
 use crate::camera::{ActiveCamera, CameraProjection, CameraResizeSystem, CameraView};
 use crate::colors;
-use crate::comp::{
-    GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepData, MeshUpkeepSystem, Transform,
-};
+use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Transform};
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};

@@ -16,7 +16,8 @@ pub trait VoxelMeshGen {
 /// a pseudocube. No occlusion on faces will be
 /// performed.
 pub struct VoxelBoxGen {
-    texture: GlTexture,
+    /// TODO: Do we need texture here?
+    _texture: GlTexture,
 
     /// Texture rectangles to be uesd for each voxel cuboid
     tex_rects: [TexRect; 6],
@@ -24,7 +25,10 @@ pub struct VoxelBoxGen {
 
 impl VoxelBoxGen {
     pub fn new(texture: GlTexture, tex_rects: [TexRect; 6]) -> Self {
-        VoxelBoxGen { texture, tex_rects }
+        VoxelBoxGen {
+            _texture: texture,
+            tex_rects,
+        }
     }
 }
 
