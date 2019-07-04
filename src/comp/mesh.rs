@@ -282,35 +282,35 @@ impl MeshBuilder {
         V: Into<glm::Vec3>,
     {
         let pos = position.into();
-        let (w, h) = (size[0], size[1]);
+        let (w, h) = (size[0] / 2.0, size[1] / 2.0);
         let index = self.next_index();
         let normal = glm::vec3(0., 0., 1.).into();
 
         self.vertices.extend(&[
             // Bottom Left
             Vertex {
-                pos: [pos.x, pos.y, pos.z],
+                pos: [pos.x - w, pos.y - h, pos.z],
                 uv: uvs[0],
                 normal,
                 color: colors[0],
             },
             // Bottom Right
             Vertex {
-                pos: [pos.x, pos.y, pos.z + w],
+                pos: [pos.x + w, pos.y - h, pos.z],
                 uv: uvs[1],
                 normal,
                 color: colors[1],
             },
             // Top Right
             Vertex {
-                pos: [pos.x, pos.y + h, pos.z + w],
+                pos: [pos.x + w, pos.y + h, pos.z],
                 uv: uvs[2],
                 normal,
                 color: colors[2],
             },
             // Top Left
             Vertex {
-                pos: [pos.x, pos.y + h, pos.z],
+                pos: [pos.x - w, pos.y + h, pos.z],
                 uv: uvs[3],
                 normal,
                 color: colors[3],
