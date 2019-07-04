@@ -1,10 +1,7 @@
-use crate::angle::Deg;
 use crate::camera::{ActiveCamera, CameraView};
-use crate::comp::{Transform, X_AXIS, Y_AXIS, Z_AXIS};
-use crate::option::lift2;
-use crate::res::DeltaTime;
+use crate::comp::Transform;
 use glm;
-use nalgebra::{Unit, Vector4};
+use nalgebra::Unit;
 use specs::{Component, FlaggedStorage, Join, ReadExpect, ReadStorage, System, WriteStorage};
 
 #[derive(Component)]
@@ -15,7 +12,6 @@ pub struct BillboardSystem;
 
 impl<'a> System<'a> for BillboardSystem {
     type SystemData = (
-        ReadExpect<'a, DeltaTime>,
         ReadExpect<'a, ActiveCamera>,
         ReadStorage<'a, CameraView>,
         ReadStorage<'a, Billboard>,
@@ -23,7 +19,7 @@ impl<'a> System<'a> for BillboardSystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (dt, active_camera, camera_views, billboards, mut transforms) = data;
+        let (active_camera, camera_views, billboards, mut transforms) = data;
 
         // Determine active camera
         let maybe_camera_view = active_camera
