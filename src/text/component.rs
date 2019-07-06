@@ -24,6 +24,16 @@ impl TextBatch {
         });
     }
 
+    /// Clears all existing text fragments and replaces
+    /// them with the given text string.
+    pub fn replace<C>(&mut self, text: &str, color: C)
+    where
+        C: Into<Color>,
+    {
+        self.fragments.clear();
+        self.add(text, color);
+    }
+
     pub fn with<C>(mut self, text: &str, color: C) -> Self
     where
         C: Into<Color>,

@@ -5,7 +5,6 @@ use rengine::specs::{Builder, Entity};
 use rengine::text::TextBatch;
 use rengine::{AppBuilder, Context, Scene, Trans};
 
-
 struct Game {
     entities: Vec<Entity>,
 }
@@ -30,7 +29,6 @@ impl Scene for Game {
     }
 
     fn on_update(&mut self, _ctx: &mut Context<'_>) -> Option<Trans> {
-
         None
     }
 }

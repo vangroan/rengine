@@ -8,13 +8,16 @@ use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
-use rengine::res::{DeviceDimensions, TextureAssets};
+use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
 use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
 use rengine::sprite::{Billboard, BillboardSystem};
+use rengine::text::TextBatch;
+use rengine::util::FpsCounter;
 use rengine::voxel::{
     raycast_from_camera, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
     VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
+
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
 use std::error::Error;
 
@@ -102,6 +105,8 @@ fn create_sprite<V: Into<glm::Vec3>>(
 }
 
 pub struct Game {
+    fps_counter: FpsCounter,
+    fps_counter_entity: Option<Entity>,
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
     billboard_sys: BillboardSystem,
     cursor_pos: PhysicalPosition,
@@ -113,6 +118,8 @@ pub struct Game {
 impl Game {
     fn new() -> Self {
         Game {
+            fps_counter: FpsCounter::new(),
+            fps_counter_entity: None,
             chunk_upkeep_sys: None,
             billboard_sys: BillboardSystem,
             cursor_pos: PhysicalPosition::new(0., 0.),
@@ -244,6 +251,15 @@ impl Scene for Game {
             }
         }
 
+        // FPS Counter
+        self.fps_counter_entity = Some(
+            ctx.world
+                .create_entity()
+                .with(TextBatch::new().with("FPS: 0", WHITE))
+                .build(),
+        );
+        self.entities.push(self.fps_counter_entity.unwrap());
+
         None
     }
 
@@ -275,6 +291,18 @@ impl Scene for Game {
     }
 
     fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        ctx.world.exec(
+            |(dt, mut text_batches): (Read<DeltaTime>, WriteStorage<'_, TextBatch>)| {
+                self.fps_counter.add(dt.duration());
+
+                self.fps_counter_entity
+                    .and_then(|e| text_batches.get_mut(e))
+                    .map(|text_batch| {
+                        text_batch.replace(&format!("FPS: {:.2}", self.fps_counter.fps()), WHITE)
+                    });
+            },
+        );
+
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
             chunk_upkeep_sys.run_now(&ctx.world.res);
         }

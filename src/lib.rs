@@ -29,6 +29,7 @@ mod scene;
 pub mod sprite;
 pub mod sys;
 pub mod text;
+pub mod util;
 pub mod voxel;
 
 pub use app::*;
