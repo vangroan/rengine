@@ -7,13 +7,17 @@ use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneError, SceneStack};
 use crate::sys::DrawSystem;
+use crate::text::{DrawTextSystem, TextBatch};
 use gfx::traits::FactoryExt;
 use gfx::Device;
+use gfx_glyph::GlyphBrushBuilder;
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
 use specs::{Builder, Dispatcher, DispatcherBuilder, RunNow, World};
 use std::error::Error;
 use std::fmt;
 use std::time::Instant;
+
+const DEFAULT_FONT_DATA: &[u8] = include_bytes!("../resources/fonts/DejaVuSans.ttf");
 
 /// The main application wrapper
 #[allow(dead_code)]
@@ -66,6 +70,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<CameraView>();
         world.register::<CameraProjection>();
         world.register::<GlTexture>();
+        world.register::<TextBatch>();
 
         // Graphics Commands to allow allocating resources
         // from systems to draw thread.
@@ -181,6 +186,9 @@ impl<'a, 'b> App<'a, 'b> {
         let mut _gizmo_renderer =
             GizmoDrawSystem::new(channel.clone(), graphics.render_target.clone());
 
+        // Text Rendering
+        let mut text_renderer = DrawTextSystem::new(channel.clone());
+
         // Scenes
         let mut scene_stack = SceneStack::new();
 
@@ -289,6 +297,9 @@ impl<'a, 'b> App<'a, 'b> {
             // Render Components
             renderer.run_now(&world.res);
 
+            // Render Text
+            text_renderer.render(&mut world, &mut graphics);
+
             // Commit Render
             match channel.recv_block() {
                 Ok(mut encoder) => {
@@ -334,6 +345,9 @@ pub enum AppError {
     /// App was setup with no initial scene
     NoInitialScene,
     SceneTransitionFail(SceneError),
+
+    /// Error while reading files
+    IOError(::std::io::Error),
 }
 
 impl fmt::Display for AppError {
@@ -349,6 +363,7 @@ impl fmt::Display for AppError {
                 WindowSize => "Window Size",
                 NoInitialScene => "No initial Scene",
                 SceneTransitionFail(_) => "Scene Transition Fail",
+                IOError(_) => "IO Error",
             }
         )
     }
@@ -364,6 +379,7 @@ impl Error for AppError {
             WindowSize => "Failed to retrieve window size",
             NoInitialScene => "No initial scene configured",
             SceneTransitionFail(_) => "Failure to transition scene during maintenance phase",
+            IOError(_) => "Error during input/output",
         }
     }
 
@@ -372,6 +388,7 @@ impl Error for AppError {
 
         match self {
             SceneTransitionFail(err) => Some(err),
+            IOError(err) => Some(err),
             _ => None,
         }
     }
@@ -390,6 +407,12 @@ where
 impl From<SceneError> for AppError {
     fn from(scene_error: SceneError) -> Self {
         AppError::SceneTransitionFail(scene_error)
+    }
+}
+
+impl From<::std::io::Error> for AppError {
+    fn from(io_error: std::io::Error) -> Self {
+        AppError::IOError(io_error)
     }
 }
 
@@ -477,6 +500,10 @@ impl AppBuilder {
                 &events_loop,
             )?;
 
+        // Text Rendering
+        let glyph_brush =
+            GlyphBrushBuilder::using_font_bytes(DEFAULT_FONT_DATA).build(factory.clone());
+
         // Graphics Context
         let graphics = GraphicContext {
             window,
@@ -484,6 +511,7 @@ impl AppBuilder {
             factory,
             render_target,
             depth_stencil,
+            glyph_brush,
         };
 
         // World

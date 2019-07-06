@@ -2,9 +2,9 @@
 extern crate gfx;
 extern crate gfx_core;
 extern crate gfx_device_gl as gfx_device;
+extern crate gfx_glyph;
 extern crate gfx_window_glutin as gfx_glutin;
 pub extern crate glutin;
-extern crate image;
 pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
 extern crate num_traits;
@@ -28,6 +28,7 @@ pub mod res;
 mod scene;
 pub mod sprite;
 pub mod sys;
+pub mod text;
 pub mod voxel;
 
 pub use app::*;

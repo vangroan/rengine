@@ -5,6 +5,7 @@ use gfx::Encoder;
 use gfx_core::handle::{DepthStencilView, RenderTargetView};
 use gfx_core::memory::Typed;
 use gfx_device::{CommandBuffer, Device, Factory, Resources};
+use gfx_glyph::GlyphBrush;
 use glutin::WindowedContext;
 
 /// Wrapper for Glutin objects
@@ -17,6 +18,11 @@ pub struct GraphicContext {
     pub(crate) factory: Factory,
     pub(crate) render_target: RenderTargetView<Resources, ColorFormat>,
     pub(crate) depth_stencil: DepthStencilView<Resources, DepthFormat>,
+
+    /// Text rendering library, kept in the graphics context
+    /// because it's not thread-safe. It keeps a reference to
+    /// the graphics factory.
+    pub(crate) glyph_brush: GlyphBrush<'static, Resources, Factory>,
 }
 
 impl GraphicContext {
