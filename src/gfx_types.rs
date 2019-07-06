@@ -7,7 +7,7 @@ pub type GraphicsEncoder = gfx::Encoder<gfx_device::Resources, gfx_device::Comma
 pub type RenderTarget<R> = gfx::handle::RenderTargetView<R, ColorFormat>;
 pub type DepthTarget<R> = gfx::handle::DepthStencilView<R, DepthFormat>;
 
-/// Note that document comments inside this block breaks the macro
+// NOTE: that document comments inside this block breaks the macro
 #[cfg_attr(rustfmt, rustfmt_skip)]
 gfx_defines! {
     vertex Vertex {
