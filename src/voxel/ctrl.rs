@@ -89,7 +89,7 @@ impl ChunkMapping {
 
 /// Applies queued updates to chunks, and regenerates
 /// the chunk's mesh.
-/// 
+///
 /// Intended to be called at the beginning of a frame update.
 pub struct ChunkUpkeepSystem<D: VoxelData, C: VoxelChunk<D>, G: VoxelMeshGen> {
     /// Chunks touched by update, that needs updating.
