@@ -1,7 +1,11 @@
 //! Non-essential utilities
 
+use specs::{Component, DenseVecStorage};
+use std::fmt;
+
 const FPS_COUNTER_WINDOW_SIZE: usize = 60;
 
+#[derive(Component)]
 pub struct FpsCounter {
     /// Sliding window of timer durations for
     /// past frames, stored as seconds.
@@ -45,5 +49,11 @@ impl Default for FpsCounter {
             frames: [0.0; FPS_COUNTER_WINDOW_SIZE],
             cursor: 0,
         }
+    }
+}
+
+impl fmt::Display for FpsCounter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FPS({})", self.fps())
     }
 }
