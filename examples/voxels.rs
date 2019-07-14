@@ -391,7 +391,7 @@ impl Scene for Game {
 fn main() -> Result<(), Box<dyn Error>> {
     let app = AppBuilder::new()
         .title("Voxels Example")
-        .size(500, 500)
+        .size(800, 600)
         .background_color([0.3, 0.4, 0.5, 1.0])
         .init_scene(Game::new())
         .build()?;
