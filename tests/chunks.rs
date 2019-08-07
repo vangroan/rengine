@@ -1,7 +1,7 @@
 extern crate rengine;
 
 use rengine::comp::MeshCommandBuffer;
-use rengine::specs::{Builder, RunNow, SystemData, World};
+use rengine::specs::{Builder, RunNow, World};
 use rengine::voxel::{
     ChunkControl, ChunkMapping, ChunkUpkeepSystem, NoOpVoxelMeshGen, VoxelArrayChunk, VoxelChunk,
 };
