@@ -1,5 +1,6 @@
 extern crate rengine;
 
+use crate::rengine::gui::GuiBuilder;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
 use rengine::colors::WHITE;
@@ -258,6 +259,13 @@ impl Scene for Game {
                 .with(TextBatch::new().with("FPS: 0", WHITE))
                 .build(),
         );
+
+        let _fps_counter_widget_id = ctx
+            .world
+            .create_widget(self.fps_counter_entity.unwrap())
+            .build()
+            .unwrap();
+
         self.entities.push(self.fps_counter_entity.unwrap());
 
         None

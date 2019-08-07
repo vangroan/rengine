@@ -3,6 +3,7 @@ use crate::colors;
 use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Transform};
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
+use crate::gui::GuiGraph;
 use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneError, SceneStack};
@@ -71,6 +72,10 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<CameraProjection>();
         world.register::<GlTexture>();
         world.register::<TextBatch>();
+
+        // GUI
+        let root_entity = world.create_entity().build();
+        world.add_resource(GuiGraph::with_root(root_entity));
 
         // Graphics Commands to allow allocating resources
         // from systems to draw thread.
