@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 
 /// Global control of multiple chunks, to enforce
-/// rules accross sibling chunks.
+/// rules across sibling chunks.
 pub struct ChunkControl<D: VoxelData, C: VoxelChunk<D>> {
     cmds: Vec<LazyCommand<D>>,
     _marker: PhantomData<(D, C)>,
