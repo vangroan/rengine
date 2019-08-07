@@ -28,6 +28,16 @@ impl Scene for Game {
         None
     }
 
+    fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        ctx.world
+            .delete_entities(&self.entities)
+            .err()
+            .map(|err| panic!(err));
+        self.entities.clear();
+
+        None
+    }
+
     fn on_update(&mut self, _ctx: &mut Context<'_>) -> Option<Trans> {
         None
     }

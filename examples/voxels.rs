@@ -263,6 +263,22 @@ impl Scene for Game {
         None
     }
 
+    fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        // ensure entities are freed
+        ctx.world
+            .delete_entities(&self.entities)
+            .err()
+            .map(|err| panic!(err));
+        self.entities.clear();
+
+        // Clear unused resources
+        ctx.world
+            .write_resource::<TextureAssets>()
+            .remove_texture(BLOCK_TEX_PATH);
+
+        None
+    }
+
     fn on_event(&mut self, ctx: &mut Context<'_>, ev: &glutin::Event) -> Option<Trans> {
         use glutin::ElementState;
         use glutin::Event::*;
