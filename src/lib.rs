@@ -1,3 +1,4 @@
+extern crate daggy;
 #[macro_use]
 extern crate gfx;
 extern crate gfx_core;
@@ -22,6 +23,7 @@ pub mod colors;
 pub mod comp;
 mod gfx_types;
 mod graphics;
+pub mod gui;
 pub mod option;
 pub mod render;
 pub mod res;
