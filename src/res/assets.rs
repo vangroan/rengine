@@ -2,7 +2,6 @@ use crate::gfx_types::ColorFormat;
 use gfx::texture::{FilterMethod, SamplerInfo, WrapMode};
 use gfx_device::{Factory, Resources};
 use std::collections::BTreeMap;
-
 use std::sync::Arc;
 
 const DEFAULT_TEXTURE_KEY: &str = "#";
