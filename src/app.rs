@@ -1,12 +1,13 @@
 use crate::camera::{ActiveCamera, CameraProjection, CameraResizeSystem, CameraView};
 use crate::colors;
 use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Transform};
+use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::gui::GuiGraph;
 use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
-use crate::scene::{Scene, SceneError, SceneStack};
+use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
 use crate::text::{DrawTextSystem, TextBatch};
 use gfx::traits::FactoryExt;
@@ -14,8 +15,6 @@ use gfx::Device;
 use gfx_glyph::GlyphBrushBuilder;
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
 use specs::{Builder, Dispatcher, DispatcherBuilder, RunNow, World};
-use std::error::Error;
-use std::fmt;
 use std::time::Instant;
 
 const DEFAULT_FONT_DATA: &[u8] = include_bytes!("../resources/fonts/DejaVuSans.ttf");
@@ -52,7 +51,7 @@ impl<'a, 'b> App<'a, 'b> {
     /// Starts the application loop
     ///
     /// Consumes the app
-    pub fn run(self) -> AppResult {
+    pub fn run(self) -> Result<()> {
         use glutin::Event::*;
 
         let App {
@@ -90,7 +89,7 @@ impl<'a, 'b> App<'a, 'b> {
         // Initial ViewPort Size
         let device_dimensions = match DeviceDimensions::from_window(&graphics.window) {
             Some(dim) => dim,
-            None => return Err(AppError::WindowSize),
+            None => return Err(ErrorKind::WindowSize.into()),
         };
 
         // Implementation of Into<(u32, u2)> performs proper rounding
@@ -177,9 +176,10 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Encoder
         let mut channel = ChannelPair::new();
-        if let Err(_) = channel.send_block(graphics.create_encoder()) {
-            return Err(AppError::EncoderSend);
-        }
+        channel.send_block(graphics.create_encoder())?;
+        // if let Err(_) = channel.send_block(graphics.create_encoder()) {
+        //     return Err(ErrorKind::EncoderSend.into());
+        // }
 
         // Renderer
         // TODO: Consider having a `Renderer` trait since it's being treated differently than other systems
@@ -201,7 +201,7 @@ impl<'a, 'b> App<'a, 'b> {
             Some(scene_box) => {
                 scene_stack.push_box(scene_box);
             }
-            None => return Err(AppError::NoInitialScene),
+            None => return Err(ErrorKind::NoInitialScene.into()),
         }
 
         // Loop control
@@ -275,16 +275,24 @@ impl<'a, 'b> App<'a, 'b> {
             scene_stack.dispatch_update(&mut world, &mut graphics);
 
             // Pre-render
-            match channel.recv_block() {
-                Ok(mut encoder) => {
-                    encoder.clear(&graphics.render_target, bkg_color);
-                    encoder.clear_depth(&graphics.depth_stencil, 1.0);
+            {
+                let mut encoder = channel.recv_block()?;
+                encoder.clear(&graphics.render_target, bkg_color);
+                encoder.clear_depth(&graphics.depth_stencil, 1.0);
 
-                    // Send encoder back
-                    channel.send_block(encoder)?;
-                }
-                Err(_) => return Err(AppError::EncoderRecv),
+                // Send encoder back
+                channel.send_block(encoder)?;
             }
+            // match channel.recv_block() {
+            //     Ok(mut encoder) => {
+            //         encoder.clear(&graphics.render_target, bkg_color);
+            //         encoder.clear_depth(&graphics.depth_stencil, 1.0);
+
+            //         // Send encoder back
+            //         channel.send_block(encoder)?;
+            //     }
+            //     Err(_) => return Err(ErrorKind::EncoderRecv.into()),
+            // }
 
             // Run systems
             dispatcher.dispatch(&world.res);
@@ -306,17 +314,25 @@ impl<'a, 'b> App<'a, 'b> {
             text_renderer.render(&mut world, &mut graphics);
 
             // Commit Render
-            match channel.recv_block() {
-                Ok(mut encoder) => {
-                    // encoder.draw(&slice, &pso, &data);
-                    encoder.flush(&mut graphics.device);
-                    graphics.window.swap_buffers().unwrap();
+            {
+                let mut encoder = channel.recv_block()?;
+                encoder.flush(&mut graphics.device);
+                graphics.window.swap_buffers().unwrap();
 
-                    // Send encoder back
-                    channel.send_block(encoder)?;
-                }
-                Err(_) => return Err(AppError::EncoderRecv),
+                // Send encoder back
+                channel.send_block(encoder)?;
             }
+            // match channel.recv_block() {
+            //     Ok(mut encoder) => {
+            //         // encoder.draw(&slice, &pso, &data);
+            //         encoder.flush(&mut graphics.device);
+            //         graphics.window.swap_buffers().unwrap();
+
+            //         // Send encoder back
+            //         channel.send_block(encoder)?;
+            //     }
+            //     Err(_) => return Err(ErrorKind::EncoderRecv.into()),
+            // }
 
             // Deallocate
             graphics.device.cleanup();
@@ -330,94 +346,6 @@ impl<'a, 'b> App<'a, 'b> {
         }
 
         Ok(())
-    }
-}
-
-pub type AppResult = Result<(), AppError>;
-
-#[derive(Debug)]
-#[must_use]
-pub enum AppError {
-    /// Graphics encoder was not in the channel when render occurred
-    EncoderRecv,
-
-    /// Graphics encoder could not be sent over the channel, possibly because it has been disconnected
-    EncoderSend,
-
-    /// Failed to retrieve Window Size
-    WindowSize,
-
-    /// App was setup with no initial scene
-    NoInitialScene,
-    SceneTransitionFail(SceneError),
-
-    /// Error while reading files
-    IOError(::std::io::Error),
-}
-
-impl fmt::Display for AppError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use AppError::*;
-
-        write!(
-            f,
-            "Application Error, {}",
-            match self {
-                EncoderRecv => "Encoder Receive",
-                EncoderSend => "Encoder Send",
-                WindowSize => "Window Size",
-                NoInitialScene => "No initial Scene",
-                SceneTransitionFail(_) => "Scene Transition Fail",
-                IOError(_) => "IO Error",
-            }
-        )
-    }
-}
-
-impl Error for AppError {
-    fn description(&self) -> &str {
-        use AppError::*;
-
-        match self {
-            EncoderRecv => "Graphics encoder was not received from channel",
-            EncoderSend => "Graphics encoder could not be sent to the channel",
-            WindowSize => "Failed to retrieve window size",
-            NoInitialScene => "No initial scene configured",
-            SceneTransitionFail(_) => "Failure to transition scene during maintenance phase",
-            IOError(_) => "Error during input/output",
-        }
-    }
-
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        use AppError::*;
-
-        match self {
-            SceneTransitionFail(err) => Some(err),
-            IOError(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl<R, C> From<crossbeam::channel::SendError<gfx::Encoder<R, C>>> for AppError
-where
-    R: gfx::Resources,
-    C: gfx::CommandBuffer<R>,
-{
-    fn from(_send_error: crossbeam::channel::SendError<gfx::Encoder<R, C>>) -> Self {
-        AppError::EncoderSend
-    }
-}
-
-impl From<SceneError> for AppError {
-    fn from(scene_error: SceneError) -> Self {
-        AppError::SceneTransitionFail(scene_error)
-    }
-}
-
-impl From<::std::io::Error> for AppError {
-    fn from(io_error: std::io::Error) -> Self {
-        AppError::IOError(io_error)
     }
 }
 
@@ -482,7 +410,7 @@ impl AppBuilder {
     }
 
     /// Consumes the builder and creates the application
-    pub fn build<'a, 'b>(mut self) -> Result<App<'a, 'b>, Box<dyn Error>> {
+    pub fn build<'a, 'b>(mut self) -> Result<App<'a, 'b>> {
         // Event Loop
         let events_loop = EventsLoop::new();
 
