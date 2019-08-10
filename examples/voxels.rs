@@ -1,6 +1,7 @@
 extern crate rengine;
 
 use crate::rengine::gui::GuiBuilder;
+use log::trace;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
 use rengine::colors::WHITE;
@@ -18,7 +19,6 @@ use rengine::voxel::{
     raycast_from_camera, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
     VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
-
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
 use std::error::Error;
 
@@ -197,7 +197,7 @@ impl Scene for Game {
             let mapping = ctx.world.write_resource::<ChunkMapping>();
             let inner = mapping.inner();
             for kvp in inner.iter() {
-                println!("{:?}", kvp);
+                trace!("{:?}", kvp);
             }
         }
 
@@ -345,8 +345,6 @@ impl Scene for Game {
                 ) = ctx.world.system_data();
 
                 for raycast_info in raycast {
-                    // println!("Voxel: {}", raycast_info.voxel_coord());
-
                     // Determine chunk coordinate
                     let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
                     let occupied = chunk_map
@@ -358,7 +356,6 @@ impl Scene for Game {
 
                     // Carve out line in path of ray
                     if occupied {
-                        // println!("!! Carving {}", raycast_info.voxel_coord());
                         chunk_ctrl.lazy_update(
                             raycast_info.voxel_coord().clone(),
                             TileVoxel {
@@ -383,8 +380,6 @@ impl Scene for Game {
                 let mut last_voxel = VoxelCoord::new(9999, 9999, 9999);
 
                 'cast: for raycast_info in raycast {
-                    // println!("Voxel: {}", raycast_info.voxel_coord());
-
                     // Determine chunk coordinate
                     let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
                     let occupied = chunk_map
@@ -396,7 +391,6 @@ impl Scene for Game {
 
                     // Tile hit, add to previous
                     if occupied {
-                        // println!("!! Adding {}", last_voxel);
                         chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
 
                         // Stop

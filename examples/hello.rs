@@ -2,6 +2,7 @@ extern crate rengine;
 #[macro_use]
 extern crate specs_derive;
 
+use log::trace;
 use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
 use rengine::comp::{GlTexture, MeshBuilder, TexRect, Transform};
 use rengine::glutin::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
@@ -57,7 +58,7 @@ struct Intro;
 
 impl Scene for Intro {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
-        println!("{:?}: On start", self);
+        trace!("{:?}: On start", self);
 
         ctx.world.register::<Block>();
 
@@ -65,7 +66,7 @@ impl Scene for Intro {
     }
 
     fn on_stop(&mut self, _ctx: &mut Context<'_>) -> Option<Trans> {
-        println!("{:?}: On stop", self);
+        trace!("{:?}: On stop", self);
 
         None
     }
@@ -94,7 +95,7 @@ impl Default for Game {
 
 impl Scene for Game {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
-        println!("{}: On start", self);
+        trace!("{}: On start", self);
 
         // Position camera away from cubes
         ctx.world.exec(
@@ -155,7 +156,7 @@ impl Scene for Game {
     }
 
     fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
-        println!("{}: On stop", self);
+        trace!("{}: On stop", self);
 
         if let Err(err) = ctx.world.delete_entities(&self.entities) {
             panic!(err);
@@ -185,19 +186,10 @@ impl Scene for Game {
 
             if let Some((_proj, view)) = maybe_cam {
                 let translate = self.camera_dir * self.camera_speed * dt;
-                let pos = view.position();
+                let pos = view.position().clone();
                 view.set_position(pos + translate);
-                let target = view.target();
+                let target = view.target().clone();
                 view.look_at(target + translate);
-
-                // {
-                //     let pos = view.position();
-                //     let target = view.target();
-                //     println!(
-                //         "Camera Pos ({}, {}, {}); Target ({}, {}, {})",
-                //         pos.x, pos.y, pos.z, target.x, target.y, target.z
-                //     );
-                // }
             }
         }
 

@@ -14,6 +14,7 @@ use gfx::traits::FactoryExt;
 use gfx::Device;
 use gfx_glyph::GlyphBrushBuilder;
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
+use log::{error, trace};
 use specs::{Builder, Dispatcher, DispatcherBuilder, RunNow, World};
 use std::time::Instant;
 
@@ -228,13 +229,13 @@ impl<'a, 'b> App<'a, 'b> {
                         event: glutin::WindowEvent::CloseRequested,
                         ..
                     } => {
-                        println!("Shutting down");
+                        trace!("Shutting down");
 
                         running = false;
 
                         // Allow scenes to cleanup resources
                         if let Err(err) = scene_stack.clear(&mut world, &mut graphics) {
-                            eprintln!("{:?}", err);
+                            error!("{:?}", err);
                         }
                     }
                     WindowEvent {
@@ -283,28 +284,11 @@ impl<'a, 'b> App<'a, 'b> {
                 // Send encoder back
                 channel.send_block(encoder)?;
             }
-            // match channel.recv_block() {
-            //     Ok(mut encoder) => {
-            //         encoder.clear(&graphics.render_target, bkg_color);
-            //         encoder.clear_depth(&graphics.depth_stencil, 1.0);
-
-            //         // Send encoder back
-            //         channel.send_block(encoder)?;
-            //     }
-            //     Err(_) => return Err(ErrorKind::EncoderRecv.into()),
-            // }
 
             // Run systems
             dispatcher.dispatch(&world.res);
 
             // Allocate Graphic Resources
-            // world.exec(
-            //     |(mesh_cmds, data): (specs::Read<'_, MeshCommandBuffer>, MeshUpkeepData)| {
-            //         mesh_upkeep.maintain(&mut graphics, data);
-            //     },
-            // );
-            // .read_resource::<MeshCommandBuffer>()
-            // .maintain(&mut graphics, world.system_data());
             mesh_upkeep.maintain(&mut graphics, world.system_data());
 
             // Render Components
@@ -322,17 +306,6 @@ impl<'a, 'b> App<'a, 'b> {
                 // Send encoder back
                 channel.send_block(encoder)?;
             }
-            // match channel.recv_block() {
-            //     Ok(mut encoder) => {
-            //         // encoder.draw(&slice, &pso, &data);
-            //         encoder.flush(&mut graphics.device);
-            //         graphics.window.swap_buffers().unwrap();
-
-            //         // Send encoder back
-            //         channel.send_block(encoder)?;
-            //     }
-            //     Err(_) => return Err(ErrorKind::EncoderRecv.into()),
-            // }
 
             // Deallocate
             graphics.device.cleanup();

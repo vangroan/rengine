@@ -1,5 +1,6 @@
 use crate::comp::{MeshBuilder, MeshCmd, MeshCommandBuffer};
 use crate::voxel::{voxel_to_chunk, ChunkCoord, VoxelChunk, VoxelCoord, VoxelData, VoxelMeshGen};
+use log::warn;
 use specs::{Component, Entity, System, Write, WriteStorage};
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
@@ -149,7 +150,7 @@ where
                             self.dirty.insert(chunk_coord.clone());
                         }
                     } else {
-                        println!("Chunk not found for {}", chunk_coord);
+                        warn!("Chunk not found for {}", chunk_coord);
                     }
                 }
             }
