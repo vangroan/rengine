@@ -10,6 +10,12 @@ pub struct Billboard;
 
 pub struct BillboardSystem;
 
+impl BillboardSystem {
+    pub fn new() -> Self {
+        BillboardSystem
+    }
+}
+
 impl<'a> System<'a> for BillboardSystem {
     type SystemData = (
         ReadExpect<'a, ActiveCamera>,
