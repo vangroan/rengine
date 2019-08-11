@@ -10,13 +10,26 @@ use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::res::{DeltaTime, TextureAssets};
 use rengine::specs::{
-    Builder, Component, DenseVecStorage, Entity, Join, Read, ReadExpect, ReadStorage, WriteStorage,
+    Builder, Component, DenseVecStorage, Entity, Join, Read, ReadExpect, ReadStorage, RunNow,
+    System, WriteStorage,
 };
 use rengine::{Context, GlTextureAssets, Scene, Trans};
 use std::error::Error;
 use std::fmt;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
+
+struct EventReaderSystem;
+
+impl<'a> System<'a> for EventReaderSystem {
+    type SystemData = (Read<'a, Vec<Event>>,);
+
+    fn run(&mut self, (events,): Self::SystemData) {
+        for event in events.iter() {
+            trace!("{:?}", event);
+        }
+    }
+}
 
 type CameraData<'a> = (
     ReadExpect<'a, ActiveCamera>,
@@ -205,6 +218,9 @@ impl Scene for Game {
 
         // Clear direction for next frame
         self.camera_dir = Vector3::new(0., 0., 0.);
+
+        // Print Events
+        EventReaderSystem.run_now(&ctx.world.res);
 
         None
     }

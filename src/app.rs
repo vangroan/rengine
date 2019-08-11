@@ -73,6 +73,9 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<GlTexture>();
         world.register::<TextBatch>();
 
+        // Event Streams
+        world.add_resource::<Vec<glutin::Event>>(Vec::new());
+
         // GUI
         let root_entity = world.create_entity().build();
         world.add_resource(GuiGraph::with_root(root_entity));
@@ -209,6 +212,10 @@ impl<'a, 'b> App<'a, 'b> {
         let mut running = true;
         let mut last_time = Instant::now();
 
+        // Buffer to copy events into, to avoid having to borrow
+        // event stream from world.
+        let mut events: Vec<glutin::Event> = Vec::new();
+
         'main: while running {
             // Time elapsed since last iteration
             let new_time = Instant::now();
@@ -223,6 +230,8 @@ impl<'a, 'b> App<'a, 'b> {
 
             // Drain user input events
             events_loop.poll_events(|event| {
+                events.push(event.clone());
+
                 // Global event handling
                 match event {
                     WindowEvent {
@@ -272,6 +281,10 @@ impl<'a, 'b> App<'a, 'b> {
                 scene_stack.dispatch_event(&mut world, &mut graphics, &event);
             });
 
+            world.exec(|(mut event_stream,): (specs::Write<Vec<glutin::Event>>,)| {
+                event_stream.extend(events.drain(..));
+            });
+
             // Scene Update
             scene_stack.dispatch_update(&mut world, &mut graphics);
 
@@ -310,6 +323,11 @@ impl<'a, 'b> App<'a, 'b> {
             // Deallocate
             graphics.device.cleanup();
             world.maintain();
+
+            // Flush event stream
+            world.exec(|(mut event_stream,): (specs::Write<Vec<glutin::Event>>,)| {
+                event_stream.clear();
+            });
 
             // Cooperatively give up CPU time
             // ::std::thread::yield_now();
