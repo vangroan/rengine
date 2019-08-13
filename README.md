@@ -1,6 +1,8 @@
 
 # rengine
 
+[![Build Status](https://travis-ci.org/vangroan/rengine.svg?branch=master)](https://travis-ci.org/vangroan/rengine)
+
 Game engine/framework that aggregates several existing libraries.
 
 ## Libraries
