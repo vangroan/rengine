@@ -3,6 +3,7 @@ use crate::gfx_types::{gizmo_pipe, GizmoPso, PipelineBundle, ShaderProgram};
 use crate::render::channel::ChannelPair;
 use crate::render::DrawFactory;
 
+#[allow(dead_code)]
 pub struct GizmoDrawSystem {
     channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,
     pub(crate) render_target: RenderTarget<gfx_device::Resources>,
