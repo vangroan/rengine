@@ -13,7 +13,7 @@ use glutin::WindowedContext;
 /// TODO: Move into specs resources
 #[allow(dead_code)]
 pub struct GraphicContext {
-    pub(crate) window: WindowedContext,
+    pub(crate) window: WindowedContext<glutin::PossiblyCurrent>,
     pub(crate) device: Device,
     pub(crate) factory: Factory,
     pub(crate) render_target: RenderTargetView<Resources, ColorFormat>,
@@ -27,12 +27,12 @@ pub struct GraphicContext {
 
 impl GraphicContext {
     #[inline]
-    pub fn window(&self) -> &WindowedContext {
+    pub fn window(&self) -> &WindowedContext<glutin::PossiblyCurrent> {
         &self.window
     }
 
     #[inline]
-    pub fn window_mut(&mut self) -> &mut WindowedContext {
+    pub fn window_mut(&mut self) -> &mut WindowedContext<glutin::PossiblyCurrent> {
         &mut self.window
     }
 

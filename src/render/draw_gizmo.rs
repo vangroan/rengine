@@ -1,5 +1,5 @@
 use crate::gfx_types::RenderTarget;
-use crate::gfx_types::{gizmo_pipe, GizmoPso, PipelineBundle, PipelineStateObject, ShaderProgram};
+use crate::gfx_types::{gizmo_pipe, GizmoPso, PipelineBundle, ShaderProgram};
 use crate::render::channel::ChannelPair;
 use crate::render::DrawFactory;
 

@@ -252,7 +252,7 @@ impl<'a, 'b> App<'a, 'b> {
                         ..
                     } => {
                         // Coordinates use physical size
-                        let dpi_factor = graphics.window.get_hidpi_factor();
+                        let dpi_factor = graphics.window.window().get_hidpi_factor();
                         let physical_size = logical_size.to_physical(dpi_factor);
 
                         // Required by some platforms

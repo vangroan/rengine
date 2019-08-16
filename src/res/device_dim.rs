@@ -19,9 +19,9 @@ impl DeviceDimensions {
     }
 
     /// Will fail if window is closed
-    pub fn from_window(window_context: &WindowedContext) -> Option<Self> {
-        let dpi_factor = window_context.get_hidpi_factor();
-        match window_context.get_inner_size() {
+    pub fn from_window(window_context: &WindowedContext<glutin::PossiblyCurrent>) -> Option<Self> {
+        let dpi_factor = window_context.window().get_hidpi_factor();
+        match window_context.window().get_inner_size() {
             Some(logical_size) => Some(DeviceDimensions::new(dpi_factor, logical_size)),
             // Window no longer exists
             None => None,
