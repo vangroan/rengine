@@ -15,6 +15,7 @@ extern crate num_traits;
 extern crate shred;
 #[macro_use]
 extern crate shred_derive;
+extern crate shrev;
 pub extern crate specs;
 #[macro_use]
 extern crate specs_derive;
