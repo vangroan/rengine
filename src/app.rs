@@ -216,7 +216,7 @@ impl<'a, 'b> App<'a, 'b> {
         // event stream from world.
         let mut events: Vec<glutin::Event> = Vec::new();
 
-        'main: while running {
+        while running {
             // Time elapsed since last iteration
             let new_time = Instant::now();
             let delta_time = DeltaTime(new_time.duration_since(last_time));
@@ -360,14 +360,20 @@ pub struct AppBuilder {
     initial_scene: Option<Box<dyn Scene>>,
 }
 
-impl AppBuilder {
-    pub fn new() -> Self {
+impl Default for AppBuilder {
+    fn default() -> Self {
         AppBuilder {
             size: [640, 480],
             title: "rengine",
             bkg_color: colors::BLACK,
             initial_scene: None,
         }
+    }
+}
+
+impl AppBuilder {
+    pub fn new() -> Self {
+        Default::default()
     }
 
     /// The initial size of the window

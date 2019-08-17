@@ -13,7 +13,7 @@ impl ActiveCamera {
 
     #[inline]
     pub fn camera_entity(&self) -> Option<Entity> {
-        self.0.clone()
+        self.0
     }
 
     #[inline]

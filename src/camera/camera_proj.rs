@@ -28,7 +28,7 @@ impl CameraProjection {
 
         // Perspective
         if device_size.1 != 0 {
-            self.persp.aspect_ratio = device_size.0 as f32 / device_size.1 as f32;
+            self.persp.aspect_ratio = f32::from(device_size.0) / f32::from(device_size.1);
         }
     }
 

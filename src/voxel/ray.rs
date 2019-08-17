@@ -161,32 +161,30 @@ impl Iterator for VoxelRaycast {
 
                     i
                 }
+            } else if self.t[1] < self.t[2] {
+                // Y-axis
+                let i = VoxelRayInfo {
+                    t: self.t[1],
+                    intersect: self.origin + self.direction.into_inner() * self.t[1],
+                    voxel: self.voxel.clone().into(),
+                };
+
+                self.t[1] += self.delta[1];
+                self.voxel[1] += self.step[1];
+
+                i
             } else {
-                if self.t[1] < self.t[2] {
-                    // Y-axis
-                    let i = VoxelRayInfo {
-                        t: self.t[1],
-                        intersect: self.origin + self.direction.into_inner() * self.t[1],
-                        voxel: self.voxel.clone().into(),
-                    };
+                // Z-axis
+                let i = VoxelRayInfo {
+                    t: self.t[2],
+                    intersect: self.origin + self.direction.into_inner() * self.t[2],
+                    voxel: self.voxel.clone().into(),
+                };
 
-                    self.t[1] += self.delta[1];
-                    self.voxel[1] += self.step[1];
+                self.t[2] += self.delta[2];
+                self.voxel[2] += self.step[2];
 
-                    i
-                } else {
-                    // Z-axis
-                    let i = VoxelRayInfo {
-                        t: self.t[2],
-                        intersect: self.origin + self.direction.into_inner() * self.t[2],
-                        voxel: self.voxel.clone().into(),
-                    };
-
-                    self.t[2] += self.delta[2];
-                    self.voxel[2] += self.step[2];
-
-                    i
-                }
+                i
             };
 
             self.cursor += 1;

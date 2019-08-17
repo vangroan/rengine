@@ -44,11 +44,10 @@ impl CameraView {
         self.target = target;
     }
 
+    /// Creates a view-forward matrix
     pub fn view_matrix(&self) -> Matrix4<f32> {
         // Right handed matrix must be used with perspective or orthographic projections
-        let face_towards = Matrix4::look_at_rh(&self.eye, &self.target, &self.up);
-
-        face_towards
+        Matrix4::look_at_rh(&self.eye, &self.target, &self.up)
     }
 }
 

@@ -109,5 +109,5 @@ pub fn camera_raycast(
     let world_direction = Unit::new_normalize(inverse_view_mat.transform_vector(&line_direction));
 
     // Create ray walker
-    return Some(voxel_raycast(world_point, world_direction, steps));
+    Some(voxel_raycast(world_point, world_direction, steps))
 }
