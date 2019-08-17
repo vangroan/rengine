@@ -333,7 +333,7 @@ impl<'a, 'b> App<'a, 'b> {
             // ::std::thread::yield_now();
 
             // TODO: Remove sleep; call update and render on separate timers
-            ::std::thread::sleep(::std::time::Duration::from_millis(16));
+            ::std::thread::sleep(::std::time::Duration::from_millis(1));
         }
 
         Ok(())
