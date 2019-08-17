@@ -144,7 +144,7 @@ impl SceneStack {
         while let Some(mut s) = self.scenes.pop() {
             let mut ctx = Context { world, graphics };
             let trans = s.on_stop(&mut ctx);
-            if !trans.is_none() {
+            if trans.is_some() {
                 self.request = trans;
             }
         }
@@ -167,7 +167,7 @@ impl SceneStack {
         if let Some(ref mut s) = self.current_mut() {
             let mut ctx = Context { world, graphics };
             let trans = s.on_start(&mut ctx);
-            if !trans.is_none() {
+            if trans.is_some() {
                 self.request = trans;
             }
         }
@@ -177,7 +177,7 @@ impl SceneStack {
         if let Some(ref mut s) = self.current_mut() {
             let mut ctx = Context { world, graphics };
             let trans = s.on_stop(&mut ctx);
-            if !trans.is_none() {
+            if trans.is_some() {
                 self.request = trans;
             }
         }
