@@ -302,9 +302,9 @@ where
                         let mask = create_mask(&center_as_neighbour);
 
                         if occupied {
-                            voxel_bundle.0 = voxel_bundle.0 | mask;
+                            voxel_bundle.0 |= mask;
                         } else {
-                            voxel_bundle.0 = voxel_bundle.0 & !mask;
+                            voxel_bundle.0 &= !mask;
                         }
                     }
                 }

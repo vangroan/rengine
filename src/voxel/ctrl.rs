@@ -84,7 +84,7 @@ impl ChunkMapping {
     where
         V: Into<ChunkCoord>,
     {
-        self.0.get(&chunk_coord.into()).map(|e| e.clone())
+        self.0.get(&chunk_coord.into()).map(|e| *e)
     }
 }
 

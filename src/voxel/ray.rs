@@ -141,7 +141,7 @@ impl Iterator for VoxelRaycast {
                     let i = VoxelRayInfo {
                         t: self.t[0],
                         intersect: self.origin + self.direction.into_inner() * self.t[0],
-                        voxel: self.voxel.clone().into(),
+                        voxel: self.voxel.into(),
                     };
 
                     self.t[0] += self.delta[0];
@@ -153,7 +153,7 @@ impl Iterator for VoxelRaycast {
                     let i = VoxelRayInfo {
                         t: self.t[2],
                         intersect: self.origin + self.direction.into_inner() * self.t[2],
-                        voxel: self.voxel.clone().into(),
+                        voxel: self.voxel.into(),
                     };
 
                     self.t[2] += self.delta[2];
@@ -166,7 +166,7 @@ impl Iterator for VoxelRaycast {
                 let i = VoxelRayInfo {
                     t: self.t[1],
                     intersect: self.origin + self.direction.into_inner() * self.t[1],
-                    voxel: self.voxel.clone().into(),
+                    voxel: self.voxel.into(),
                 };
 
                 self.t[1] += self.delta[1];
@@ -178,7 +178,7 @@ impl Iterator for VoxelRaycast {
                 let i = VoxelRayInfo {
                     t: self.t[2],
                     intersect: self.origin + self.direction.into_inner() * self.t[2],
-                    voxel: self.voxel.clone().into(),
+                    voxel: self.voxel.into(),
                 };
 
                 self.t[2] += self.delta[2];
