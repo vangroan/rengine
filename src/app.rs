@@ -181,9 +181,6 @@ impl<'a, 'b> App<'a, 'b> {
         // Encoder
         let mut channel = ChannelPair::new();
         channel.send_block(graphics.create_encoder())?;
-        // if let Err(_) = channel.send_block(graphics.create_encoder()) {
-        //     return Err(ErrorKind::EncoderSend.into());
-        // }
 
         // Renderer
         // TODO: Consider having a `Renderer` trait since it's being treated differently than other systems
