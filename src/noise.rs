@@ -41,8 +41,10 @@ pub fn sample_value_noise(position: f32, octaves: u8) -> f32 {
         let val_b = b * amplitude;
 
         // Linear interpolation
-        let weight = pos_b - pos;
-        sum += val_a + (val_b - val_a) * weight;
+        // (b - a * t) + a
+        let diff = val_b - val_a;
+        let t = (pos - pos_a) / diff;
+        sum += val_a + diff * t;
     }
 
     sum
