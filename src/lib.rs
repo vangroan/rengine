@@ -29,6 +29,7 @@ mod errors;
 mod gfx_types;
 mod graphics;
 pub mod gui;
+pub mod noise;
 pub mod option;
 pub mod render;
 pub mod res;
