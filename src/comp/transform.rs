@@ -119,6 +119,14 @@ impl Transform {
     }
 
     #[inline]
+    pub fn set_position<V>(&mut self, pos: V)
+    where
+        V: Into<Vec3>,
+    {
+        self.pos = pos.into();
+    }
+
+    #[inline]
     pub fn rotate<A, V>(&mut self, angle: A, axis: V)
     where
         A: Into<Rad<f32>>,
