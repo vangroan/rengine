@@ -28,7 +28,7 @@ pub struct App<'comp, 'thread> {
     world: World,
     dispatcher: Dispatcher<'comp, 'thread>,
     bkg_color: colors::Color,
-    initial_scene: Option<Box<Scene>>,
+    initial_scene: Option<Box<dyn Scene>>,
 }
 
 impl<'a, 'b> App<'a, 'b> {
