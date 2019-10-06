@@ -16,6 +16,13 @@ impl VoxelCoord {
     pub fn new(i: i32, j: i32, k: i32) -> Self {
         VoxelCoord { i, j, k }
     }
+
+    /// Tests for diagonality on the i, j plane
+    pub fn is_diagonal_k(&self, rhs: &VoxelCoord) -> bool {
+        let x = rhs.i - self.i;
+        let y = rhs.j - self.j;
+        x != 0 && y != 0
+    }
 }
 
 impl Default for VoxelCoord {
