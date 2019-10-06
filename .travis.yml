@@ -3,7 +3,7 @@ rust:
   - stable
   - 1.32.0 # minimum supported version
   - 1.34.0 # development version
-  - 1.36.0 # latest version
+  - 1.37.0 # latest version
   - nightly
 cache: cargo
 # TODO: Upload to Github Releases
