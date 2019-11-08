@@ -41,6 +41,11 @@ where
     pub fn as_degrees(&self) -> N {
         self.0
     }
+
+    #[inline]
+    pub fn approx_eq<T: Into<Self>>(&self, rhs: T) -> bool {
+        (self.0 - rhs.into().0).abs() < Float::epsilon()
+    }
 }
 
 impl<N> Into<Rad<N>> for Deg<N>
@@ -49,6 +54,13 @@ where
 {
     fn into(self) -> Rad<N> {
         Rad(self.as_radians())
+    }
+}
+
+impl From<Deg<f32>> for f64 {
+    #[inline]
+    fn from(deg: Deg<f32>) -> f64 {
+        f64::from(deg.0)
     }
 }
 
@@ -79,6 +91,11 @@ where
         let pi = N::PI();
         self.0 * (d / pi)
     }
+
+    #[inline]
+    pub fn approx_eq<T: Into<Self>>(&self, rhs: T) -> bool {
+        (self.0 - rhs.into().0).abs() < Float::epsilon()
+    }
 }
 
 impl<N> Into<Deg<N>> for Rad<N>
@@ -98,6 +115,13 @@ impl Into<Rad<f32>> for f32 {
     }
 }
 
+impl From<Rad<f32>> for f64 {
+    #[inline]
+    fn from(rad: Rad<f32>) -> f64 {
+        f64::from(rad.0)
+    }
+}
+
 impl<N> fmt::Display for Rad<N>
 where
     N: Float + fmt::Display,
@@ -110,13 +134,14 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::inexact_eq;
 
     #[test]
     fn test_degrees() {
         let deg_45 = Deg(45.);
         let rad_45 = ::std::f32::consts::PI / 4.;
-        assert_eq!(rad_45, deg_45.as_radians());
-        assert_eq!(Rad(rad_45), deg_45.into());
+        assert!(inexact_eq!(rad_45, deg_45.as_radians()));
+        assert!(Rad(rad_45).approx_eq(deg_45));
     }
 
     #[test]
@@ -124,7 +149,7 @@ mod test {
         let pi = ::std::f32::consts::PI;
         let deg_45 = 45.;
         let rad_45 = Rad(pi / 4.);
-        assert_eq!(deg_45, rad_45.as_degrees());
-        assert_eq!(Deg(deg_45), rad_45.into());
+        assert!(inexact_eq!(deg_45, rad_45.as_degrees()));
+        assert!(Deg(deg_45).approx_eq(rad_45));
     }
 }

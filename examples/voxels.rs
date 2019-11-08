@@ -45,6 +45,7 @@ impl VoxelData for TileVoxel {
     }
 }
 
+#[allow(clippy::just_underscores_and_digits)]
 fn isometric_camera_position() -> Point3<f32> {
     let _45 = Deg(45.);
     let _35 = Rad((1. / 2.0_f32.sqrt()).atan());
@@ -85,7 +86,7 @@ fn create_sprite<V: Into<glm::Vec3>>(
     pos: V,
     tex: GlTexture,
 ) -> Entity {
-    let entity = world
+    world
         .create_entity()
         .with(tex)
         .with(Billboard)
@@ -100,9 +101,7 @@ fn create_sprite<V: Into<glm::Vec3>>(
                 .build(graphics),
         )
         .with(Transform::default().with_position(pos))
-        .build();
-
-    entity
+        .build()
 }
 
 pub struct Game {
@@ -273,10 +272,10 @@ impl Scene for Game {
 
     fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         // ensure entities are freed
-        ctx.world
-            .delete_entities(&self.entities)
-            .err()
-            .map(|err| panic!(err));
+        let maybe_err = ctx.world.delete_entities(&self.entities).err();
+        if let Some(err) = maybe_err {
+            panic!(err);
+        }
         self.entities.clear();
 
         // Clear unused resources
@@ -293,8 +292,8 @@ impl Scene for Game {
         use glutin::MouseButton;
         use glutin::WindowEvent::*;
 
-        match ev {
-            WindowEvent { event, .. } => match event {
+        if let WindowEvent { event, .. } = ev {
+            match event {
                 CursorMoved { position, .. } => {
                     let (device_dim,): (Read<'_, DeviceDimensions>,) = ctx.world.system_data();
                     self.cursor_pos = position.to_physical(device_dim.dpi_factor());
@@ -307,8 +306,7 @@ impl Scene for Game {
                     }
                 }
                 _ => {}
-            },
-            _ => {}
+            }
         }
 
         None
@@ -319,11 +317,12 @@ impl Scene for Game {
             |(dt, mut text_batches): (Read<DeltaTime>, WriteStorage<'_, TextBatch>)| {
                 self.fps_counter.add(dt.duration());
 
-                self.fps_counter_entity
+                if let Some(text_batch) = self
+                    .fps_counter_entity
                     .and_then(|e| text_batches.get_mut(e))
-                    .map(|text_batch| {
-                        text_batch.replace(&format!("FPS: {:.2}", self.fps_counter.fps()), WHITE)
-                    });
+                {
+                    text_batch.replace(&format!("FPS: {:.2}", self.fps_counter.fps()), WHITE)
+                }
             },
         );
 
@@ -336,7 +335,7 @@ impl Scene for Game {
 
         if self.carve {
             if let Some(raycast) =
-                raycast_from_camera(ctx.world.system_data(), self.cursor_pos.clone(), 200)
+                raycast_from_camera(ctx.world.system_data(), self.cursor_pos, 200)
             {
                 let (chunk_map, mut chunk_ctrl, chunks): (
                     Read<'_, ChunkMapping>,
@@ -369,7 +368,7 @@ impl Scene for Game {
 
         if self.add {
             if let Some(raycast) =
-                raycast_from_camera(ctx.world.system_data(), self.cursor_pos.clone(), 200)
+                raycast_from_camera(ctx.world.system_data(), self.cursor_pos, 200)
             {
                 let (chunk_map, mut chunk_ctrl, chunks): (
                     Read<'_, ChunkMapping>,

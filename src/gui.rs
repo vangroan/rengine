@@ -2,13 +2,13 @@ use daggy::Dag;
 use specs::Entity;
 
 mod builder;
-mod drawable;
 mod draw;
+mod drawable;
 mod widget;
 
 pub use builder::*;
-pub use drawable::*;
 pub use draw::*;
+pub use drawable::*;
 pub use widget::*;
 
 // TODO: Layout

@@ -202,7 +202,7 @@ mod test {
     fn test_basic_cast() {
         let ray = voxel_raycast(
             [1.5, 0.5, 0.5].into(),
-            Unit::new_normalize([0.5, 0.866025403, 0.0].into()),
+            Unit::new_normalize([0.5, 0.866_025_4, 0.0].into()),
             10,
         );
         let target = VoxelCoord::new(2, 3, 0);

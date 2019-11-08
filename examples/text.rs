@@ -32,10 +32,12 @@ impl Scene for Game {
     }
 
     fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
-        ctx.world
-            .delete_entities(&self.entities)
-            .err()
-            .map(|err| panic!(err));
+        let maybe_err = ctx.world.delete_entities(&self.entities).err();
+
+        if let Some(err) = maybe_err {
+            panic!(err);
+        }
+
         self.entities.clear();
 
         None

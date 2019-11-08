@@ -26,6 +26,7 @@ pub mod camera;
 pub mod colors;
 pub mod comp;
 mod errors;
+mod float;
 mod gfx_types;
 mod graphics;
 pub mod gui;
@@ -42,6 +43,7 @@ pub mod voxel;
 
 pub use app::*;
 pub use errors::*;
+pub use float::*;
 pub use gfx_types::*;
 pub use graphics::*;
 pub use scene::*;

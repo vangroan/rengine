@@ -45,7 +45,7 @@ fn test_lazy_update() {
     let mut upkeep_system: IntUpkeepSystem = IntUpkeepSystem::new(NoOpVoxelMeshGen);
 
     // Maintain
-    upkeep_system.run_now(&mut world.res);
+    upkeep_system.run_now(&world.res);
     assert_eq!(0, world.read_resource::<IntChunkCtrl>().cmd_len());
 
     {

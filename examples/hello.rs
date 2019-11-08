@@ -43,8 +43,7 @@ fn create_block(
     tex: GlTexture,
     tex_rects: [TexRect; 6],
 ) -> Entity {
-    ctx
-        .world
+    ctx.world
         .create_entity()
         .with(
             MeshBuilder::new()
@@ -54,10 +53,9 @@ fn create_block(
         .with(
             Transform::default()
                 .with_anchor([0.0, 0.0, 0.0])
-                .with_position(pos)
-                // .with_scale([0.5, 0.5, 0.5])
-                // .with_rotate_world(Deg(45.), Y_AXIS)
-                // .with_rotate_world(Deg(30.), X_AXIS),
+                .with_position(pos), // .with_scale([0.5, 0.5, 0.5])
+                                     // .with_rotate_world(Deg(45.), Y_AXIS)
+                                     // .with_rotate_world(Deg(30.), X_AXIS),
         )
         .with(tex)
         .build()
@@ -199,9 +197,9 @@ impl Scene for Game {
 
             if let Some((_proj, view)) = maybe_cam {
                 let translate = self.camera_dir * self.camera_speed * dt;
-                let pos = view.position().clone();
+                let pos = *view.position();
                 view.set_position(pos + translate);
-                let target = view.target().clone();
+                let target = *view.target();
                 view.look_at(target + translate);
             }
         }
@@ -225,21 +223,22 @@ impl Scene for Game {
         None
     }
 
-    fn on_event(&mut self, _ctx: &mut Context<'_>, event: &Event) -> Option<Trans> {
-        match event {
-            Event::WindowEvent {
-                event:
-                    WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                virtual_keycode: Some(key),
-                                state,
-                                ..
-                            },
-                        ..
-                    },
-                ..
-            } => match state {
+    fn on_event(&mut self, _ctx: &mut Context<'_>, ev: &Event) -> Option<Trans> {
+        if let Event::WindowEvent {
+            event:
+                WindowEvent::KeyboardInput {
+                    input:
+                        KeyboardInput {
+                            virtual_keycode: Some(key),
+                            state,
+                            ..
+                        },
+                    ..
+                },
+            ..
+        } = ev
+        {
+            match state {
                 ElementState::Pressed => match key {
                     VirtualKeyCode::W => {
                         self.camera_dir.y = 1.;
@@ -262,8 +261,7 @@ impl Scene for Game {
                     _ => {}
                 },
                 ElementState::Released => {}
-            },
-            _ => {}
+            }
         }
 
         None
