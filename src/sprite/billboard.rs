@@ -8,6 +8,8 @@ use specs::{Component, FlaggedStorage, Join, ReadExpect, ReadStorage, System, Wr
 #[storage(FlaggedStorage)]
 pub struct Billboard;
 
+/// System that orients entities marked as billboards
+/// towards the currently active camera.
 pub struct BillboardSystem;
 
 impl BillboardSystem {
