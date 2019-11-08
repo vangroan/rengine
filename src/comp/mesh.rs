@@ -23,12 +23,18 @@ pub struct MeshBuilder {
     indices: Vec<u16>,
 }
 
-impl MeshBuilder {
-    pub fn new() -> Self {
+impl Default for MeshBuilder {
+    fn default() -> Self {
         MeshBuilder {
             vertices: vec![],
             indices: vec![],
         }
+    }
+}
+
+impl MeshBuilder {
+    pub fn new() -> Self {
+        Default::default()
     }
 
     /// New vertices will be inserted starting here
@@ -366,9 +372,15 @@ pub enum MeshCmd {
 
 pub struct MeshUpkeepSystem;
 
+impl Default for MeshUpkeepSystem {
+    fn default() -> Self {
+        MeshUpkeepSystem
+    }
+}
+
 impl MeshUpkeepSystem {
     pub fn new() -> Self {
-        MeshUpkeepSystem
+        Default::default()
     }
 
     pub fn maintain(&self, graphics_context: &mut GraphicContext, data: MeshUpkeepData) {

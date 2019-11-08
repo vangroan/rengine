@@ -2,7 +2,7 @@ use crate::colors::Color;
 use gfx_glyph::{FontId, SectionText, VariedSection};
 use specs::{Component, DenseVecStorage};
 
-#[derive(Component)]
+#[derive(Component, Default)]
 #[storage(DenseVecStorage)]
 pub struct TextBatch {
     fragments: Vec<TextFragment>,
@@ -10,7 +10,7 @@ pub struct TextBatch {
 
 impl TextBatch {
     pub fn new() -> Self {
-        TextBatch { fragments: vec![] }
+        Default::default()
     }
 
     pub fn add<C>(&mut self, text: &str, color: C)

@@ -42,7 +42,7 @@ impl CameraProjection {
         let [dev_w, dev_h] = self.ortho.device_size;
         let scale_pixels = self.ortho.scale_pixels;
 
-        let (width, height) = (dev_w as f32 / scale_pixels, dev_h as f32 / scale_pixels);
+        let (width, height) = (f32::from(dev_w) / scale_pixels, f32::from(dev_h) / scale_pixels);
         let (x, y) = (pos.x - (width / 2.), pos.y - (height / 2.));
 
         Matrix4::new_orthographic(x, x + width, y, y + height, near, far)

@@ -23,7 +23,7 @@ pub fn sample_value_noise(position: f32, octaves: u8) -> f32 {
     let mut sum: f32 = 0.0;
 
     for oct in 0..octaves {
-        let frequency = 2_f32.powf(oct as f32);
+        let frequency = 2_f32.powf(f32::from(oct));
         let amplitude = 1.0 / frequency;
 
         // Points either side of the given position.

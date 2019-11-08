@@ -32,10 +32,10 @@ impl GuiGraph {
 
     pub fn insert_entity(&mut self, entity: Entity, parent: Option<WidgetId>) -> WidgetId {
         // When no parent is specified, add to root.
-        let parent_index = parent.unwrap_or(self.root_id.clone()).node_index();
+        let parent_index = parent.unwrap_or_else(|| self.root_id.clone()).node_index();
 
         // TODO: Do we need to keep the Edge index?
-        let (_edge_index, node_index) = self.graph.add_child(parent_index, Child, entity).into();
+        let (_edge_index, node_index) = self.graph.add_child(parent_index, Child, entity);
 
         node_index.into()
     }

@@ -15,6 +15,7 @@ pub struct Transform {
     pub(crate) rot: Qua<f32>,
 }
 
+#[allow(clippy::assign_op_pattern)]
 impl Transform {
     pub fn new() -> Self {
         Default::default()

@@ -10,11 +10,12 @@ pub struct Billboard;
 
 /// System that orients entities marked as billboards
 /// towards the currently active camera.
+#[derive(Default)]
 pub struct BillboardSystem;
 
 impl BillboardSystem {
     pub fn new() -> Self {
-        BillboardSystem
+        Default::default()
     }
 }
 

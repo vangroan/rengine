@@ -31,6 +31,7 @@ pub struct Context<'a> {
     pub graphics: &'a mut GraphicContext,
 }
 
+#[derive(Default)]
 pub struct SceneStack {
     scenes: Vec<Box<dyn Scene>>,
     request: Option<Trans>,
@@ -38,10 +39,7 @@ pub struct SceneStack {
 
 impl SceneStack {
     pub fn new() -> Self {
-        SceneStack {
-            scenes: Vec::new(),
-            request: None,
-        }
+        Default::default()
     }
 
     /// Retrieves the scene at the top of the stack.
@@ -198,7 +196,7 @@ impl SceneStack {
         if let Some(ref mut s) = self.current_mut() {
             let mut ctx = Context { world, graphics };
             let trans = s.on_stop(&mut ctx);
-            if !trans.is_none() {
+            if trans.is_some() {
                 self.request = trans;
             }
         }
@@ -209,7 +207,7 @@ impl SceneStack {
         if let Some(ref mut s) = self.current_mut() {
             let mut ctx = Context { world, graphics };
             let trans = s.on_start(&mut ctx);
-            if !trans.is_none() {
+            if trans.is_some() {
                 self.request = trans;
             }
         }
@@ -222,7 +220,7 @@ impl SceneStack {
         if let Some(ref mut scene) = self.current_mut() {
             let mut ctx = Context { world, graphics };
             let trans = scene.on_update(&mut ctx);
-            if !trans.is_none() {
+            if trans.is_some() {
                 self.request = trans;
             }
         }
@@ -237,7 +235,7 @@ impl SceneStack {
         if let Some(ref mut scene) = self.current_mut() {
             let mut ctx = Context { world, graphics };
             let trans = scene.on_event(&mut ctx, event);
-            if !trans.is_none() {
+            if trans.is_some() {
                 self.request = trans;
             }
         }

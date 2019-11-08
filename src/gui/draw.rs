@@ -25,7 +25,7 @@ impl<'a> System<'a> for DrawGuiSystem {
                 for (drawable,) in (&drawables,).join() {
                     match drawable {
                         GuiDrawable::Text(_txt) => draw_txt(),
-                        _ => {}
+                        GuiDrawable::Rectangle(_rect) => {}
                     }
                 }
 

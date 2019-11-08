@@ -6,15 +6,25 @@ pub struct ChannelPair<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
     recv: Receiver<gfx::Encoder<R, C>>,
 }
 
+impl<R, C> Default for ChannelPair<R, C>
+where
+    R: gfx::Resources,
+    C: gfx::CommandBuffer<R>,
+{
+    fn default() -> Self {
+        // Thread will block if more than 1 encoder is being sent
+        let (send, recv) = crossbeam::channel::bounded(1);
+        ChannelPair { recv, send }
+    }
+}
+
 impl<R, C> ChannelPair<R, C>
 where
     R: gfx::Resources,
     C: gfx::CommandBuffer<R>,
 {
     pub fn new() -> Self {
-        // Thread will block if more than 1 encoder is being sent
-        let (send, recv) = crossbeam::channel::bounded(1);
-        ChannelPair { recv, send }
+        Default::default()
     }
 
     pub fn send_block(

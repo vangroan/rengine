@@ -35,7 +35,7 @@ impl DrawTextSystem {
                 graphics
                     .glyph_brush
                     .use_queue()
-                    .draw(&mut encoder, &mut graphics.render_target)
+                    .draw(&mut encoder, &graphics.render_target)
                     .expect("Failed drawing text queue");
 
                 self.channel

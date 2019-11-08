@@ -1,3 +1,5 @@
+#![allow(clippy::large_enum_variant)]
+
 use crate::gfx_types::GraphicsEncoder;
 use crate::scene::SceneError;
 use crossbeam::channel::{RecvError, SendError};

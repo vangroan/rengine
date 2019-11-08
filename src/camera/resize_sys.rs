@@ -10,6 +10,12 @@ pub struct CameraResizeSystem;
 
 impl CameraResizeSystem {
     pub fn new() -> Self {
+        Default::default()
+    }
+}
+
+impl Default for CameraResizeSystem {
+    fn default() -> Self {
         CameraResizeSystem
     }
 }

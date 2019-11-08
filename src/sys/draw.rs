@@ -14,6 +14,17 @@ pub struct DrawSystem {
     pub(crate) depth_target: DepthTarget<gfx_device::Resources>,
 }
 
+pub type DrawSystemData<'a> = (
+    ReadExpect<'a, PipelineBundle<pipe::Meta>>,
+    ReadExpect<'a, ViewPort>,
+    Read<'a, ActiveCamera>,
+    ReadStorage<'a, Mesh>,
+    ReadStorage<'a, GlTexture>,
+    ReadStorage<'a, Transform>,
+    ReadStorage<'a, CameraView>,
+    ReadStorage<'a, CameraProjection>,
+);
+
 impl DrawSystem {
     pub fn new(
         channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,
@@ -29,16 +40,7 @@ impl DrawSystem {
 }
 
 impl<'a> System<'a> for DrawSystem {
-    type SystemData = (
-        ReadExpect<'a, PipelineBundle<pipe::Meta>>,
-        ReadExpect<'a, ViewPort>,
-        Read<'a, ActiveCamera>,
-        ReadStorage<'a, Mesh>,
-        ReadStorage<'a, GlTexture>,
-        ReadStorage<'a, Transform>,
-        ReadStorage<'a, CameraView>,
-        ReadStorage<'a, CameraProjection>,
-    );
+    type SystemData = DrawSystemData<'a>;
 
     fn run(
         &mut self,
