@@ -43,7 +43,6 @@ impl<'a> System<'a> for BillboardSystem {
                     let cam_up = camera_view.up();
                     glm::Vec3::new(cam_up.x, cam_up.y, cam_up.z)
                 };
-                // let diff = (camera_view.eye() - transform.pos).to_homogeneous();
                 let diff = (camera_view.eye() - transform.pos).to_homogeneous();
                 let dir = Unit::new_normalize(diff);
 
