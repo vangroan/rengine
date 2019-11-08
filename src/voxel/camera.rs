@@ -46,7 +46,7 @@ pub fn raycast_from_camera(
         return camera_raycast(
             projection,
             cam_view.view_matrix(),
-            device_dim.physical_size().clone(),
+            *device_dim.physical_size(),
             screen_pos,
             steps,
         );

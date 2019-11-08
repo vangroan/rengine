@@ -30,7 +30,9 @@ impl FpsCounter {
     /// Calculates the frames per second for the past
     /// frame window.
     pub fn fps(&self) -> f32 {
-        assert!(FPS_COUNTER_WINDOW_SIZE != 0);
+        if FPS_COUNTER_WINDOW_SIZE == 0 {
+            panic!("FPS Counter window size is zero")
+        }
 
         let total = self.frames.iter().fold(0.0, |acc, x| acc + x);
         let average_dt = total / FPS_COUNTER_WINDOW_SIZE as f32;
