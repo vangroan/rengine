@@ -84,7 +84,7 @@ impl ChunkMapping {
     where
         V: Into<ChunkCoord>,
     {
-        self.0.get(&chunk_coord.into()).map(|e| *e)
+        self.0.get(&chunk_coord.into()).copied()
     }
 }
 
@@ -101,6 +101,18 @@ pub struct ChunkUpkeepSystem<D: VoxelData, C: VoxelChunk<D>, G: VoxelMeshGen> {
     /// Mesh generator invoked when generating chunks.
     mesh_gen: G,
     _marker: PhantomData<(D, C)>,
+}
+
+#[derive(SystemData)]
+pub struct ChunkUpkeepSystemData<'a, D, C>
+where
+    D: 'static + VoxelData + Send + Sync,
+    C: 'static + VoxelChunk<D> + Component + Send + Sync,
+{
+    chunk_ctrl: Write<'a, ChunkControl<D, C>>,
+    chunk_map: Write<'a, ChunkMapping>,
+    chunks: WriteStorage<'a, C>,
+    mesh_cmds: Write<'a, MeshCommandBuffer>,
 }
 
 impl<D, C, G> ChunkUpkeepSystem<D, C, G>
@@ -124,16 +136,16 @@ where
     C: 'static + VoxelChunk<D> + Component + Send + Sync,
     G: 'static + VoxelMeshGen + Send + Sync,
 {
-    type SystemData = (
-        Write<'a, ChunkControl<D, C>>,
-        Write<'a, ChunkMapping>,
-        WriteStorage<'a, C>,
-        Write<'a, MeshCommandBuffer>,
-    );
+    type SystemData = ChunkUpkeepSystemData<'a, D, C>;
 
     fn run(&mut self, data: Self::SystemData) {
         use LazyCommand::*;
-        let (mut chunk_ctrl, chunk_map, mut chunks, mut mesh_cmds) = data;
+        let ChunkUpkeepSystemData {
+            mut chunk_ctrl,
+            chunk_map,
+            mut chunks,
+            mut mesh_cmds,
+        } = data;
 
         for cmd in chunk_ctrl.cmds.drain(..).into_iter() {
             match cmd {

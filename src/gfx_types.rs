@@ -8,7 +8,7 @@ pub type RenderTarget<R> = gfx::handle::RenderTargetView<R, ColorFormat>;
 pub type DepthTarget<R> = gfx::handle::DepthStencilView<R, DepthFormat>;
 
 // NOTE: that document comments inside this block breaks the macro
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 gfx_defines! {
     vertex Vertex {
         pos: [f32; 3] = "a_Pos",
