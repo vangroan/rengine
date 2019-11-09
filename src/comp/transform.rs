@@ -205,3 +205,26 @@ impl Default for Transform {
         }
     }
 }
+
+/// Methods to retrieve transform components
+impl Transform {
+    #[inline]
+    pub fn anchor(&self) -> &Vec3 {
+        &self.anchor
+    }
+
+    #[inline]
+    pub fn scale(&self) -> &Vec3 {
+        &self.scale
+    }
+
+    #[inline]
+    pub fn position(&self) -> &Vec3 {
+        &self.pos
+    }
+
+    #[inline]
+    pub fn rotation(&self) -> &Qua<f32> {
+        &self.rot
+    }
+}
