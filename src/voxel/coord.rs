@@ -5,7 +5,7 @@ use std::ops::{Add, Sub};
 ///
 /// Float positions can implicitly be converted
 /// to a coordinate, with rounding handled correctly.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VoxelCoord {
     pub i: i32,
     pub j: i32,
