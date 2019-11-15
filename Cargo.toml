@@ -23,11 +23,14 @@ nalgebra = "0.18.0"
 nalgebra-glm = "0.4.0"
 num-traits = "0.2.6"
 rlua = "0.16"
+serde = { version = "1.0", features = ["derive"] }
 shred = "0.7.0"
 shred-derive = "0.5.0"
 shrev = "1.1.1"
 specs = { version = "0.14.3", default_features = false } # disable rayon due to CPU usage bug
 specs-derive = "0.4.0"
+toml = "0.5"
+walkdir = "2.2"
 
 [dev-dependencies]
 criterion = "0.2.11"

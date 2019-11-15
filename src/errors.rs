@@ -21,6 +21,7 @@ error_chain! {
         // `error-chain` does not currently support polymorphism.
         GraphicsEncoderSend(SendError<GraphicsEncoder>);
         Lua(rlua::Error);
+        Toml(toml::de::Error);
     }
 
     errors {

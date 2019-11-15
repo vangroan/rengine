@@ -1,5 +1,7 @@
-[mod]
-name = "Example Core Mod"
-author = "Willem Victor"
 
+name = "Example Core Mod"
+version = "0.0.0"
+author = "Willem Victor"
+email = "willem@examplemod.com"
+website = "examplemod.com"
 

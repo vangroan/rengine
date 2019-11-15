@@ -13,6 +13,7 @@ pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
 extern crate num_traits;
 extern crate rlua;
+extern crate serde;
 extern crate shred;
 #[macro_use]
 extern crate shred_derive;
@@ -20,6 +21,8 @@ extern crate shrev;
 pub extern crate specs;
 #[macro_use]
 extern crate specs_derive;
+extern crate toml;
+extern crate walkdir;
 
 pub mod angle;
 mod app;

@@ -6,13 +6,20 @@ use crossbeam::{
 };
 use log::{trace, warn};
 use rlua::Lua;
+use serde::Deserialize;
+use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::fmt;
+use std::fs::{canonicalize, File};
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::thread;
+use toml;
+use walkdir::{DirEntry, WalkDir};
 
 pub const DEFAULT_LIB_NAME: &str = "core";
 pub const DEFAULT_MOD_PATH: &str = "./mods";
+pub const DEFAULT_MOD_DEF: &str = "mod.toml";
 pub const DEFAULT_ENTRY_FILE: &str = "init.lua";
 
 /// World level resource that contains a mapping of
@@ -61,7 +68,7 @@ pub struct ModMeta {
     email: Option<InternedStr>,
 
     /// Optional website address for mod.
-    webstie: Option<InternedStr>,
+    website: Option<InternedStr>,
 
     /// Entry point Lua filename.
     entry: InternedStr,
@@ -74,11 +81,8 @@ pub struct ModMeta {
     /// the mod when starting up the main game scene.
     enabled: bool,
 
-    /// Incoming command buffer.
-    sender: channel::Sender<Vec<ModCmd>>,
-
-    /// Outgoing result buffer.
-    receiver: channel::Receiver<Vec<ModCmd>>,
+    /// Incoming and outgoing command buffer.
+    chan: ChannelPair,
 
     /// Handle to the script runner thread, which can be joined on when
     /// shutting down gracefully.
@@ -88,6 +92,16 @@ pub struct ModMeta {
     join: Option<ScriptRunnerHandle>,
     // Lua state is specific to each mod.
     // lua: Lua,
+}
+
+/// Meta file found at the top level of a mod's folder.
+#[derive(Deserialize)]
+struct ModMetaModel {
+    name: String,
+    version: String,
+    author: String,
+    email: Option<String>,
+    website: Option<String>,
 }
 
 enum ModCmd {
@@ -130,7 +144,65 @@ impl Mods {
     /// file is misformed, or fails to load.
     pub fn load_mods(&mut self) -> errors::Result<()> {
         trace!("Loading mods");
-        // TODO: Load mods
+
+        // Search for mod definition file
+        let walker = WalkDir::new(&self.mod_path).max_depth(2);
+
+        for entry in walker {
+            let entry = entry.unwrap();
+
+            if is_hidden(&entry) {
+                continue;
+            }
+
+            if entry.path().file_name().unwrap() == DEFAULT_MOD_DEF {
+                let file_path = canonicalize(entry.path()).unwrap();
+                let dir_path = file_path.parent().unwrap();
+                let mod_name = intern(dir_path.iter().last().unwrap().to_str().unwrap());
+
+                // TODO: Validate string values
+
+                if !file_path.is_file() {
+                    warn!("Mod {:?} is not a file", dir_path);
+                    continue;
+                }
+                trace!("Found mod in {:?}", dir_path);
+
+                // Load Data
+                let mut file = File::open(&file_path)?;
+                let mut contents = Vec::new();
+                file.read_to_end(&mut contents)?;
+
+                // Load Definition
+                let meta: ModMetaModel = toml::from_slice(&contents)?;
+
+                // Construct Key
+                let id = intern(&format!("{}:{}", mod_name.as_ref(), meta.version));
+
+                if let Entry::Vacant(e) = self.mods.entry(id) {
+                    e.insert(ModMeta {
+                        id,
+                        path: dir_path.to_path_buf(),
+                        name: intern(&meta.name),
+                        version: intern(&meta.version),
+                        author: intern(&meta.author),
+                        email: meta.email.map(|ref s| intern(s)),
+                        website: meta.website.map(|ref s| intern(s)),
+                        entry: intern(DEFAULT_ENTRY_FILE),
+                        depends_on: Vec::new(),
+                        enabled: false,
+                        chan: self.mod_channel.clone(),
+                        join: None,
+                    });
+                }
+            }
+            println!(
+                "{} {:?}",
+                entry.path().display(),
+                entry.path().file_name().unwrap()
+            );
+        }
+
         Ok(())
     }
 
@@ -322,4 +394,12 @@ fn create_interface(lib_name: String) -> errors::Result<Lua> {
         Ok(_) => Ok(lua),
         Err(err) => Err(errors::ErrorKind::Lua(err).into()),
     }
+}
+
+fn is_hidden(entry: &DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s.starts_with("."))
+        .unwrap_or(false)
 }
