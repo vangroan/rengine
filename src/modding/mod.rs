@@ -22,8 +22,11 @@ pub const DEFAULT_MOD_PATH: &str = "./mods";
 pub const DEFAULT_MOD_DEF: &str = "mod.toml";
 pub const DEFAULT_ENTRY_FILE: &str = "init.lua";
 
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 /// World level resource that contains a mapping of
 /// mod keys to mod meta objects.
+#[allow(dead_code)]
 pub struct Mods {
     mods: BTreeMap<InternedStr, ModMeta>,
 
@@ -38,6 +41,7 @@ pub struct Mods {
     mod_path: PathBuf,
 }
 
+#[allow(dead_code)]
 pub struct ModMeta {
     /// Unique identifier for this mod, a combination
     /// of the directory name and version of the mod.
@@ -207,7 +211,6 @@ impl Mods {
     ///
     /// Runs the initial Lua file of each mod or modpack.
     pub fn init_mods(&mut self) -> errors::Result<()> {
-        // TODO: Do this for each loaded mod.
         for (_id, meta) in self.mods.iter_mut() {
             // TODO: Avoid string copy
             let lib_name = self.lib_name.as_ref().to_owned();
@@ -257,7 +260,7 @@ impl Mods {
     ///     transform: ComponentDef<Transform>,
     /// }
     /// ```
-    pub fn define_entity<F>(&mut self, f: F)
+    pub fn define_entity<F>(&mut self, _f: F)
     where
         F: Fn(),
     {
@@ -381,7 +384,6 @@ impl ScriptRunner {
             match cmd {
                 Init => self.run_init(),
                 Shutdown => return false,
-                _ => {}
             }
         }
 
@@ -416,7 +418,7 @@ fn create_interface(lib_name: String) -> errors::Result<Lua> {
             })?;
 
         let lib = lua_ctx.create_table()?;
-        lib.set("version", "0.0.0")?;
+        lib.set("version", VERSION)?;
         lib.set("register_entity", register_entity)?;
 
         let globals = lua_ctx.globals();
@@ -431,6 +433,7 @@ fn create_interface(lib_name: String) -> errors::Result<Lua> {
     }
 }
 
+/// Avoid hidden unix files
 fn is_hidden(entry: &DirEntry) -> bool {
     entry
         .file_name()
