@@ -10,7 +10,7 @@
 ]]--
 
 -- Engine version
-print(rengine.version)
+print('Engine Version: ' .. rengine.version)
 
 --[[
     Define an entity.

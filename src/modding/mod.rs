@@ -36,14 +36,6 @@ pub struct Mods {
 
     /// Path to the mod folder.
     mod_path: PathBuf,
-
-    /// Communication channel to script runner threads.
-    hub: ChannelPair,
-
-    /// Copy of other end of channels. To be cloned
-    /// and passed to script runner threads, whenever a
-    /// new mod is initialized.
-    mod_channel: ChannelPair,
 }
 
 pub struct ModMeta {
@@ -81,7 +73,13 @@ pub struct ModMeta {
     /// the mod when starting up the main game scene.
     enabled: bool,
 
-    /// Incoming and outgoing command buffer.
+    /// Channel for sending and receiving a command buffer, to
+    /// and from the script runner.
+    ///
+    /// Use this to comminucate with the script runner.
+    hub: ChannelPair,
+
+    /// Clone this to a a script runner when one is spawned.
     chan: ChannelPair,
 
     /// Handle to the script runner thread, which can be joined on when
@@ -105,6 +103,10 @@ struct ModMetaModel {
 }
 
 enum ModCmd {
+    /// Initialise all loaded mods, spawning script runners and
+    /// runs the entry script for each mod.
+    Init,
+
     /// Gracefully shuts down the thread running the Lua state.
     Shutdown,
 }
@@ -122,19 +124,16 @@ type ScriptRunnerHandle = thread::JoinHandle<errors::Result<()>>;
 struct ScriptRunner {
     lua: Lua,
     chan: ChannelPair,
+    init_script: PathBuf,
 }
 
 impl Mods {
     pub fn new(lib_name: &'static str, mod_path: &Path) -> Self {
-        let (hub_chan, mod_chan) = ChannelPair::create();
-
         Mods {
             mods: BTreeMap::new(),
             order: Vec::new(),
             lib_name: intern(lib_name),
-            mod_path: mod_path.to_owned(),
-            hub: hub_chan,
-            mod_channel: mod_chan,
+            mod_path: mod_path.to_path_buf(),
         }
     }
 
@@ -180,6 +179,8 @@ impl Mods {
                 let id = intern(&format!("{}:{}", mod_name.as_ref(), meta.version));
 
                 if let Entry::Vacant(e) = self.mods.entry(id) {
+                    let (hub_chan, mod_chan) = ChannelPair::create();
+
                     e.insert(ModMeta {
                         id,
                         path: dir_path.to_path_buf(),
@@ -191,16 +192,12 @@ impl Mods {
                         entry: intern(DEFAULT_ENTRY_FILE),
                         depends_on: Vec::new(),
                         enabled: false,
-                        chan: self.mod_channel.clone(),
+                        hub: hub_chan,
+                        chan: mod_chan,
                         join: None,
                     });
                 }
             }
-            println!(
-                "{} {:?}",
-                entry.path().display(),
-                entry.path().file_name().unwrap()
-            );
         }
 
         Ok(())
@@ -209,22 +206,34 @@ impl Mods {
     /// Initialise loaded mods.
     ///
     /// Runs the initial Lua file of each mod or modpack.
-    pub fn init_mods(&self) -> errors::Result<()> {
+    pub fn init_mods(&mut self) -> errors::Result<()> {
         // TODO: Do this for each loaded mod.
-        let lib_name = self.lib_name.as_ref().to_owned();
-        let chan = self.mod_channel.clone();
-        let join: ScriptRunnerHandle = thread::Builder::new()
-            .name("mod:0.0.0".to_string())
-            .spawn(move || {
-                let lua = create_interface(lib_name)?;
-                let mut runner = ScriptRunner { lua, chan };
+        for (_id, meta) in self.mods.iter_mut() {
+            // TODO: Avoid string copy
+            let lib_name = self.lib_name.as_ref().to_owned();
+            let chan = meta.chan.clone();
+            let init_script = meta.path.join(meta.entry.as_ref());
+            meta.join = Some(
+                thread::Builder::new()
+                    .name("mod:0.0.0".to_string())
+                    .spawn(move || {
+                        let lua = create_interface(lib_name)?;
+                        let mut runner = ScriptRunner {
+                            lua,
+                            chan,
+                            init_script,
+                        };
 
-                // Run until shutdown
-                runner.run();
+                        // Run until shutdown
+                        runner.run();
 
-                Ok(())
-            })
-            .unwrap();
+                        Ok(())
+                    })
+                    .unwrap(),
+            );
+        }
+
+        self.dispatch(vec![ModCmd::Init]);
 
         Ok(())
     }
@@ -256,6 +265,8 @@ impl Mods {
     }
 
     pub fn shutdown(&mut self) {
+        self.dispatch(vec![ModCmd::Shutdown]);
+
         for (_, meta) in self.mods.iter_mut() {
             if let Some(handle) = meta.join.take() {
                 handle.join().expect("script runner panic").unwrap();
@@ -266,7 +277,20 @@ impl Mods {
     /// Executes all mods, passing the given command buffer
     /// to all script runners. Blocks on each script runner
     /// waiting for the buffer to be returned.
-    fn dispatch(&self, mut cmds: Vec<ModCmd>) -> Vec<ModCmd> {
+    fn dispatch(&mut self, mut cmds: Vec<ModCmd>) -> Vec<ModCmd> {
+        for (_id, meta) in self.mods.iter_mut() {
+            // Ownership of the command buffer is passed
+            // to script runner thread and returned on
+            // each iteration.
+            cmds = match meta.hub.send(cmds) {
+                Ok(_) => match meta.hub.receive() {
+                    Ok(v) => v,
+                    Err(err) => panic!(err),
+                },
+                Err(SendError(v)) => v,
+            };
+        }
+
         cmds.clear();
         cmds
     }
@@ -274,15 +298,11 @@ impl Mods {
 
 impl Default for Mods {
     fn default() -> Self {
-        let (hub_chan, mod_chan) = ChannelPair::create();
-
         Mods {
             mods: BTreeMap::new(),
             order: Vec::new(),
             lib_name: intern(DEFAULT_LIB_NAME),
             mod_path: PathBuf::from(DEFAULT_MOD_PATH),
-            hub: hub_chan,
-            mod_channel: mod_chan,
         }
     }
 }
@@ -359,6 +379,7 @@ impl ScriptRunner {
 
         for cmd in cmds.iter() {
             match cmd {
+                Init => self.run_init(),
                 Shutdown => return false,
                 _ => {}
             }
@@ -366,10 +387,24 @@ impl ScriptRunner {
 
         return true;
     }
+
+    fn run_init(&self) {
+        let result: rlua::Result<()> = self.lua.context(|lua_ctx| {
+            let mut file = File::open(&self.init_script).expect("file open");
+            let mut content = String::new();
+            file.read_to_string(&mut content).expect("file read");
+
+            lua_ctx.load(&content).exec()?;
+
+            Ok(())
+        });
+
+        result.expect("init script");
+    }
 }
 
 fn create_interface(lib_name: String) -> errors::Result<Lua> {
-    use rlua::{self, Table};
+    use rlua::Table;
     let lua = Lua::new();
 
     let result = lua.context(|lua_ctx| {
