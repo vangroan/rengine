@@ -83,7 +83,7 @@ pub struct ModMeta {
     /// Use this to comminucate with the script runner.
     hub: ChannelPair,
 
-    /// Clone this to a a script runner when one is spawned.
+    /// Clone this to a script runner when one is spawned.
     chan: ChannelPair,
 
     /// Handle to the script runner thread, which can be joined on when
