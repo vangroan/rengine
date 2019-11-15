@@ -9,6 +9,8 @@
     This table acts as the main library interface to the engine.
 ]]--
 
+print('======== Core ========')
+
 -- Engine version
 print('Engine Version: ' .. rengine.version)
 
