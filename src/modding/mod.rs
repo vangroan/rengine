@@ -92,8 +92,6 @@ pub struct ModMeta {
     /// Optional because threads are only spawned during mod initialisation,
     /// after mod loading.
     join: Option<ScriptRunnerHandle>,
-    // Lua state is specific to each mod.
-    // lua: Lua,
 }
 
 /// Meta file found at the top level of a mod's folder.
