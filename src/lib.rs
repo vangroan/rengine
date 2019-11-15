@@ -12,6 +12,7 @@ extern crate log;
 pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
 extern crate num_traits;
+extern crate rlua;
 extern crate shred;
 #[macro_use]
 extern crate shred_derive;
@@ -30,6 +31,8 @@ mod float;
 mod gfx_types;
 mod graphics;
 pub mod gui;
+pub mod intern;
+pub mod modding;
 pub mod noise;
 pub mod option;
 pub mod render;
