@@ -207,6 +207,7 @@ impl<'a, 'b> App<'a, 'b> {
                 lib_name,
                 path.to_str().unwrap()
             );
+
             world.add_resource(Mods::new(lib_name, path));
         }
 

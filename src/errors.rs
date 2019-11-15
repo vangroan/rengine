@@ -18,9 +18,9 @@ error_chain! {
         EncoderRecv(RecvError);
         GlutinCreate(CreationError);
 
-        // `error-chain` currently does not
-        // currently support polymorphism.
+        // `error-chain` does not currently support polymorphism.
         GraphicsEncoderSend(SendError<GraphicsEncoder>);
+        Lua(rlua::Error);
     }
 
     errors {
@@ -31,6 +31,10 @@ error_chain! {
         NoInitialScene {
             description("no initial scene configured")
             display("no initial scene configured")
+        }
+        ModLoad {
+            description("failed to load mods")
+            display("failed to load mods")
         }
     }
 }

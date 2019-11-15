@@ -8,10 +8,13 @@ use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
+use rengine::modding::Mods;
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
-use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
+use rengine::specs::{
+    Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteExpect, WriteStorage,
+};
 use rengine::sprite::{Billboard, BillboardSystem};
 use rengine::text::TextBatch;
 use rengine::util::FpsCounter;
@@ -267,10 +270,21 @@ impl Scene for Game {
 
         self.entities.push(self.fps_counter_entity.unwrap());
 
+        // Load Mod Meta
+        ctx.world.exec(|mut mods: WriteExpect<Mods>| {
+            mods.load_mods().unwrap();
+            mods.init_mods().unwrap();
+        });
+
         None
     }
 
     fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        // Shutdown mods
+        ctx.world.exec(|mut mods: WriteExpect<Mods>| {
+            mods.shutdown();
+        });
+
         // ensure entities are freed
         let maybe_err = ctx.world.delete_entities(&self.entities).err();
         if let Some(err) = maybe_err {
@@ -411,6 +425,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .size(800, 600)
         .background_color([0.3, 0.4, 0.5, 1.0])
         .init_scene(Game::new())
+        .add_modding("rengine", "./examples/mods")
         .build()?;
 
     app.run()?;
