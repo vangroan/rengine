@@ -92,6 +92,12 @@ pub struct ModMeta {
     /// Optional because threads are only spawned during mod initialisation,
     /// after mod loading.
     join: Option<ScriptRunnerHandle>,
+
+    /// Stream of errors that occurred inside a script runner's thread.
+    errors: (
+        channel::Sender<errors::Error>,
+        channel::Receiver<errors::Error>,
+    ),
 }
 
 /// Meta file found at the top level of a mod's folder.
@@ -127,6 +133,7 @@ struct ScriptRunner {
     lua: Lua,
     chan: ChannelPair,
     init_script: PathBuf,
+    errors: channel::Sender<errors::Error>,
 }
 
 impl Mods {
@@ -182,6 +189,7 @@ impl Mods {
 
                 if let Entry::Vacant(e) = self.mods.entry(id) {
                     let (hub_chan, mod_chan) = ChannelPair::create();
+                    let error_chan = channel::unbounded();
 
                     e.insert(ModMeta {
                         id,
@@ -197,6 +205,7 @@ impl Mods {
                         hub: hub_chan,
                         chan: mod_chan,
                         join: None,
+                        errors: error_chan,
                     });
                 }
             }
@@ -214,6 +223,8 @@ impl Mods {
             let lib_name = self.lib_name.as_ref().to_owned();
             let chan = meta.chan.clone();
             let init_script = meta.path.join(meta.entry.as_ref());
+            let error_sender = meta.errors.0.clone();
+
             meta.join = Some(
                 thread::Builder::new()
                     .name("mod:0.0.0".to_string())
@@ -223,6 +234,7 @@ impl Mods {
                             lua,
                             chan,
                             init_script,
+                            errors: error_sender,
                         };
 
                         // Run until shutdown
@@ -278,7 +290,7 @@ impl Mods {
     /// Executes all mods, passing the given command buffer
     /// to all script runners. Blocks on each script runner
     /// waiting for the buffer to be returned.
-    fn dispatch(&mut self, mut cmds: Vec<ModCmd>) -> Vec<ModCmd> {
+    fn dispatch(&mut self, mut cmds: Vec<ModCmd>) -> errors::Result<Vec<ModCmd>> {
         for (_id, meta) in self.mods.iter_mut() {
             // Ownership of the command buffer is passed
             // to script runner thread and returned on
@@ -286,14 +298,15 @@ impl Mods {
             cmds = match meta.hub.send(cmds) {
                 Ok(_) => match meta.hub.receive() {
                     Ok(v) => v,
-                    Err(err) => panic!(err),
+                    Err(_) => return Err(errors::ErrorKind::ModDispatch.into()),
                 },
+                // TODO: report send error via channel
                 Err(SendError(v)) => v,
             };
         }
 
         cmds.clear();
-        cmds
+        Ok(cmds)
     }
 }
 
@@ -375,31 +388,52 @@ impl ScriptRunner {
         }
     }
 
+    /// Dispatch the incoming command to a handler method.
+    ///
+    /// Returns `true` to indicate that the receiver loop
+    /// should continue, `false` if it should stop.
     fn on_receive(&mut self, cmds: &Vec<ModCmd>) -> bool {
         use ModCmd::*;
 
         for cmd in cmds.iter() {
             match cmd {
-                Init => self.run_init(),
-                Shutdown => return false,
+                Init => {
+                    self.handle(self.run_init());
+                }
+                Shutdown => {
+                    return false;
+                }
             }
         }
 
         return true;
     }
 
-    fn run_init(&self) {
-        let result: rlua::Result<()> = self.lua.context(|lua_ctx| {
-            let mut file = File::open(&self.init_script).expect("file open");
-            let mut content = String::new();
-            file.read_to_string(&mut content).expect("file read");
+    /// Helper handler that will send errors over the runner's error channel.
+    #[allow(unused_must_use)]
+    fn handle<T>(&mut self, result: errors::Result<T>) {
+        match result {
+            Ok(_) => {}
+            Err(err) => {
+                self.errors.send(err);
+            }
+        }
+    }
 
+    fn run_init(&self) -> errors::Result<()> {
+        let mut file = File::open(&self.init_script)?;
+        let mut content = String::new();
+        file.read_to_string(&mut content)?;
+
+        let result: rlua::Result<()> = self.lua.context(move |lua_ctx| {
             lua_ctx.load(&content).exec()?;
 
             Ok(())
         });
 
-        result.expect("init script");
+        result?;
+
+        Ok(())
     }
 }
 

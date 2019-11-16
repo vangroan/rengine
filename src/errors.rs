@@ -37,5 +37,9 @@ error_chain! {
             description("failed to load mods")
             display("failed to load mods")
         }
+        ModDispatch {
+            description("did not receive command buffer back from script runner")
+            display("did not receive command buffer back from script runner")
+        }
     }
 }
