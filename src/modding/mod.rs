@@ -246,7 +246,7 @@ impl Mods {
             );
         }
 
-        self.dispatch(vec![ModCmd::Init]);
+        self.dispatch(vec![ModCmd::Init])?;
 
         Ok(())
     }
@@ -277,20 +277,45 @@ impl Mods {
         unimplemented!()
     }
 
-    pub fn shutdown(&mut self) {
-        self.dispatch(vec![ModCmd::Shutdown]);
+    /// Gracefully shuts down all script runners.
+    ///
+    /// Will return an error if any of the script
+    /// runners returns an error its during shutdown.
+    ///
+    /// Can also return an error if one or more threads
+    /// panic.
+    pub fn shutdown(&mut self) -> errors::Result<()> {
+        let result = self.dispatch(vec![ModCmd::Shutdown]);
+        let mut errors: Option<Vec<errors::Error>> = None;
 
         for (_, meta) in self.mods.iter_mut() {
             if let Some(handle) = meta.join.take() {
-                handle.join().expect("script runner panic").unwrap();
+                match handle.join() {
+                    Ok(r) => {
+                        if let Err(e) = r {
+                            errors.get_or_insert_with(|| vec![]).push(e);
+                        }
+                    }
+                    Err(_) => errors
+                        .get_or_insert_with(|| vec![])
+                        .push(errors::ErrorKind::ModScriptThread.into()),
+                }
             }
         }
+
+        // Return script errors after threads are shutdown.
+        result?;
+
+        Ok(())
     }
 
     /// Executes all mods, passing the given command buffer
     /// to all script runners. Blocks on each script runner
     /// waiting for the buffer to be returned.
     fn dispatch(&mut self, mut cmds: Vec<ModCmd>) -> errors::Result<Vec<ModCmd>> {
+        // Lazy instantiated vector
+        let mut errors: Option<Vec<errors::Error>> = None;
+
         for (_id, meta) in self.mods.iter_mut() {
             // Ownership of the command buffer is passed
             // to script runner thread and returned on
@@ -298,15 +323,28 @@ impl Mods {
             cmds = match meta.hub.send(cmds) {
                 Ok(_) => match meta.hub.receive() {
                     Ok(v) => v,
+                    // If the receiver is closed, then
+                    // we've lost the command buffer.
                     Err(_) => return Err(errors::ErrorKind::ModDispatch.into()),
                 },
-                // TODO: report send error via channel
+                // If the channel is full, the command
+                // buffer is returned.
                 Err(SendError(v)) => v,
             };
+
+            // Gather possible errors
+            while let Ok(err) = meta.errors.1.try_recv() {
+                errors.get_or_insert_with(|| vec![]).push(err);
+            }
         }
 
         cmds.clear();
-        Ok(cmds)
+
+        if let Some(e) = errors {
+            Err(errors::ErrorKind::ModComposite(e).into())
+        } else {
+            Ok(cmds)
+        }
     }
 }
 

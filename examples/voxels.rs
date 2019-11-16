@@ -272,8 +272,12 @@ impl Scene for Game {
 
         // Load Mod Meta
         ctx.world.exec(|mut mods: WriteExpect<Mods>| {
-            mods.load_mods().unwrap();
-            mods.init_mods().unwrap();
+            if let Err(e) = mods.load_mods() {
+                println!("{:?}", e);
+            }
+            if let Err(e) = mods.init_mods() {
+                println!("{:?}", e);
+            }
         });
 
         None
@@ -282,7 +286,7 @@ impl Scene for Game {
     fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         // Shutdown mods
         ctx.world.exec(|mut mods: WriteExpect<Mods>| {
-            mods.shutdown();
+            mods.shutdown().expect("mod shutdown");
         });
 
         // ensure entities are freed

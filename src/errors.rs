@@ -37,9 +37,17 @@ error_chain! {
             description("failed to load mods")
             display("failed to load mods")
         }
+        ModScriptThread {
+            description("script runner thread panic")
+            display("script runner thread panic")
+        }
         ModDispatch {
             description("did not receive command buffer back from script runner")
             display("did not receive command buffer back from script runner")
+        }
+        ModComposite(v: Vec<Error>) {
+            description("multiple script failures")
+            display("multiple script failures: {} errors", v.len())
         }
     }
 }
