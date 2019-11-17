@@ -13,6 +13,7 @@ pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
 extern crate num_traits;
 extern crate rlua;
+extern crate regex;
 extern crate serde;
 extern crate shred;
 #[macro_use]

@@ -23,6 +23,7 @@ nalgebra = "0.18.0"
 nalgebra-glm = "0.4.0"
 num-traits = "0.2.6"
 rlua = "0.16"
+regex = "1"
 serde = { version = "1.0", features = ["derive"] }
 shred = "0.7.0"
 shred-derive = "0.5.0"

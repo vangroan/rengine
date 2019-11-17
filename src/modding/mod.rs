@@ -17,6 +17,11 @@ use std::thread;
 use toml;
 use walkdir::{DirEntry, WalkDir};
 
+mod runner;
+mod validate;
+mod cmd;
+mod chan;
+
 pub const DEFAULT_LIB_NAME: &str = "core";
 pub const DEFAULT_MOD_PATH: &str = "./mods";
 pub const DEFAULT_MOD_DEF: &str = "mod.toml";
@@ -81,10 +86,10 @@ pub struct ModMeta {
     /// and from the script runner.
     ///
     /// Use this to comminucate with the script runner.
-    hub: ChannelPair,
+    hub: chan::ChannelPair,
 
     /// Clone this to a script runner when one is spawned.
-    chan: ChannelPair,
+    chan: chan::ChannelPair,
 
     /// Handle to the script runner thread, which can be joined on when
     /// shutting down gracefully.
@@ -110,31 +115,7 @@ struct ModMetaModel {
     website: Option<String>,
 }
 
-enum ModCmd {
-    /// Initialise all loaded mods, spawning script runners and
-    /// runs the entry script for each mod.
-    Init,
-
-    /// Gracefully shuts down the thread running the Lua state.
-    Shutdown,
-}
-
-#[derive(Clone)]
-struct ChannelPair {
-    sender: channel::Sender<Vec<ModCmd>>,
-    receiver: channel::Receiver<Vec<ModCmd>>,
-}
-
-type ModCmdChannel = (channel::Sender<Vec<ModCmd>>, channel::Receiver<Vec<ModCmd>>);
-
 type ScriptRunnerHandle = thread::JoinHandle<errors::Result<()>>;
-
-struct ScriptRunner {
-    lua: Lua,
-    chan: ChannelPair,
-    init_script: PathBuf,
-    errors: channel::Sender<errors::Error>,
-}
 
 impl Mods {
     pub fn new(lib_name: &'static str, mod_path: &Path) -> Self {
@@ -188,7 +169,7 @@ impl Mods {
                 let id = intern(&format!("{}:{}", mod_name.as_ref(), meta.version));
 
                 if let Entry::Vacant(e) = self.mods.entry(id) {
-                    let (hub_chan, mod_chan) = ChannelPair::create();
+                    let (hub_chan, mod_chan) = chan::ChannelPair::create();
                     let error_chan = channel::unbounded();
 
                     e.insert(ModMeta {
@@ -230,7 +211,7 @@ impl Mods {
                     .name("mod:0.0.0".to_string())
                     .spawn(move || {
                         let lua = create_interface(lib_name)?;
-                        let mut runner = ScriptRunner {
+                        let mut runner = self::runner::ScriptRunner {
                             lua,
                             chan,
                             init_script,
@@ -246,7 +227,7 @@ impl Mods {
             );
         }
 
-        self.dispatch(vec![ModCmd::Init])?;
+        self.dispatch(vec![cmd::ModCmd::Init])?;
 
         Ok(())
     }
@@ -285,7 +266,7 @@ impl Mods {
     /// Can also return an error if one or more threads
     /// panic.
     pub fn shutdown(&mut self) -> errors::Result<()> {
-        let result = self.dispatch(vec![ModCmd::Shutdown]);
+        let result = self.dispatch(vec![cmd::ModCmd::Shutdown]);
         let mut errors: Option<Vec<errors::Error>> = None;
 
         for (_, meta) in self.mods.iter_mut() {
@@ -312,7 +293,7 @@ impl Mods {
     /// Executes all mods, passing the given command buffer
     /// to all script runners. Blocks on each script runner
     /// waiting for the buffer to be returned.
-    fn dispatch(&mut self, mut cmds: Vec<ModCmd>) -> errors::Result<Vec<ModCmd>> {
+    fn dispatch(&mut self, mut cmds: Vec<cmd::ModCmd>) -> errors::Result<Vec<cmd::ModCmd>> {
         // Lazy instantiated vector
         let mut errors: Option<Vec<errors::Error>> = None;
 
@@ -378,102 +359,6 @@ impl Drop for ModMeta {
     }
 }
 
-impl ChannelPair {
-    /// Creates two channel pairs, that are linked to eachother.
-    fn create() -> (Self, Self) {
-        // Unbounded channel will block on both
-        // send and receive, until the other end
-        // is ready.
-        let (a_send, b_recv): ModCmdChannel = channel::bounded(0);
-        let (b_send, a_recv): ModCmdChannel = channel::bounded(0);
-
-        let a = ChannelPair {
-            sender: a_send,
-            receiver: a_recv,
-        };
-        let b = ChannelPair {
-            sender: b_send,
-            receiver: b_recv,
-        };
-
-        return (a, b);
-    }
-
-    fn send(&mut self, val: Vec<ModCmd>) -> Result<(), SendError<Vec<ModCmd>>> {
-        self.sender.send(val)
-    }
-
-    fn receive(&mut self) -> Result<Vec<ModCmd>, RecvError> {
-        self.receiver.recv()
-    }
-}
-
-impl ScriptRunner {
-    fn run(&mut self) {
-        let mut running = true;
-
-        'main: while running {
-            // Receive command buffer from hub
-            match self.chan.receive() {
-                Ok(mut cmds) => {
-                    running = self.on_receive(&mut cmds);
-
-                    // Send back to hub
-                    self.chan.send(cmds).unwrap();
-                }
-                _ => {}
-            }
-        }
-    }
-
-    /// Dispatch the incoming command to a handler method.
-    ///
-    /// Returns `true` to indicate that the receiver loop
-    /// should continue, `false` if it should stop.
-    fn on_receive(&mut self, cmds: &Vec<ModCmd>) -> bool {
-        use ModCmd::*;
-
-        for cmd in cmds.iter() {
-            match cmd {
-                Init => {
-                    self.handle(self.run_init());
-                }
-                Shutdown => {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    /// Helper handler that will send errors over the runner's error channel.
-    #[allow(unused_must_use)]
-    fn handle<T>(&mut self, result: errors::Result<T>) {
-        match result {
-            Ok(_) => {}
-            Err(err) => {
-                self.errors.send(err);
-            }
-        }
-    }
-
-    fn run_init(&self) -> errors::Result<()> {
-        let mut file = File::open(&self.init_script)?;
-        let mut content = String::new();
-        file.read_to_string(&mut content)?;
-
-        let result: rlua::Result<()> = self.lua.context(move |lua_ctx| {
-            lua_ctx.load(&content).exec()?;
-
-            Ok(())
-        });
-
-        result?;
-
-        Ok(())
-    }
-}
 
 fn create_interface(lib_name: String) -> errors::Result<Lua> {
     use rlua::Table;
