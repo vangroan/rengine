@@ -109,9 +109,49 @@ pub trait MaskedChunk {
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VoxelAdjacencyMask(u32);
 
+const MASK_BACK: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_0001_0000);
+const MASK_FRONT: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_0100_0000_0000_0000_0000_0000);
+const MASK_LEFT: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_0001_0000_0000_0000);
+const MASK_RIGHT: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_0100_0000_0000_0000);
+const MASK_BOTTOM: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_1000_0000_0000);
+const MASK_TOP: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_0100_0000_0000_0000_0000_0000);
+
+impl VoxelAdjacencyMask {
+    #[inline]
+    pub fn is_back(&self) -> bool {
+        *self & MASK_BACK == MASK_BACK
+    }
+
+    #[inline]
+    pub fn is_front(&self) -> bool {
+        *self & MASK_FRONT == MASK_FRONT
+    }
+
+    #[inline]
+    pub fn is_left(&self) -> bool {
+        *self & MASK_LEFT == MASK_LEFT
+    }
+
+    #[inline]
+    pub fn is_right(&self) -> bool {
+        *self & MASK_RIGHT == MASK_RIGHT
+    }
+
+    #[inline]
+    pub fn is_bottom(&self) -> bool {
+        *self & MASK_BOTTOM == MASK_BOTTOM
+    }
+
+    #[inline]
+    pub fn is_top(&self) -> bool {
+        *self & MASK_TOP == MASK_TOP
+    }
+}
+
 impl ops::BitOr for VoxelAdjacencyMask {
     type Output = Self;
 
+    #[inline]
     fn bitor(self, rhs: Self) -> Self {
         VoxelAdjacencyMask(self.0 | rhs.0)
     }
@@ -120,18 +160,21 @@ impl ops::BitOr for VoxelAdjacencyMask {
 impl ops::BitAnd for VoxelAdjacencyMask {
     type Output = Self;
 
+    #[inline]
     fn bitand(self, rhs: Self) -> Self {
         VoxelAdjacencyMask(self.0 & rhs.0)
     }
 }
 
 impl ops::BitOrAssign for VoxelAdjacencyMask {
+    #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
         self.0 |= rhs.0;
     }
 }
 
 impl ops::BitAndAssign for VoxelAdjacencyMask {
+    #[inline]
     fn bitand_assign(&mut self, rhs: Self) {
         self.0 &= rhs.0;
     }
@@ -140,6 +183,7 @@ impl ops::BitAndAssign for VoxelAdjacencyMask {
 impl ops::Not for VoxelAdjacencyMask {
     type Output = Self;
 
+    #[inline]
     fn not(self) -> Self {
         VoxelAdjacencyMask(!self.0)
     }
@@ -482,5 +526,21 @@ mod test {
             VoxelAdjacencyMask(0b_0000_0100_0000_0000_0000_0000_0000_0000),
             m_top_right_front
         );
+    }
+
+    #[test]
+    fn test_mask_eq() {
+        // println!("Front: {:b}", create_mask(&[0, 0, 1]).0);
+        // println!("Back: {:b}", create_mask(&[0, 0, -1]).0);
+        // println!("Left: {:b}", create_mask(&[-1, 0, 0]).0);
+        // println!("Right: {:b}", create_mask(&[1, 0, 0]).0);
+        // println!("Bottom: {:b}", create_mask(&[1, -1, 0]).0);
+        // println!("Top: {:b}", create_mask(&[0, 1, 0]).0);
+        
+        let m_front = create_mask(&[0, 0, 1]);
+        assert!(m_front.is_front());
+
+        let m_back = create_mask(&[0, 0, -1]);
+        assert!(m_back.is_back());
     }
 }
