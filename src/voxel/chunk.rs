@@ -491,12 +491,12 @@ where
     where
         V: Into<VoxelCoord>,
     {
-        let voxel_coord: VoxelCoord = coord.into();
+        let local_coord: VoxelCoord = coord.into();
 
-        if self.in_bounds(voxel_coord.clone()) {
+        if self.in_bounds(local_coord.clone()) {
             let index = self.data_index(&local_coord);
 
-            self.data.get(index).map(|el| &el.0)
+            self.data.get(index).map(|el| el.0)
         } else {
             None
         }
