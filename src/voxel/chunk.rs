@@ -119,35 +119,37 @@ const MASK_RIGHT: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_0100_0000_0000_0000
 const MASK_BOTTOM: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_1000_0000_0000);
 const MASK_TOP: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_0100_0000_0000_0000_0000_0000);
 
+/// Helper methods for determining whether a voxel should
+/// have a side rendered.
 impl VoxelAdjacencyMask {
     #[inline]
-    pub fn is_back(&self) -> bool {
-        *self & MASK_BACK == MASK_BACK
+    pub fn empty_back(&self) -> bool {
+        *self & MASK_BACK != MASK_BACK
     }
 
     #[inline]
-    pub fn is_front(&self) -> bool {
-        *self & MASK_FRONT == MASK_FRONT
+    pub fn empty_front(&self) -> bool {
+        *self & MASK_FRONT != MASK_FRONT
     }
 
     #[inline]
-    pub fn is_left(&self) -> bool {
-        *self & MASK_LEFT == MASK_LEFT
+    pub fn empty_left(&self) -> bool {
+        *self & MASK_LEFT != MASK_LEFT
     }
 
     #[inline]
-    pub fn is_right(&self) -> bool {
-        *self & MASK_RIGHT == MASK_RIGHT
+    pub fn empty_right(&self) -> bool {
+        *self & MASK_RIGHT != MASK_RIGHT
     }
 
     #[inline]
-    pub fn is_bottom(&self) -> bool {
-        *self & MASK_BOTTOM == MASK_BOTTOM
+    pub fn empty_bottom(&self) -> bool {
+        *self & MASK_BOTTOM != MASK_BOTTOM
     }
 
     #[inline]
-    pub fn is_top(&self) -> bool {
-        *self & MASK_TOP == MASK_TOP
+    pub fn empty_top(&self) -> bool {
+        *self & MASK_TOP != MASK_TOP
     }
 }
 
@@ -555,9 +557,23 @@ mod test {
         // println!("Bottom: {:b}", create_mask(&[1, -1, 0]).0);
         // println!("Top: {:b}", create_mask(&[0, 1, 0]).0);
         let m_front = create_mask(&[0, 0, 1]);
-        assert!(m_front.is_front());
+        assert!(!m_front.empty_front());
 
         let m_back = create_mask(&[0, 0, -1]);
-        assert!(m_back.is_back());
+        assert!(!m_back.empty_back());
+    }
+
+    /// Should correctly set the adjacency mask of neighbouring voxels.
+    #[test]
+    fn test_set_adjacent() {
+        let mut chunk: VoxelArrayChunk<u16> = VoxelArrayChunk::new([0, 0, 0]);
+        chunk.set([2, 2, 2], 1);
+
+        assert_eq!(Some(&1), chunk.get([2, 2, 2]), "voxel wasn't set");
+
+        println!("{:?} {:?}", [3, 2, 2], chunk.mask_local([3, 2, 2]));
+        assert!(!chunk.mask_local([1, 2, 2]).unwrap().empty_right());
+        assert!(chunk.mask_local([1, 2, 2]).unwrap().empty_top());
+        assert!(!chunk.mask_local([3, 2, 2]).unwrap().empty_left());
     }
 }
