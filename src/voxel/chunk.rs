@@ -1,5 +1,6 @@
 use crate::voxel::{ChunkCoord, VoxelCoord, VoxelData};
 use specs::{Component, DenseVecStorage};
+use std::ops;
 
 /// Length of each side of a chunk
 pub const CHUNK_DIM8: usize = 8;
@@ -105,24 +106,61 @@ pub trait MaskedChunk {
 /// Stores the occupancy information for
 /// the 26 surrounding neighbours in
 /// 3-dimensions.
-pub type VoxelAdjacencyMask = u32;
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct VoxelAdjacencyMask(u32);
+
+impl ops::BitOr for VoxelAdjacencyMask {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        VoxelAdjacencyMask(self.0 | rhs.0)
+    }
+}
+
+impl ops::BitAnd for VoxelAdjacencyMask {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self {
+        VoxelAdjacencyMask(self.0 & rhs.0)
+    }
+}
+
+impl ops::BitOrAssign for VoxelAdjacencyMask {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl ops::BitAndAssign for VoxelAdjacencyMask {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl ops::Not for VoxelAdjacencyMask {
+    type Output = Self;
+
+    fn not(self) -> Self {
+        VoxelAdjacencyMask(!self.0)
+    }
+}
 
 /// Given a voxel coordinate offset, create the bit mask
 /// where the appropriate bit is set to occupied.
 ///
 /// Supports offsets for immediate neighbours (Moore neighbourhood
 /// radius = 1)
-/// 
+///
 /// ## Implementation
-/// 
+///
 /// This function needs some explaining.
-/// 
+///
 /// Imagine a voxel is contained inside an imaginary 3 x 3 x 3 cuboid, containing
 /// 27 voxels. Our voxel is in the center, at coordinate (0, 0, 0) surrounded by
 /// 26 other voxels which form it's immediate neighbourhood.
-/// 
+///
 /// A 2D cross section would look like this:
-/// 
+///
 /// ```ignore
 /// +-----+-----+-----+
 /// | -1  |  0  |  1  |
@@ -138,11 +176,11 @@ pub type VoxelAdjacencyMask = u32;
 /// |  0  |  0  |  0  |
 /// +-----+-----+-----+
 /// ```
-/// 
-/// To get a single number index between 0 and 27 we transpose the coordinates of the 
+///
+/// To get a single number index between 0 and 27 we transpose the coordinates of the
 /// neighbourhood so the origin would be in a corner, and all coordinates would be
 /// positive.
-/// 
+///
 /// ```ignore
 /// +-----+-----+-----+
 /// |  0  |  1  |  2  |
@@ -158,14 +196,14 @@ pub type VoxelAdjacencyMask = u32;
 /// |  0  |  0  |  0  |
 /// +-----+-----+-----+
 /// ```
-/// 
+///
 /// From here we can use simple arithmetic to find the index, much like how voxel
 /// coordinates would be stored in an array.
-/// 
+///
 /// ```ignore
 /// let index = x + (y * width) + (z * width * height);
 /// ```
-/// 
+///
 /// Since the neighbourhood has a small, finite number of neighbours, the index is
 /// used as a bit position. The bit is stored in an integer type large enough
 /// to hold 27 bits.
@@ -181,7 +219,7 @@ fn create_mask(voxel_offset: &[i32; 3]) -> VoxelAdjacencyMask {
     // Neighbourhood is treated as a 3x3x3 cube
     let index = trans[0] + trans[1] * 3 + trans[2] * 3 * 3;
 
-    1 << index
+    VoxelAdjacencyMask(1 << index)
 }
 
 /// Implementation of `VoxelChunk` that naively keeps
@@ -365,7 +403,7 @@ where
                     // is occupied.
                     let neigh_coord = local_coord.clone() + [x, y, z].into();
                     let index = self.data_index(&neigh_coord);
-                    if let Some(mut voxel_bundle) = self.data.get_mut(index) {
+                    if let Some(voxel_bundle) = self.data.get_mut(index) {
                         // Prepare a mask from the perspective of the neighbour.
                         let center_as_neighbour = [-x, -y, -z];
                         let mask = create_mask(&center_as_neighbour);
@@ -423,22 +461,25 @@ mod test {
     fn test_create_mask() {
         let m_bottom_left_back = create_mask(&[-1, -1, -1]);
         assert_eq!(
-            0b_0000_0000_0000_0000_0000_0000_0000_0001,
+            VoxelAdjacencyMask(0b_0000_0000_0000_0000_0000_0000_0000_0001),
             m_bottom_left_back
         );
 
         let m_middle_left_back = create_mask(&[0, -1, -1]);
         assert_eq!(
-            0b_0000_0000_0000_0000_0000_0000_0000_0010,
+            VoxelAdjacencyMask(0b_0000_0000_0000_0000_0000_0000_0000_0010),
             m_middle_left_back
         );
 
         let m_center = create_mask(&[0, 0, 0]);
-        assert_eq!(0b_0000_0000_0000_0000_0010_0000_0000_0000, m_center);
+        assert_eq!(
+            VoxelAdjacencyMask(0b_0000_0000_0000_0000_0010_0000_0000_0000),
+            m_center
+        );
 
         let m_top_right_front = create_mask(&[1, 1, 1]);
         assert_eq!(
-            0b_0000_0100_0000_0000_0000_0000_0000_0000,
+            VoxelAdjacencyMask(0b_0000_0100_0000_0000_0000_0000_0000_0000),
             m_top_right_front
         );
     }
