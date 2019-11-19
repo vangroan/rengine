@@ -95,19 +95,19 @@ pub trait VoxelChunk<D: VoxelData> {
     /// Retrieve mutable voxel data at the given coordinate.
     ///
     /// Returns `None` when coordinate is outside of
-    /// the chunks bounds.
+    /// the chunk's bounds.
     fn get_mut<V: Into<VoxelCoord>>(&mut self, coord: V) -> Option<&mut D>;
 
     /// Sets the voxel data at the given coordinate.
     fn set<V: Into<VoxelCoord>>(&mut self, coord: V, data: D);
 }
 
-/// Implementation of `VoxelChunk` that naively keeps
-/// data in an array.
+/// Trait describing a chunk that keeps adjacency
+/// information for each voxel.
 ///
 /// Each voxel record has an adjacency mapping that
 /// indicates whether its neighbours are occupied or
-/// empty. Occupancy from neighbouring chunks is not
+/// empty. Occupancy from neighbouring *chunks* is not
 /// automatically controlled, and must be enforced by
 /// an upper container that has knowledge of chunk
 /// layout.
@@ -119,6 +119,17 @@ pub trait VoxelChunk<D: VoxelData> {
 /// By bookkeeping the adjacency information, the time
 /// taken is sinked during updating of the chunk, freeing
 /// up the iteration from performing neighbour lookups.
+pub trait MaskedChunk {
+    /// Retrieve the adjacency mask for a voxel coordinate.
+    ///
+    /// Returns `None` when coordinate is outside of
+    /// the chunk's bounds.
+    fn mask<V: Into<VoxelCoord>>(&self, coord: V) -> Option<VoxelAdjacencyMask>;
+}
+
+/// Implementation of `VoxelChunk` that naively keeps
+/// data in an array. Data is tightly packed, but takes
+/// up more memory.
 ///
 /// No deduplication or compression is applied to the
 /// data.
@@ -168,22 +179,6 @@ where
         (local_coord.i
             + local_coord.j * CHUNK_DIM8 as i32
             + local_coord.k * CHUNK_DIM8 as i32 * CHUNK_DIM8 as i32) as usize
-    }
-
-    pub fn mask<V>(&self, coord: V) -> VoxelAdjacencyMask
-    where
-        V: Into<VoxelCoord>,
-    {
-        let voxel_coord: VoxelCoord = coord.into();
-
-        if self.in_bounds(voxel_coord.clone()) {
-            let local_coord = voxel_coord - &self.voxel_offset;
-            let index = self.data_index(&local_coord);
-
-            self.data.get(index).map(|el| el.0).unwrap_or(0)
-        } else {
-            0
-        }
     }
 }
 
@@ -326,6 +321,27 @@ where
                     }
                 }
             }
+        }
+    }
+}
+
+impl<D> MaskedChunk for VoxelArrayChunk<D>
+where
+    D: 'static + VoxelData + Sync + Send,
+{
+    fn mask<V>(&self, coord: V) -> Option<VoxelAdjacencyMask>
+    where
+        V: Into<VoxelCoord>,
+    {
+        let voxel_coord: VoxelCoord = coord.into();
+
+        if self.in_bounds(voxel_coord.clone()) {
+            let local_coord = voxel_coord - &self.voxel_offset;
+            let index = self.data_index(&local_coord);
+
+            self.data.get(index).map(|el| el.0)
+        } else {
+            None
         }
     }
 }
