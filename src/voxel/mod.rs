@@ -5,6 +5,7 @@ mod ctrl;
 mod data;
 mod mesh;
 mod ray;
+mod wiggle;
 
 pub use camera::*;
 pub use chunk::*;
@@ -13,3 +14,4 @@ pub use ctrl::*;
 pub use data::*;
 pub use mesh::*;
 pub use ray::*;
+pub use wiggle::*;
