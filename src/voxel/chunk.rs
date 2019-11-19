@@ -168,6 +168,22 @@ where
             + local_coord.j * CHUNK_DIM8 as i32
             + local_coord.k * CHUNK_DIM8 as i32 * CHUNK_DIM8 as i32) as usize
     }
+
+    pub fn mask<V>(&self, coord: V) -> VoxelAdjacencyMask
+    where
+        V: Into<VoxelCoord>,
+    {
+        let voxel_coord: VoxelCoord = coord.into();
+
+        if self.in_bounds(voxel_coord.clone()) {
+            let local_coord = voxel_coord - &self.voxel_offset;
+            let index = self.data_index(&local_coord);
+
+            self.data.get(index).map(|el| el.0).unwrap_or(0)
+        } else {
+            0
+        }
+    }
 }
 
 impl<D> VoxelChunk<D> for VoxelArrayChunk<D>
