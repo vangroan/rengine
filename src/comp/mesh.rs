@@ -335,14 +335,14 @@ impl MeshBuilder {
     }
 
     /// Create quad from the given points, colors and UVs.
-    /// 
+    ///
     /// Points are provided in the order:
-    /// 
+    ///
     ///   * Bottom Left (`-x`, `-y`)
     ///   * Bottom Right (`+x`, `-y`)
     ///   * Top Right (`+x`, `+y`)
     ///   * Top Left (`-x`, `+y`)
-    /// 
+    ///
     /// ```ignore
     /// 3-----------2
     /// |         / |
@@ -351,7 +351,12 @@ impl MeshBuilder {
     /// | /         |
     /// 0-----------1
     /// ```
-    pub fn quad_with_points<V>(mut self, points: [V; 4], colors: [Color; 4], uvs: [[f32; 2]; 4]) -> Self
+    pub fn quad_with_points<V>(
+        mut self,
+        points: [V; 4],
+        colors: [Color; 4],
+        uvs: [[f32; 2]; 4],
+    ) -> Self
     where
         V: Into<glm::Vec3>,
     {

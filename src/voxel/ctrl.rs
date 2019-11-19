@@ -1,5 +1,7 @@
 use crate::comp::{MeshBuilder, MeshCmd, MeshCommandBuffer};
-use crate::voxel::{voxel_to_chunk, ChunkCoord, VoxelChunk, VoxelCoord, VoxelData, VoxelMeshGen};
+use crate::voxel::{
+    voxel_to_chunk, ChunkCoord, MaskedChunk, VoxelChunk, VoxelCoord, VoxelData, VoxelMeshGen,
+};
 use log::warn;
 use specs::{Component, Entity, System, Write, WriteStorage};
 use std::collections::{HashMap, HashSet};
@@ -133,7 +135,7 @@ where
 impl<'a, D, C, G> System<'a> for ChunkUpkeepSystem<D, C, G>
 where
     D: 'static + VoxelData + Send + Sync,
-    C: 'static + VoxelChunk<D> + Component + Send + Sync,
+    C: 'static + VoxelChunk<D> + Component + MaskedChunk + Send + Sync,
     G: 'static + VoxelMeshGen + Send + Sync,
 {
     type SystemData = ChunkUpkeepSystemData<'a, D, C>;

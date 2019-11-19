@@ -1,11 +1,11 @@
 use crate::comp::{GlTexture, MeshBuilder, TexRect};
-use crate::voxel::{VoxelChunk, VoxelData};
+use crate::voxel::{MaskedChunk, VoxelChunk, VoxelData};
 
 /// Mesh generator for voxel chunks.
 pub trait VoxelMeshGen {
     /// The resulting mesh will be staged inside the provided
     /// mesh builder.
-    fn generate<D: VoxelData, C: VoxelChunk<D>>(
+    fn generate<D: VoxelData, C: VoxelChunk<D> + MaskedChunk>(
         &self,
         chunk: &C,
         mesh_builder: MeshBuilder,
@@ -36,7 +36,7 @@ impl VoxelMeshGen for VoxelBoxGen {
     fn generate<D, C>(&self, chunk: &C, mut builder: MeshBuilder) -> MeshBuilder
     where
         D: VoxelData,
-        C: VoxelChunk<D>,
+        C: VoxelChunk<D> + MaskedChunk,
     {
         let dim = chunk.dim() as i32;
 
