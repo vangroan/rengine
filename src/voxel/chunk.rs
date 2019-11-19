@@ -493,7 +493,7 @@ where
     {
         let local_coord: VoxelCoord = coord.into();
 
-        if self.in_bounds(local_coord.clone()) {
+        if self.in_bounds_local(local_coord.clone()) {
             let index = self.data_index(&local_coord);
 
             self.data.get(index).map(|el| el.0)
