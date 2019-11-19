@@ -17,6 +17,63 @@ type VoxelAdjacencyMask = u32;
 ///
 /// Supports offsets for immediate neighbours (Moore neighbourhood
 /// radius = 1)
+/// 
+/// ## Implementation
+/// 
+/// This function needs some explaining.
+/// 
+/// Imagine a voxel is contained inside an imaginary 3 x 3 x 3 cuboid, containing
+/// 27 voxels. Our voxel is in the center, at coordinate (0, 0, 0) surrounded by
+/// 26 other voxels which form it's immediate neighbourhood.
+/// 
+/// A 2D cross section would look like this:
+/// 
+/// ```ignore
+/// +-----+-----+-----+
+/// | -1  |  0  |  1  |
+/// |  1  |  1  |  1  |
+/// |  0  |  0  |  0  |
+/// +-----+-----+-----+
+/// | -1  |  0  |  1  |
+/// |  0  |  0  |  0  |
+/// |  0  |  0  |  0  |
+/// +-----+-----+-----+
+/// | -1  |  0  |  1  |
+/// | -1  | -1  | -1  |
+/// |  0  |  0  |  0  |
+/// +-----+-----+-----+
+/// ```
+/// 
+/// To get a single number index between 0 and 27 we transpose the coordinates of the 
+/// neighbourhood so the origin would be in a corner, and all coordinates would be
+/// positive.
+/// 
+/// ```ignore
+/// +-----+-----+-----+
+/// |  0  |  1  |  2  |
+/// |  2  |  2  |  2  |
+/// |  0  |  0  |  0  |
+/// +-----+-----+-----+
+/// |  0  |  1  |  2  |
+/// |  1  |  1  |  1  |
+/// |  0  |  0  |  0  |
+/// +-----+-----+-----+
+/// |  0  |  1  |  2  |
+/// |  0  |  0  |  0  |
+/// |  0  |  0  |  0  |
+/// +-----+-----+-----+
+/// ```
+/// 
+/// From here we can use simple arithmetic to find the index, much like how voxel
+/// coordinates would be stored in an array.
+/// 
+/// ```ignore
+/// let index = x + (y * width) + (z * width * height);
+/// ```
+/// 
+/// Since the neighbourhood has a small, finite number of neighbours, the index is
+/// used as a bit position. The bit is stored in an integer type large enough
+/// to hold 27 bits.
 fn create_mask(voxel_offset: &[i32; 3]) -> VoxelAdjacencyMask {
     // Translate center to bottom, left, back. Coordinate (-1, -1, -1)
     // will become (0, 0, 0).
