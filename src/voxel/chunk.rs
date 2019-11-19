@@ -101,6 +101,9 @@ pub trait MaskedChunk {
     /// Returns `None` when coordinate is outside of
     /// the chunk's bounds.
     fn mask<V: Into<VoxelCoord>>(&self, coord: V) -> Option<VoxelAdjacencyMask>;
+
+    /// Retrieve the adjacency mask for the local voxel coordinate.
+    fn mask_local<V: Into<VoxelCoord>>(&self, coord: V) -> Option<VoxelAdjacencyMask>;
 }
 
 /// Stores the occupancy information for
@@ -380,7 +383,7 @@ where
         }
     }
 
-    fn get_local<V: Into<VoxelCoord>>(&self, coord: V) -> Option<&D>
+    fn get_local<V>(&self, coord: V) -> Option<&D>
     where
         V: Into<VoxelCoord>,
     {
@@ -483,6 +486,21 @@ where
             None
         }
     }
+
+    fn mask_local<V>(&self, coord: V) -> Option<VoxelAdjacencyMask>
+    where
+        V: Into<VoxelCoord>,
+    {
+        let voxel_coord: VoxelCoord = coord.into();
+
+        if self.in_bounds(voxel_coord.clone()) {
+            let index = self.data_index(&local_coord);
+
+            self.data.get(index).map(|el| &el.0)
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
@@ -536,7 +554,6 @@ mod test {
         // println!("Right: {:b}", create_mask(&[1, 0, 0]).0);
         // println!("Bottom: {:b}", create_mask(&[1, -1, 0]).0);
         // println!("Top: {:b}", create_mask(&[0, 1, 0]).0);
-        
         let m_front = create_mask(&[0, 0, 1]);
         assert!(m_front.is_front());
 
