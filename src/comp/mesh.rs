@@ -577,6 +577,79 @@ impl MeshBuilder {
         self
     }
 
+    /// Create quad from the given points, colors and UVs.
+    ///
+    /// Points are provided in the order:
+    ///
+    ///   * Bottom Left (`-x`, `-y`)
+    ///   * Bottom Right (`+x`, `-y`)
+    ///   * Top Right (`+x`, `+y`)
+    ///   * Top Left (`-x`, `+y`)
+    ///
+    /// ```ignore
+    /// 3-----------2
+    /// |         / |
+    /// |      /    |
+    /// |    /      |
+    /// | /         |
+    /// 0-----------1
+    /// ```
+    pub fn quad_with_points<V>(
+        mut self,
+        points: [V; 4],
+        colors: [Color; 4],
+        uvs: [[f32; 2]; 4],
+    ) -> Self
+    where
+        V: Into<glm::Vec3>,
+    {
+        let [p1, p2, p3, p4] = points;
+        let [p1, p2, p3, p4] = [p1.into(), p2.into(), p3.into(), p4.into()];
+        let index = self.next_index();
+
+        // TODO: Calculate normal
+        let normal = glm::vec3(0., 0., 1.).into();
+
+        self.vertices.extend(&[
+            // Bottom Left
+            Vertex {
+                pos: p1.into(),
+                uv: uvs[0],
+                normal,
+                color: colors[0],
+            },
+            // Bottom Right
+            Vertex {
+                pos: p2.into(),
+                uv: uvs[1],
+                normal,
+                color: colors[1],
+            },
+            // Top Right
+            Vertex {
+                pos: p3.into(),
+                uv: uvs[2],
+                normal,
+                color: colors[2],
+            },
+            // Top Left
+            Vertex {
+                pos: p4.into(),
+                uv: uvs[3],
+                normal,
+                color: colors[3],
+            },
+        ]);
+
+        // triangle 1
+        self.indices.extend(&[index, index + 1, index + 2]);
+
+        // triangle 2
+        self.indices.extend(&[index, index + 2, index + 3]);
+
+        self
+    }
+
     /// Allocate mesh on graphics memory
     pub fn build(self, ctx: &mut GraphicContext) -> Mesh {
         let (vbuf, slice) = ctx
