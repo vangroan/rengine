@@ -68,7 +68,7 @@ pub trait VoxelChunk<D: VoxelData> {
 
     /// Position of chunk in global voxel space.
     ///
-    /// This position is should be located in the
+    /// This position should be located in the
     /// left, bottom, back corner of the chunk,
     /// which is (0, 0, 0) in local coordinates.
     fn voxel_offset(&self) -> &VoxelCoord;

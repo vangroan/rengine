@@ -43,6 +43,249 @@ impl MeshBuilder {
         self.vertices.len() as u16
     }
 
+    /// Create a pseudocube from the given points, representing the corners.
+    ///
+    /// | Point | x | y | z |
+    /// |:-----:|:-:|:-:|:-:|
+    /// | p0    | 0 | 0 | 0 |
+    /// | p1    | 0 | 0 | 1 |
+    /// | p2    | 0 | 1 | 0 |
+    /// | p3    | 0 | 1 | 1 |
+    /// | p4    | 1 | 0 | 0 |
+    /// | p5    | 1 | 0 | 1 |
+    /// | p6    | 1 | 1 | 0 |
+    /// | p7    | 1 | 1 | 1 |
+    pub fn pseudocube_points<V>(mut self, points: [V; 8], texture_rects: [TexRect; 6]) -> Self
+    where
+        V: Into<glm::Vec3>,
+    {
+        let [v0, v1, v2, v3, v4, v5, v6, v7] = points;
+        let [p0, p1, p2, p3, p4, p5, p6, p7]: [[f32; 3]; 8] = [
+            v0.into().into(),
+            v1.into().into(),
+            v2.into().into(),
+            v3.into().into(),
+            v4.into().into(),
+            v5.into().into(),
+            v6.into().into(),
+            v7.into().into(),
+        ];
+        let [back_tex, front_tex, left_tex, right_tex, bottom_tex, top_tex] = texture_rects;
+        let index = self.next_index();
+
+        // Back Quad
+        let normal = glm::vec3(0., 0., -1.).into();
+        self.vertices.extend(&[
+            Vertex {
+                pos: p4.clone(),
+                uv: [back_tex.x(), back_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p0.clone(),
+                uv: [back_tex.w(), back_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p2.clone(),
+                uv: [back_tex.w(), back_tex.y()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p6.clone(),
+                uv: [back_tex.x(), back_tex.y()],
+                normal,
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 1
+        self.indices.extend(&[index, index + 1, index + 2]);
+
+        // triangle 2
+        self.indices.extend(&[index, index + 2, index + 3]);
+
+        // Front Quad
+        let normal = glm::vec3(0., 0., 1.).into();
+        self.vertices.extend(&[
+            Vertex {
+                pos: p1.clone(),
+                uv: [front_tex.x(), front_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p5.clone(),
+                uv: [front_tex.w(), front_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p7.clone(),
+                uv: [front_tex.w(), front_tex.y()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p3.clone(),
+                uv: [front_tex.x(), front_tex.y()],
+                normal,
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 3
+        self.indices.extend(&[index + 4, index + 5, index + 6]);
+
+        // triangle 4
+        self.indices.extend(&[index + 4, index + 6, index + 7]);
+
+        // Left Quad
+        let normal = glm::vec3(-1., 0., 0.).into();
+        self.vertices.extend(&[
+            Vertex {
+                pos: p0.clone(),
+                uv: [left_tex.x(), left_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p1.clone(),
+                uv: [left_tex.w(), left_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p3.clone(),
+                uv: [left_tex.w(), left_tex.y()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p2.clone(),
+                uv: [left_tex.x(), left_tex.y()],
+                normal,
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 5
+        self.indices.extend(&[index + 8, index + 9, index + 10]);
+
+        // triangle 6
+        self.indices.extend(&[index + 8, index + 10, index + 11]);
+
+        // Right Quad
+        let normal = glm::vec3(1., 0., 0.).into();
+        self.vertices.extend(&[
+            Vertex {
+                pos: p5.clone(),
+                uv: [right_tex.x(), right_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p4.clone(),
+                uv: [right_tex.w(), right_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p6.clone(),
+                uv: [right_tex.w(), right_tex.y()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p7.clone(),
+                uv: [right_tex.x(), right_tex.y()],
+                normal,
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 7
+        self.indices.extend(&[index + 12, index + 13, index + 14]);
+
+        // triangle 8
+        self.indices.extend(&[index + 12, index + 14, index + 15]);
+
+        // Bottom Quad
+        let normal = glm::vec3(0., -1., 0.).into();
+        self.vertices.extend(&[
+            Vertex {
+                pos: p0.clone(),
+                uv: [bottom_tex.x(), bottom_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p4.clone(),
+                uv: [bottom_tex.w(), bottom_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p5.clone(),
+                uv: [bottom_tex.w(), bottom_tex.y()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p1.clone(),
+                uv: [bottom_tex.x(), bottom_tex.y()],
+                normal,
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 9
+        self.indices.extend(&[index + 16, index + 17, index + 18]);
+
+        // triangle 10
+        self.indices.extend(&[index + 16, index + 18, index + 19]);
+
+        // Top Quad
+        let normal = glm::vec3(0., 1., 0.).into();
+        self.vertices.extend(&[
+            Vertex {
+                pos: p7.clone(),
+                uv: [top_tex.x(), top_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p6.clone(),
+                uv: [top_tex.w(), top_tex.h()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p2.clone(),
+                uv: [top_tex.w(), top_tex.y()],
+                normal,
+                color: WHITE,
+            },
+            Vertex {
+                pos: p3.clone(),
+                uv: [top_tex.x(), top_tex.y()],
+                normal,
+                color: WHITE,
+            },
+        ]);
+
+        // triangle 11
+        self.indices.extend(&[index + 20, index + 21, index + 22]);
+
+        // triangle 12
+        self.indices.extend(&[index + 20, index + 22, index + 23]);
+
+        self
+    }
+
     pub fn pseudocube<V>(mut self, position: V, size: [f32; 3], texture_rects: [TexRect; 6]) -> Self
     where
         V: Into<glm::Vec3>,

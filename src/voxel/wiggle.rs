@@ -4,7 +4,7 @@
 /// Useful for random values that need to remain the same for a given voxel
 /// position. Example use-case would be randomizing mesh or texture
 /// regeneration.
-pub fn wiggle(i: i32, j: i32, k: i32) -> (f32, f32, f32) {
+pub fn wiggle(i: i32, j: i32, k: i32) -> [f32; 3] {
     // Cast to larger type so we have room to shift.
     let (i, j, k) = (i as u64, j as u64, k as u64);
 
@@ -32,11 +32,11 @@ pub fn wiggle(i: i32, j: i32, k: i32) -> (f32, f32, f32) {
 
     // The number 65,535 is chosen because it is small enough to offer good
     // modulo wrap-around, but also gives good spread between 0.0 and 1.0.
-    (
+    [
         (xorshift(i) % 65_535) as f32 / 65_535_f32,
         (xorshift(j) % 65_535) as f32 / 65_535_f32,
         (xorshift(k) % 65_535) as f32 / 65_535_f32,
-    )
+    ]
 }
 
 /// Simple Xor-Shift pseudo random number implementation.
