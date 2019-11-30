@@ -245,7 +245,7 @@ impl Scene for Game {
 
                 if let Some((_, view)) = maybe_cam {
                     view.set_position(pos);
-                    view.look_at([0., 0., 0.].into());
+                    view.look_at([CHUNK_DIM8 as f32, CHUNK_DIM8 as f32, CHUNK_DIM8 as f32].into());
                 }
             },
         );
