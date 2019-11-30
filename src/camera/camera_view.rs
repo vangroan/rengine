@@ -35,6 +35,12 @@ impl CameraView {
     }
 
     #[inline]
+    pub fn make_right(&self) -> Unit<Vector3<f32>> {
+        let d = self.eye - self.target;
+        Unit::new_normalize(d.cross(&self.up))
+    }
+
+    #[inline]
     pub fn target(&self) -> &Point3<f32> {
         &self.target
     }

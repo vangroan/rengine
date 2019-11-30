@@ -1,4 +1,6 @@
-use crate::camera::{ActiveCamera, CameraProjection, CameraResizeSystem, CameraView};
+use crate::camera::{
+    ActiveCamera, CameraProjection, CameraResizeSystem, CameraView, OrbitalCamera,
+};
 use crate::colors;
 use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Transform};
 use crate::errors::*;
@@ -70,6 +72,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<Transform>();
         world.register::<CameraView>();
         world.register::<CameraProjection>();
+        world.register::<OrbitalCamera>();
         world.register::<GlTexture>();
         world.register::<TextBatch>();
 

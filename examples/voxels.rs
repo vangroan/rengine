@@ -3,7 +3,9 @@ extern crate rengine;
 use crate::rengine::gui::GuiBuilder;
 use log::trace;
 use rengine::angle::{Deg, Rad};
-use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
+use rengine::camera::{
+    ActiveCamera, CameraProjection, CameraView, OrbitalCamera, OrbitalCameraControlSystem,
+};
 use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
@@ -109,6 +111,7 @@ pub struct Game {
     fps_counter_entity: Option<Entity>,
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
     billboard_sys: BillboardSystem,
+    orbital_sys: OrbitalCameraControlSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
     add: bool,
@@ -122,6 +125,7 @@ impl Game {
             fps_counter_entity: None,
             chunk_upkeep_sys: None,
             billboard_sys: BillboardSystem,
+            orbital_sys: OrbitalCameraControlSystem::new(),
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
             add: false,
@@ -213,6 +217,24 @@ impl Scene for Game {
         });
 
         // Position Camera
+        let device_dim = DeviceDimensions::from_window(ctx.graphics.window()).unwrap();
+        let logical_dim: (u32, u32) = device_dim.logical_size().clone().into();
+        let camera_id = ctx
+            .world
+            .create_entity()
+            .with(Transform::new().with_position([0., 0., -2.]))
+            .with(CameraProjection::with_device_size((
+                logical_dim.0 as u16,
+                logical_dim.1 as u16,
+            )))
+            .with(CameraView::new())
+            .with(OrbitalCamera::new())
+            .build();
+        ctx.world
+            .write_resource::<ActiveCamera>()
+            .set_camera_entity(camera_id);
+        self.entities.push(camera_id);
+
         ctx.world.exec(
             |(active_camera, mut cam_views, mut _cam_projs): CameraData| {
                 let pos = isometric_camera_position() * 70.;
@@ -325,6 +347,8 @@ impl Scene for Game {
                 }
             },
         );
+
+        self.orbital_sys.run_now(&ctx.world.res);
 
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
             chunk_upkeep_sys.run_now(&ctx.world.res);
