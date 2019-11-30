@@ -19,7 +19,7 @@ use rengine::text::TextBatch;
 use rengine::util::FpsCounter;
 use rengine::voxel::{
     raycast_from_camera, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
-    VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
+    DeformedBoxGen, VoxelArrayChunk, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
 use std::error::Error;
@@ -27,7 +27,7 @@ use std::error::Error;
 const BLOCK_TEX_PATH: &str = "examples/block.png";
 type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
 type TileVoxelChunk = VoxelArrayChunk<TileVoxel>;
-type TileUpkeepSystem = ChunkUpkeepSystem<TileVoxel, TileVoxelChunk, VoxelBoxGen>;
+type TileUpkeepSystem = ChunkUpkeepSystem<TileVoxel, TileVoxelChunk, DeformedBoxGen>;
 const EMPTY_TILE: u16 = 0;
 type CameraData<'a> = (
     Read<'a, ActiveCamera>,
@@ -169,10 +169,7 @@ impl Scene for Game {
         };
 
         // Setup system
-        self.chunk_upkeep_sys = Some(TileUpkeepSystem::new(VoxelBoxGen::new(
-            tex.clone(),
-            tex_rects,
-        )));
+        self.chunk_upkeep_sys = Some(TileUpkeepSystem::new(DeformedBoxGen::new(0.1, tex_rects)));
 
         // Create Chunks
         self.entities.push(create_chunk(
