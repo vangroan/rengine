@@ -114,7 +114,9 @@ pub struct Game {
     orbital_sys: OrbitalCameraControlSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
+    carved: bool,
     add: bool,
+    added: bool,
     entities: Vec<Entity>,
 }
 
@@ -128,7 +130,9 @@ impl Game {
             orbital_sys: OrbitalCameraControlSystem::new(),
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
+            carved: false,
             add: false,
+            added: false,
             entities: vec![],
         }
     }
@@ -319,9 +323,17 @@ impl Scene for Game {
                 }
                 MouseInput { button, state, .. } => {
                     if button == &MouseButton::Right {
-                        self.carve = state == &ElementState::Pressed;
+                        self.carve = state == &ElementState::Pressed && !self.carved;
+
+                        if state == &ElementState::Released {
+                            self.carved = false;
+                        }
                     } else if button == &MouseButton::Left {
-                        self.add = state == &ElementState::Pressed;
+                        self.add = state == &ElementState::Pressed && !self.added;
+
+                        if state == &ElementState::Released {
+                            self.added = false;
+                        }
                     }
                 }
                 _ => {}
@@ -354,7 +366,7 @@ impl Scene for Game {
         // Orient sprites toward camera
         self.billboard_sys.run_now(&ctx.world.res);
 
-        if self.carve {
+        if self.carve && !self.carved {
             if let Some(raycast) =
                 raycast_from_camera(ctx.world.system_data(), self.cursor_pos, 200)
             {
@@ -364,7 +376,7 @@ impl Scene for Game {
                     ReadStorage<'_, VoxelArrayChunk<TileVoxel>>,
                 ) = ctx.world.system_data();
 
-                for raycast_info in raycast {
+                'carve: for raycast_info in raycast {
                     // Determine chunk coordinate
                     let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
                     let occupied = chunk_map
@@ -374,7 +386,7 @@ impl Scene for Game {
                         .map(|d| d.occupied())
                         .unwrap_or(false);
 
-                    // Carve out line in path of ray
+                    // Carve out a voxel in path of ray
                     if occupied {
                         chunk_ctrl.lazy_update(
                             raycast_info.voxel_coord().clone(),
@@ -382,12 +394,14 @@ impl Scene for Game {
                                 tile_id: EMPTY_TILE,
                             },
                         );
+                        self.carved = true;
+                        break 'carve;
                     }
                 }
             }
         }
 
-        if self.add {
+        if self.add && !self.added {
             if let Some(raycast) =
                 raycast_from_camera(ctx.world.system_data(), self.cursor_pos, 200)
             {
@@ -397,9 +411,9 @@ impl Scene for Game {
                     ReadStorage<'_, VoxelArrayChunk<TileVoxel>>,
                 ) = ctx.world.system_data();
 
-                let mut last_voxel = VoxelCoord::new(9999, 9999, 9999);
+                let mut last_voxel: Option<VoxelCoord> = None;
 
-                'cast: for raycast_info in raycast {
+                'add: for raycast_info in raycast {
                     // Determine chunk coordinate
                     let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
                     let occupied = chunk_map
@@ -411,12 +425,16 @@ impl Scene for Game {
 
                     // Tile hit, add to previous
                     if occupied {
-                        chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
+                        if let Some(last_voxel) = last_voxel {
+                            chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
+
+                            self.added = true;
+                        }
 
                         // Stop
-                        break 'cast;
+                        break 'add;
                     } else {
-                        last_voxel = raycast_info.voxel_coord().clone();
+                        last_voxel = Some(raycast_info.voxel_coord().clone());
                     }
                 }
             }
