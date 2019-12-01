@@ -4,8 +4,9 @@ use crate::rengine::gui::GuiBuilder;
 use log::trace;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
-    ActiveCamera, CameraProjection, CameraView, DollyCamera, DollyCameraControlSystem, GridCamera,
-    GridCameraControlSystem, OrbitalCamera, OrbitalCameraControlSystem,
+    ActiveCamera, CameraDriftSystem, CameraProjection, CameraView, DollyCamera,
+    DollyCameraControlSystem, FocusTarget, GridCamera, GridCameraControlSystem, OrbitalCamera,
+    OrbitalCameraControlSystem,
 };
 use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
@@ -115,6 +116,7 @@ pub struct Game {
     orbital_sys: OrbitalCameraControlSystem,
     dolly_sys: DollyCameraControlSystem,
     grid_camera_sys: GridCameraControlSystem,
+    camera_drift_sys: CameraDriftSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
     carved: bool,
@@ -133,6 +135,7 @@ impl Game {
             orbital_sys: OrbitalCameraControlSystem::new(),
             dolly_sys: DollyCameraControlSystem::new(),
             grid_camera_sys: GridCameraControlSystem::new(),
+            camera_drift_sys: CameraDriftSystem::new(),
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
             carved: false,
@@ -225,13 +228,14 @@ impl Scene for Game {
                 logical_dim.1 as u16,
             )))
             .with(CameraView::new())
-            .with(OrbitalCamera::new())
-            .with(DollyCamera::new())
-            .with(GridCamera::with_target([
+            .with(FocusTarget::with_target([
                 CHUNK_DIM8 as f32,
                 CHUNK_DIM8 as f32,
                 CHUNK_DIM8 as f32,
             ]))
+            .with(OrbitalCamera::new())
+            .with(DollyCamera::new())
+            .with(GridCamera::new())
             .build();
         ctx.world
             .write_resource::<ActiveCamera>()
@@ -362,6 +366,7 @@ impl Scene for Game {
         self.orbital_sys.run_now(&ctx.world.res);
         self.dolly_sys.run_now(&ctx.world.res);
         self.grid_camera_sys.run_now(&ctx.world.res);
+        self.camera_drift_sys.run_now(&ctx.world.res);
 
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
             chunk_upkeep_sys.run_now(&ctx.world.res);

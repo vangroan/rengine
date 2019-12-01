@@ -1,9 +1,10 @@
 //! Camera control that locks the focus target on a voxel-axis in a 3D grid.
 
-use super::{ActiveCamera, CameraView};
+use super::{ActiveCamera, FocusTarget};
+use crate::option::lift2;
 use glutin::Event;
 use nalgebra::{Point3, Vector3};
-use specs::{Component, DenseVecStorage, Join, Read, System, WriteStorage};
+use specs::{Component, DenseVecStorage, Read, System, WriteStorage};
 
 /// Marks a camera with grid based control.
 ///
@@ -15,27 +16,17 @@ use specs::{Component, DenseVecStorage, Join, Read, System, WriteStorage};
 ///        other systems that are changing camera look-at.
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
-pub struct GridCamera {
-    target: Point3<f32>,
-}
+pub struct GridCamera;
 
 impl GridCamera {
     pub fn new() -> Self {
         Default::default()
     }
-
-    pub fn with_target<P: Into<Point3<f32>>>(target: P) -> Self {
-        GridCamera {
-            target: target.into(),
-        }
-    }
 }
 
 impl Default for GridCamera {
     fn default() -> Self {
-        GridCamera {
-            target: Point3::new(0.0, 0.0, 0.0),
-        }
+        GridCamera
     }
 }
 
@@ -52,14 +43,14 @@ impl<'a> System<'a> for GridCameraControlSystem {
     type SystemData = (
         Read<'a, Vec<Event>>,
         Read<'a, ActiveCamera>,
-        WriteStorage<'a, CameraView>,
+        WriteStorage<'a, FocusTarget>,
         WriteStorage<'a, GridCamera>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
         use glutin::{ElementState, Event::*, VirtualKeyCode, WindowEvent::*};
 
-        let (events, active_camera, mut camera_views, mut grid_cameras) = data;
+        let (events, active_camera, mut focus_target, mut grid_cameras) = data;
         let mut offset: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 
         for ev in events.iter() {
@@ -84,29 +75,15 @@ impl<'a> System<'a> for GridCameraControlSystem {
 
         // Apply input to active grid camera.
         if offset.y > ::std::f32::EPSILON || offset.y < -::std::f32::EPSILON {
-            let maybe_camera = active_camera
-                .camera_entity()
-                .and_then(|e| grid_cameras.get_mut(e));
+            let maybe_camera = active_camera.camera_entity().and_then(|e| {
+                lift2(
+                    focus_target.get_mut(e),
+                    grid_cameras.get_mut(e), // Only grid cameras
+                )
+            });
 
-            if let Some(grid_camera) = maybe_camera {
-                grid_camera.target += offset;
-            }
-        }
-
-        // Apply movement to all grid cameras.
-        for (camera_view, grid_camera) in (&mut camera_views, &grid_cameras).join() {
-            let proximity = (camera_view.target() - grid_camera.target).magnitude();
-
-            // Is camera at rest?
-            if proximity > ::std::f32::EPSILON {
-                // Tri-linear interpolate towards grid camera target
-                let time = 0.50;
-                let new_target =
-                    camera_view.target() + ((grid_camera.target - camera_view.target()) * time);
-                // Both camera and target positions will be shifted.
-                let camera_diff: Vector3<f32> = camera_view.position() - camera_view.target();
-                camera_view.set_position(new_target + camera_diff);
-                camera_view.look_at(new_target);
+            if let Some((focus_target, _grid_camera)) = maybe_camera {
+                focus_target.set_position(focus_target.position() + offset);
             }
         }
     }
