@@ -6,9 +6,9 @@ use glutin::{dpi::PhysicalPosition, ElementState, Event};
 use nalgebra::{Point3, Rotation3, Unit, UnitQuaternion, Vector3};
 use specs::{Component, DenseVecStorage, Read, ReadExpect, ReadStorage, System, WriteStorage};
 
+/// Marks a camera to have arcball rotation controls.
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
-/// Marks a camera to have arcball rotation controls.
 pub struct OrbitalCamera {
     /// Value between 0.0 and 1.0 to control the deceleration
     stop_ease: f32,
@@ -171,7 +171,6 @@ impl<'a> System<'a> for OrbitalCameraControlSystem {
 
 pub fn arcball_rotate(camera_view: &mut CameraView, pitch: Rad<f32>, yaw: Rad<f32>) {
     let camera_diff: Vector3<f32> = camera_view.position() - camera_view.target();
-    // println!("camera_pos - focus_pos = {}", camera_diff);
 
     // Keep the distance between the camera and target.
     let camera_distance = camera_diff.magnitude();

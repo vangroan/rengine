@@ -4,7 +4,8 @@ use crate::rengine::gui::GuiBuilder;
 use log::trace;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
-    ActiveCamera, CameraProjection, CameraView, OrbitalCamera, OrbitalCameraControlSystem,
+    ActiveCamera, CameraProjection, CameraView, DollyCamera, DollyCameraControlSystem,
+    OrbitalCamera, OrbitalCameraControlSystem,
 };
 use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
@@ -112,6 +113,7 @@ pub struct Game {
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
     billboard_sys: BillboardSystem,
     orbital_sys: OrbitalCameraControlSystem,
+    dolly_sys: DollyCameraControlSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
     carved: bool,
@@ -128,6 +130,7 @@ impl Game {
             chunk_upkeep_sys: None,
             billboard_sys: BillboardSystem,
             orbital_sys: OrbitalCameraControlSystem::new(),
+            dolly_sys: DollyCameraControlSystem::new(),
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
             carved: false,
@@ -176,26 +179,17 @@ impl Scene for Game {
         self.chunk_upkeep_sys = Some(TileUpkeepSystem::new(DeformedBoxGen::new(0.1, tex_rects)));
 
         // Create Chunks
-        self.entities.push(create_chunk(
-            &mut ctx.world,
-            ChunkCoord::new(0, 0, 0),
-            tex.clone(),
-        ));
-        self.entities.push(create_chunk(
-            &mut ctx.world,
-            ChunkCoord::new(1, 0, 0),
-            tex.clone(),
-        ));
-        self.entities.push(create_chunk(
-            &mut ctx.world,
-            ChunkCoord::new(0, 0, 1),
-            tex.clone(),
-        ));
-        self.entities.push(create_chunk(
-            &mut ctx.world,
-            ChunkCoord::new(1, 0, 1),
-            tex.clone(),
-        ));
+        for x in 0..2 {
+            for y in 0..2 {
+                for z in 0..2 {
+                    self.entities.push(create_chunk(
+                        &mut ctx.world,
+                        ChunkCoord::new(x, y, z),
+                        tex.clone(),
+                    ));
+                }
+            }
+        }
 
         {
             let mapping = ctx.world.write_resource::<ChunkMapping>();
@@ -230,6 +224,7 @@ impl Scene for Game {
             )))
             .with(CameraView::new())
             .with(OrbitalCamera::new())
+            .with(DollyCamera::new())
             .build();
         ctx.world
             .write_resource::<ActiveCamera>()
@@ -358,6 +353,7 @@ impl Scene for Game {
         );
 
         self.orbital_sys.run_now(&ctx.world.res);
+        self.dolly_sys.run_now(&ctx.world.res);
 
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
             chunk_upkeep_sys.run_now(&ctx.world.res);
