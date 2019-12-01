@@ -3,7 +3,7 @@
 use super::{ActiveCamera, FocusTarget};
 use crate::option::lift2;
 use glutin::Event;
-use nalgebra::{Point3, Vector3};
+use nalgebra::Vector3;
 use specs::{Component, DenseVecStorage, Read, System, WriteStorage};
 
 /// Marks a camera with grid based control.
@@ -50,7 +50,7 @@ impl<'a> System<'a> for GridCameraControlSystem {
     fn run(&mut self, data: Self::SystemData) {
         use glutin::{ElementState, Event::*, VirtualKeyCode, WindowEvent::*};
 
-        let (events, active_camera, mut focus_target, mut grid_cameras) = data;
+        let (events, active_camera, mut focus_targets, mut grid_cameras) = data;
         let mut offset: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 
         for ev in events.iter() {
@@ -77,7 +77,7 @@ impl<'a> System<'a> for GridCameraControlSystem {
         if offset.y > ::std::f32::EPSILON || offset.y < -::std::f32::EPSILON {
             let maybe_camera = active_camera.camera_entity().and_then(|e| {
                 lift2(
-                    focus_target.get_mut(e),
+                    focus_targets.get_mut(e),
                     grid_cameras.get_mut(e), // Only grid cameras
                 )
             });

@@ -6,7 +6,7 @@ use rengine::angle::{Deg, Rad};
 use rengine::camera::{
     ActiveCamera, CameraDriftSystem, CameraProjection, CameraView, DollyCamera,
     DollyCameraControlSystem, FocusTarget, GridCamera, GridCameraControlSystem, OrbitalCamera,
-    OrbitalCameraControlSystem,
+    OrbitalCameraControlSystem, SlideCamera, SlideCameraControlSystem,
 };
 use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
@@ -116,6 +116,7 @@ pub struct Game {
     orbital_sys: OrbitalCameraControlSystem,
     dolly_sys: DollyCameraControlSystem,
     grid_camera_sys: GridCameraControlSystem,
+    slide_camera_sys: SlideCameraControlSystem,
     camera_drift_sys: CameraDriftSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
@@ -135,6 +136,7 @@ impl Game {
             orbital_sys: OrbitalCameraControlSystem::new(),
             dolly_sys: DollyCameraControlSystem::new(),
             grid_camera_sys: GridCameraControlSystem::new(),
+            slide_camera_sys: SlideCameraControlSystem::new(),
             camera_drift_sys: CameraDriftSystem::new(),
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
@@ -236,6 +238,7 @@ impl Scene for Game {
             .with(OrbitalCamera::new())
             .with(DollyCamera::new())
             .with(GridCamera::new())
+            .with(SlideCamera::new())
             .build();
         ctx.world
             .write_resource::<ActiveCamera>()
@@ -366,6 +369,7 @@ impl Scene for Game {
         self.orbital_sys.run_now(&ctx.world.res);
         self.dolly_sys.run_now(&ctx.world.res);
         self.grid_camera_sys.run_now(&ctx.world.res);
+        self.slide_camera_sys.run_now(&ctx.world.res);
         self.camera_drift_sys.run_now(&ctx.world.res);
 
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
