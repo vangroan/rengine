@@ -4,8 +4,8 @@ use crate::rengine::gui::GuiBuilder;
 use log::trace;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
-    ActiveCamera, CameraProjection, CameraView, DollyCamera, DollyCameraControlSystem,
-    OrbitalCamera, OrbitalCameraControlSystem,
+    ActiveCamera, CameraProjection, CameraView, DollyCamera, DollyCameraControlSystem, GridCamera,
+    GridCameraControlSystem, OrbitalCamera, OrbitalCameraControlSystem,
 };
 use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
@@ -114,6 +114,7 @@ pub struct Game {
     billboard_sys: BillboardSystem,
     orbital_sys: OrbitalCameraControlSystem,
     dolly_sys: DollyCameraControlSystem,
+    grid_camera_sys: GridCameraControlSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
     carved: bool,
@@ -131,6 +132,7 @@ impl Game {
             billboard_sys: BillboardSystem,
             orbital_sys: OrbitalCameraControlSystem::new(),
             dolly_sys: DollyCameraControlSystem::new(),
+            grid_camera_sys: GridCameraControlSystem::new(),
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
             carved: false,
@@ -225,6 +227,11 @@ impl Scene for Game {
             .with(CameraView::new())
             .with(OrbitalCamera::new())
             .with(DollyCamera::new())
+            .with(GridCamera::with_target([
+                CHUNK_DIM8 as f32,
+                CHUNK_DIM8 as f32,
+                CHUNK_DIM8 as f32,
+            ]))
             .build();
         ctx.world
             .write_resource::<ActiveCamera>()
@@ -354,6 +361,7 @@ impl Scene for Game {
 
         self.orbital_sys.run_now(&ctx.world.res);
         self.dolly_sys.run_now(&ctx.world.res);
+        self.grid_camera_sys.run_now(&ctx.world.res);
 
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
             chunk_upkeep_sys.run_now(&ctx.world.res);
