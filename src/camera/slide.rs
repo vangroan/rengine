@@ -6,7 +6,7 @@ use super::{ActiveCamera, CameraView, FocusTarget};
 use crate::option::lift3;
 use crate::res::{DeltaTime, DeviceDimensions};
 use glutin::{dpi::LogicalPosition, Event};
-use nalgebra::{Unit, Vector3};
+use nalgebra::Vector3;
 use specs::{Component, DenseVecStorage, Read, ReadStorage, System, WriteStorage};
 
 #[derive(Component, Debug)]
@@ -109,9 +109,10 @@ impl<'a> System<'a> for SlideCameraControlSystem {
                 let right = forward.cross(&up);
 
                 let focus_position = focus_target.position();
-                let new_position =
-                    (focus_position + forward * dir[1] * slide_camera.speed * dt.as_secs_float());
-                // + (focus_position + right * dir[0] * slide_camera.speed * dt.as_secs_float());
+                let new_position = focus_position
+                    + (forward * dir[1] * slide_camera.speed * dt.as_secs_float())
+                    + (right * dir[0] * slide_camera.speed * dt.as_secs_float());
+
                 focus_target.set_position(new_position);
             }
         }
