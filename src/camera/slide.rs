@@ -85,8 +85,6 @@ impl<'a> System<'a> for SlideCameraControlSystem {
                 dir[1] += 1.0;
             }
 
-            println!("Slide {} {}", dir[0], dir[1]);
-
             let maybe_camera = active_camera.camera_entity().and_then(|e| {
                 lift3(
                     camera_views.get(e),
