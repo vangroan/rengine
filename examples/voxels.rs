@@ -3,7 +3,11 @@ extern crate rengine;
 use crate::rengine::gui::GuiBuilder;
 use log::trace;
 use rengine::angle::{Deg, Rad};
-use rengine::camera::{ActiveCamera, CameraProjection, CameraView};
+use rengine::camera::{
+    ActiveCamera, CameraDriftSystem, CameraProjection, CameraView, DollyCamera,
+    DollyCameraControlSystem, FocusTarget, GridCamera, GridCameraControlSystem, OrbitalCamera,
+    OrbitalCameraControlSystem, SlideCamera, SlideCameraControlSystem,
+};
 use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
@@ -20,7 +24,7 @@ use rengine::text::TextBatch;
 use rengine::util::FpsCounter;
 use rengine::voxel::{
     raycast_from_camera, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
-    VoxelArrayChunk, VoxelBoxGen, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
+    DeformedBoxGen, VoxelArrayChunk, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
 use std::error::Error;
@@ -28,7 +32,7 @@ use std::error::Error;
 const BLOCK_TEX_PATH: &str = "examples/block.png";
 type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
 type TileVoxelChunk = VoxelArrayChunk<TileVoxel>;
-type TileUpkeepSystem = ChunkUpkeepSystem<TileVoxel, TileVoxelChunk, VoxelBoxGen>;
+type TileUpkeepSystem = ChunkUpkeepSystem<TileVoxel, TileVoxelChunk, DeformedBoxGen>;
 const EMPTY_TILE: u16 = 0;
 type CameraData<'a> = (
     Read<'a, ActiveCamera>,
@@ -112,9 +116,16 @@ pub struct Game {
     fps_counter_entity: Option<Entity>,
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
     billboard_sys: BillboardSystem,
+    orbital_sys: OrbitalCameraControlSystem,
+    dolly_sys: DollyCameraControlSystem,
+    grid_camera_sys: GridCameraControlSystem,
+    slide_camera_sys: SlideCameraControlSystem,
+    camera_drift_sys: CameraDriftSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
+    carved: bool,
     add: bool,
+    added: bool,
     entities: Vec<Entity>,
 }
 
@@ -125,9 +136,16 @@ impl Game {
             fps_counter_entity: None,
             chunk_upkeep_sys: None,
             billboard_sys: BillboardSystem,
+            orbital_sys: OrbitalCameraControlSystem::new(),
+            dolly_sys: DollyCameraControlSystem::new(),
+            grid_camera_sys: GridCameraControlSystem::new(),
+            slide_camera_sys: SlideCameraControlSystem::new(),
+            camera_drift_sys: CameraDriftSystem::new(),
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
+            carved: false,
             add: false,
+            added: false,
             entities: vec![],
         }
     }
@@ -168,32 +186,20 @@ impl Scene for Game {
         };
 
         // Setup system
-        self.chunk_upkeep_sys = Some(TileUpkeepSystem::new(VoxelBoxGen::new(
-            tex.clone(),
-            tex_rects,
-        )));
+        self.chunk_upkeep_sys = Some(TileUpkeepSystem::new(DeformedBoxGen::new(0.1, tex_rects)));
 
         // Create Chunks
-        self.entities.push(create_chunk(
-            &mut ctx.world,
-            ChunkCoord::new(0, 0, 0),
-            tex.clone(),
-        ));
-        self.entities.push(create_chunk(
-            &mut ctx.world,
-            ChunkCoord::new(1, 0, 0),
-            tex.clone(),
-        ));
-        self.entities.push(create_chunk(
-            &mut ctx.world,
-            ChunkCoord::new(0, 0, 1),
-            tex.clone(),
-        ));
-        self.entities.push(create_chunk(
-            &mut ctx.world,
-            ChunkCoord::new(1, 0, 1),
-            tex.clone(),
-        ));
+        for x in 0..2 {
+            for y in 0..2 {
+                for z in 0..2 {
+                    self.entities.push(create_chunk(
+                        &mut ctx.world,
+                        ChunkCoord::new(x, y, z),
+                        tex.clone(),
+                    ));
+                }
+            }
+        }
 
         {
             let mapping = ctx.world.write_resource::<ChunkMapping>();
@@ -216,6 +222,32 @@ impl Scene for Game {
         });
 
         // Position Camera
+        let device_dim = DeviceDimensions::from_window(ctx.graphics.window()).unwrap();
+        let logical_dim: (u32, u32) = device_dim.logical_size().clone().into();
+        let camera_id = ctx
+            .world
+            .create_entity()
+            .with(Transform::new().with_position([0., 0., -2.]))
+            .with(CameraProjection::with_device_size((
+                logical_dim.0 as u16,
+                logical_dim.1 as u16,
+            )))
+            .with(CameraView::new())
+            .with(FocusTarget::with_target([
+                CHUNK_DIM8 as f32,
+                CHUNK_DIM8 as f32,
+                CHUNK_DIM8 as f32,
+            ]))
+            .with(OrbitalCamera::new())
+            .with(DollyCamera::new())
+            .with(GridCamera::new())
+            .with(SlideCamera::new())
+            .build();
+        ctx.world
+            .write_resource::<ActiveCamera>()
+            .set_camera_entity(camera_id);
+        self.entities.push(camera_id);
+
         ctx.world.exec(
             |(active_camera, mut cam_views, mut _cam_projs): CameraData| {
                 let pos = isometric_camera_position() * 70.;
@@ -226,7 +258,7 @@ impl Scene for Game {
 
                 if let Some((_, view)) = maybe_cam {
                     view.set_position(pos);
-                    view.look_at([0., 0., 0.].into());
+                    view.look_at([CHUNK_DIM8 as f32, CHUNK_DIM8 as f32, CHUNK_DIM8 as f32].into());
                 }
             },
         );
@@ -318,9 +350,17 @@ impl Scene for Game {
                 }
                 MouseInput { button, state, .. } => {
                     if button == &MouseButton::Right {
-                        self.carve = state == &ElementState::Pressed;
+                        self.carve = state == &ElementState::Pressed && !self.carved;
+
+                        if state == &ElementState::Released {
+                            self.carved = false;
+                        }
                     } else if button == &MouseButton::Left {
-                        self.add = state == &ElementState::Pressed;
+                        self.add = state == &ElementState::Pressed && !self.added;
+
+                        if state == &ElementState::Released {
+                            self.added = false;
+                        }
                     }
                 }
                 _ => {}
@@ -344,6 +384,12 @@ impl Scene for Game {
             },
         );
 
+        self.orbital_sys.run_now(&ctx.world.res);
+        self.dolly_sys.run_now(&ctx.world.res);
+        self.grid_camera_sys.run_now(&ctx.world.res);
+        self.slide_camera_sys.run_now(&ctx.world.res);
+        self.camera_drift_sys.run_now(&ctx.world.res);
+
         if let Some(ref mut chunk_upkeep_sys) = self.chunk_upkeep_sys {
             chunk_upkeep_sys.run_now(&ctx.world.res);
         }
@@ -351,7 +397,7 @@ impl Scene for Game {
         // Orient sprites toward camera
         self.billboard_sys.run_now(&ctx.world.res);
 
-        if self.carve {
+        if self.carve && !self.carved {
             if let Some(raycast) =
                 raycast_from_camera(ctx.world.system_data(), self.cursor_pos, 200)
             {
@@ -361,7 +407,7 @@ impl Scene for Game {
                     ReadStorage<'_, VoxelArrayChunk<TileVoxel>>,
                 ) = ctx.world.system_data();
 
-                for raycast_info in raycast {
+                'carve: for raycast_info in raycast {
                     // Determine chunk coordinate
                     let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
                     let occupied = chunk_map
@@ -371,7 +417,7 @@ impl Scene for Game {
                         .map(|d| d.occupied())
                         .unwrap_or(false);
 
-                    // Carve out line in path of ray
+                    // Carve out a voxel in path of ray
                     if occupied {
                         chunk_ctrl.lazy_update(
                             raycast_info.voxel_coord().clone(),
@@ -379,12 +425,14 @@ impl Scene for Game {
                                 tile_id: EMPTY_TILE,
                             },
                         );
+                        self.carved = true;
+                        break 'carve;
                     }
                 }
             }
         }
 
-        if self.add {
+        if self.add && !self.added {
             if let Some(raycast) =
                 raycast_from_camera(ctx.world.system_data(), self.cursor_pos, 200)
             {
@@ -394,9 +442,9 @@ impl Scene for Game {
                     ReadStorage<'_, VoxelArrayChunk<TileVoxel>>,
                 ) = ctx.world.system_data();
 
-                let mut last_voxel = VoxelCoord::new(9999, 9999, 9999);
+                let mut last_voxel: Option<VoxelCoord> = None;
 
-                'cast: for raycast_info in raycast {
+                'add: for raycast_info in raycast {
                     // Determine chunk coordinate
                     let chunk_coord = voxel_to_chunk(raycast_info.voxel_coord());
                     let occupied = chunk_map
@@ -408,12 +456,16 @@ impl Scene for Game {
 
                     // Tile hit, add to previous
                     if occupied {
-                        chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
+                        if let Some(last_voxel) = last_voxel {
+                            chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
+
+                            self.added = true;
+                        }
 
                         // Stop
-                        break 'cast;
+                        break 'add;
                     } else {
-                        last_voxel = raycast_info.voxel_coord().clone();
+                        last_voxel = Some(raycast_info.voxel_coord().clone());
                     }
                 }
             }

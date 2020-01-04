@@ -8,7 +8,10 @@ in vec4 v_Color;
 out vec4 Target0;
 
 void main() {
-    vec4 aw = texture(t_Sampler, v_Uv).rgba;
-
-    Target0 = aw * v_Color;
+    vec4 texel = texture(t_Sampler, v_Uv).rgba;
+    // Prevent transparent pixels from overwriting opaque pixels in the back.
+    if (texel.a < 0.5) {
+        discard;
+    }
+    Target0 = texel * v_Color;
 }

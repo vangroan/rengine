@@ -35,6 +35,10 @@ impl DeviceDimensions {
     pub fn physical_size(&self) -> &PhysicalSize {
         &self.physical_size
     }
+
+    pub fn logical_size(&self) -> &LogicalSize {
+        &self.logical_size
+    }
 }
 
 impl Default for DeviceDimensions {
