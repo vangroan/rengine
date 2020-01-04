@@ -38,3 +38,6 @@ criterion = "0.2.11"
 
 [[bench]]
 name = "voxel"
+
+[features]
+default= []
