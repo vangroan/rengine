@@ -1,9 +1,6 @@
 use crate::errors;
 use crate::intern::{intern, InternedStr};
-use crossbeam::{
-    channel,
-    channel::{RecvError, SendError},
-};
+use crossbeam::{channel, channel::SendError};
 use log::{trace, warn};
 use rlua::Lua;
 use serde::Deserialize;
@@ -17,17 +14,17 @@ use std::thread;
 use toml;
 use walkdir::{DirEntry, WalkDir};
 
+mod chan;
+mod cmd;
 mod runner;
 mod validate;
-mod cmd;
-mod chan;
 
 pub const DEFAULT_LIB_NAME: &str = "core";
 pub const DEFAULT_MOD_PATH: &str = "./mods";
 pub const DEFAULT_MOD_DEF: &str = "mod.toml";
 pub const DEFAULT_ENTRY_FILE: &str = "init.lua";
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// World level resource that contains a mapping of
 /// mod keys to mod meta objects.
@@ -359,7 +356,6 @@ impl Drop for ModMeta {
     }
 }
 
-
 fn create_interface(lib_name: String) -> errors::Result<Lua> {
     use rlua::Table;
     let lua = Lua::new();
@@ -393,6 +389,6 @@ fn is_hidden(entry: &DirEntry) -> bool {
     entry
         .file_name()
         .to_str()
-        .map(|s| s.starts_with("."))
+        .map(|s| s.starts_with('.'))
         .unwrap_or(false)
 }

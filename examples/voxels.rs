@@ -457,7 +457,7 @@ impl Scene for Game {
                     // Tile hit, add to previous
                     if occupied {
                         if let Some(last_voxel) = last_voxel {
-                            chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
+                            chunk_ctrl.lazy_update(last_voxel, TileVoxel { tile_id: 1 });
 
                             self.added = true;
                         }

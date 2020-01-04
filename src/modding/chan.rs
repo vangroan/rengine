@@ -1,8 +1,8 @@
+use super::cmd::ModCmd;
 use crossbeam::{
     channel,
     channel::{RecvError, SendError},
 };
-use super::cmd::ModCmd;
 
 #[derive(Clone)]
 pub struct ChannelPair {
@@ -30,7 +30,7 @@ impl ChannelPair {
             receiver: b_recv,
         };
 
-        return (a, b);
+        (a, b)
     }
 
     pub fn send(&mut self, val: Vec<ModCmd>) -> Result<(), SendError<Vec<ModCmd>>> {
