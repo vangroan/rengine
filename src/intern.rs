@@ -42,6 +42,19 @@ impl Interner {
     }
 }
 
+#[cfg(feature = "nightly-features")]
+impl !Sync for InternedStr {}
+
+/// An interened string is stored in a thread local collection, with an integer
+/// id that is only relevant to that collection. Sending an interened string to
+/// another thread, and attempting to retrieve a string from its local
+/// collection would yield an unexpected string or an out-of-range error.
+///
+/// Currently unimplementing traits built-in traits is only supported in
+/// nightly.
+#[cfg(feature = "nightly-features")]
+impl !Send for InternedStr {}
+
 /// Returns a reference to the interner stored in TLD
 pub fn get_local_interner() -> Rc<RefCell<Interner>> {
     thread_local!(static INTERNER: Rc<RefCell<Interner>> = Rc::new(RefCell::new(Interner::new())));
