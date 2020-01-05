@@ -22,7 +22,7 @@ impl Interner {
     }
 
     pub fn intern(&mut self, s: &str) -> InternedStr {
-        match self.indexes.get(s).map(|x| *x) {
+        match self.indexes.get(s).copied() {
             Some(index) => InternedStr(index),
             None => {
                 let index = self.strings.len();
@@ -33,7 +33,7 @@ impl Interner {
         }
     }
 
-    pub fn get_str<'a>(&'a self, InternedStr(i): InternedStr) -> &'a str {
+    pub fn get_str(&self, InternedStr(i): InternedStr) -> &str {
         if i < self.strings.len() {
             &*self.strings[i]
         } else {

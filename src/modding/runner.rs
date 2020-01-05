@@ -1,10 +1,9 @@
 use super::chan::ChannelPair;
 use super::cmd::ModCmd;
+use super::cmd::SceneHook;
 use crate::errors;
-use crate::intern::InternedStr;
 use crossbeam::channel;
 use rlua::Lua;
-use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
@@ -13,10 +12,12 @@ pub struct ScriptRunner {
     pub(crate) lua: Lua,
     pub(crate) chan: ChannelPair,
     pub(crate) init_script: PathBuf,
+    pub(crate) lib_name: String,
     pub(crate) errors: channel::Sender<errors::Error>,
 }
 
 impl ScriptRunner {
+    #[allow(dead_code)]
     pub fn spawn() -> ScriptRunner {
         unimplemented!()
     }
@@ -24,16 +25,13 @@ impl ScriptRunner {
     pub fn run(&mut self) {
         let mut running = true;
 
-        'main: while running {
-            // Receive command buffer from hub
-            match self.chan.receive() {
-                Ok(mut cmds) => {
-                    running = self.on_receive(&mut cmds);
+        while running {
+            // Receive command buffer from hub.
+            if let Ok(cmds) = self.chan.receive() {
+                running = self.on_receive(&cmds);
 
-                    // Send back to hub
-                    self.chan.send(cmds).unwrap();
-                }
-                _ => {}
+                // Send back to hub
+                self.chan.send(cmds).unwrap();
             }
         }
     }
@@ -42,7 +40,7 @@ impl ScriptRunner {
     ///
     /// Returns `true` to indicate that the receiver loop
     /// should continue, `false` if it should stop.
-    fn on_receive(&mut self, cmds: &Vec<ModCmd>) -> bool {
+    fn on_receive(&mut self, cmds: &[ModCmd]) -> bool {
         use ModCmd::*;
 
         for cmd in cmds.iter() {
@@ -53,10 +51,12 @@ impl ScriptRunner {
                 Shutdown => {
                     return false;
                 }
+                Scene(hook) => self.handle(self.run_scene_hook(hook)),
+                Game => unimplemented!(),
             }
         }
 
-        return true;
+        true
     }
 
     /// Helper handler that will send errors over the runner's error channel.
@@ -84,5 +84,33 @@ impl ScriptRunner {
         result?;
 
         Ok(())
+    }
+
+    fn run_scene_hook(&self, hook: &SceneHook) -> errors::Result<()> {
+        use super::cmd::SceneHook::*;
+
+        let lib_name: &str = &self.lib_name;
+
+        match hook {
+            AfterStart => {
+                let result: rlua::Result<()> = self.lua.context(move |lua_ctx| {
+                    let globals = lua_ctx.globals();
+                    let lib_table: rlua::Table = globals.get(lib_name)?;
+
+                    // The mod does not have to declare a hook.
+                    let func_result: rlua::Result<rlua::Function> = lib_table.get("on_start");
+                    if let Ok(func) = func_result {
+                        func.call::<_, ()>(())?;
+                    }
+
+                    Ok(())
+                });
+
+                result?;
+
+                Ok(())
+            }
+            _ => Ok(()),
+        }
     }
 }

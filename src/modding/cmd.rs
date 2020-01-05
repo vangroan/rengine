@@ -5,4 +5,15 @@ pub enum ModCmd {
 
     /// Gracefully shuts down the thread running the Lua state.
     Shutdown,
+
+    /// Scene lifetime hook.
+    Scene(SceneHook),
+
+    /// Placeholder for custom game input commands
+    Game,
+}
+
+pub enum SceneHook {
+    /// Scene has started.
+    AfterStart,
 }

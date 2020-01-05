@@ -23,3 +23,11 @@ print('Engine Version: ' .. rengine.version)
 rengine.register_entity('core:plant', {
 
 })
+
+function rengine.on_start()
+    print('Start hook called')
+    skelly.spawn_skelly(12, 12, 8)
+    skelly.spawn_skelly(13, 12, 8)
+    skelly.spawn_skelly(14, 12, 8)
+end
+

@@ -1,7 +1,7 @@
 use crate::errors;
 use crate::intern::{intern, InternedStr};
 use crossbeam::{channel, channel::SendError};
-use log::{trace, warn};
+use log::{error, trace, warn};
 use rlua::Lua;
 use serde::Deserialize;
 use std::collections::btree_map::Entry;
@@ -18,6 +18,8 @@ mod chan;
 mod cmd;
 mod runner;
 mod validate;
+
+pub use cmd::*;
 
 pub const DEFAULT_LIB_NAME: &str = "core";
 pub const DEFAULT_MOD_PATH: &str = "./mods";
@@ -100,6 +102,10 @@ pub struct ModMeta {
         channel::Sender<errors::Error>,
         channel::Receiver<errors::Error>,
     ),
+
+    /// Stream of outgoing commands that have been sent by script runners
+    /// during script execution.
+    script_cmds: (channel::Sender<u32>, channel::Receiver<u32>),
 }
 
 /// Meta file found at the top level of a mod's folder.
@@ -147,6 +153,10 @@ impl Mods {
                 let mod_name = intern(dir_path.iter().last().unwrap().to_str().unwrap());
 
                 // TODO: Validate string values
+                if !validate::mod_name(mod_name.as_ref()) {
+                    error!("Invalid mod name '{}'", mod_name.as_ref());
+                    return Err(errors::ErrorKind::ModLoad.into());
+                }
 
                 if !file_path.is_file() {
                     warn!("Mod {:?} is not a file", dir_path);
@@ -168,6 +178,7 @@ impl Mods {
                 if let Entry::Vacant(e) = self.mods.entry(id) {
                     let (hub_chan, mod_chan) = chan::ChannelPair::create();
                     let error_chan = channel::unbounded();
+                    let script_cmds_chan = channel::unbounded();
 
                     e.insert(ModMeta {
                         id,
@@ -184,6 +195,7 @@ impl Mods {
                         chan: mod_chan,
                         join: None,
                         errors: error_chan,
+                        script_cmds: script_cmds_chan,
                     });
                 }
             }
@@ -195,23 +207,30 @@ impl Mods {
     /// Initialise loaded mods.
     ///
     /// Runs the initial Lua file of each mod or modpack.
-    pub fn init_mods(&mut self) -> errors::Result<()> {
+    pub fn init_mods(&mut self, api: fn(&mut rlua::Lua, ScriptChannel)) -> errors::Result<()> {
         for (_id, meta) in self.mods.iter_mut() {
-            // TODO: Avoid string copy
+            // TODO: Avoid string copy.
             let lib_name = self.lib_name.as_ref().to_owned();
             let chan = meta.chan.clone();
             let init_script = meta.path.join(meta.entry.as_ref());
             let error_sender = meta.errors.0.clone();
+            let cmds_sender = meta.script_cmds.0.clone();
 
             meta.join = Some(
                 thread::Builder::new()
                     .name("mod:0.0.0".to_string())
                     .spawn(move || {
-                        let lua = create_interface(lib_name)?;
+                        // Engine scripting interface
+                        let mut lua = create_interface(lib_name.as_ref())?;
+
+                        // Game scripting interface
+                        api(&mut lua, ScriptChannel(cmds_sender));
+
                         let mut runner = self::runner::ScriptRunner {
                             lua,
                             chan,
                             init_script,
+                            lib_name: lib_name.clone(),
                             errors: error_sender,
                         };
 
@@ -224,7 +243,15 @@ impl Mods {
             );
         }
 
-        self.dispatch(vec![cmd::ModCmd::Init])?;
+        let (_in_cmds, out_cmds) = self.dispatch(vec![cmd::ModCmd::Init])?;
+        if out_cmds.is_some() {
+            warn!("Dispatching commands during initialization is not supported.");
+            if let Some(mut cmds) = out_cmds {
+                for cmd in cmds.drain(..) {
+                    println!("  {:?}", cmd);
+                }
+            }
+        }
 
         Ok(())
     }
@@ -264,6 +291,10 @@ impl Mods {
     /// panic.
     pub fn shutdown(&mut self) -> errors::Result<()> {
         let result = self.dispatch(vec![cmd::ModCmd::Shutdown]);
+        if let Ok((_, Some(_))) = result {
+            warn!("Dispatching commands during shutdown is not supported.");
+        }
+
         let mut errors: Option<Vec<errors::Error>> = None;
 
         for (_, meta) in self.mods.iter_mut() {
@@ -287,18 +318,29 @@ impl Mods {
         Ok(())
     }
 
+    /// Dispatches a scene lifetime hook to all mods.
+    pub fn scene_hook(&mut self, hook: SceneHook) -> errors::Result<Option<Vec<u32>>> {
+        self.dispatch(vec![ModCmd::Scene(hook)])
+            // Discard in command buffer.
+            .map(|(_in_cmds, out_cmds)| out_cmds)
+    }
+
     /// Executes all mods, passing the given command buffer
     /// to all script runners. Blocks on each script runner
     /// waiting for the buffer to be returned.
-    fn dispatch(&mut self, mut cmds: Vec<cmd::ModCmd>) -> errors::Result<Vec<cmd::ModCmd>> {
-        // Lazy instantiated vector
+    fn dispatch(
+        &mut self,
+        mut in_cmds: Vec<cmd::ModCmd>,
+    ) -> errors::Result<(Vec<cmd::ModCmd>, Option<Vec<u32>>)> {
+        // Lazy instantiated vectors
         let mut errors: Option<Vec<errors::Error>> = None;
+        let mut out_cmds: Option<Vec<u32>> = None;
 
         for (_id, meta) in self.mods.iter_mut() {
             // Ownership of the command buffer is passed
             // to script runner thread and returned on
             // each iteration.
-            cmds = match meta.hub.send(cmds) {
+            in_cmds = match meta.hub.send(in_cmds) {
                 Ok(_) => match meta.hub.receive() {
                     Ok(v) => v,
                     // If the receiver is closed, then
@@ -314,14 +356,19 @@ impl Mods {
             while let Ok(err) = meta.errors.1.try_recv() {
                 errors.get_or_insert_with(|| vec![]).push(err);
             }
+
+            // Gather outgoing commands
+            while let Ok(cmd) = meta.script_cmds.1.try_recv() {
+                out_cmds.get_or_insert_with(|| vec![]).push(cmd);
+            }
         }
 
-        cmds.clear();
+        in_cmds.clear();
 
         if let Some(e) = errors {
             Err(errors::ErrorKind::ModComposite(e).into())
         } else {
-            Ok(cmds)
+            Ok((in_cmds, out_cmds))
         }
     }
 }
@@ -356,7 +403,16 @@ impl Drop for ModMeta {
     }
 }
 
-fn create_interface(lib_name: String) -> errors::Result<Lua> {
+#[derive(Clone)]
+pub struct ScriptChannel(pub(crate) channel::Sender<u32>);
+
+impl ScriptChannel {
+    pub fn send(&mut self, message: u32) {
+        self.0.send(message);
+    }
+}
+
+fn create_interface(lib_name: &str) -> errors::Result<Lua> {
     use rlua::Table;
     let lua = Lua::new();
 
