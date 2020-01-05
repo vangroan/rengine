@@ -8,12 +8,13 @@ use specs::{Component, DenseVecStorage, Read, System, WriteStorage};
 
 /// Marks a camera with grid based control.
 ///
-/// FIXME: Because the system assigns the target in `GridCamera` to the
-///        camera's target, the `GridCamera` becomes the source of truth
-///        for the camera's target.
+/// # FIXME
+/// Because the system assigns the target in `GridCamera` to the
+/// camera's target, the `GridCamera` becomes the source of truth
+/// for the camera's target.
 ///
-///        Logic needs to change so that `GridCamera` does not overrule
-///        other systems that are changing camera look-at.
+/// Logic needs to change so that `GridCamera` does not overrule
+/// other systems that are changing camera look-at.
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
 pub struct GridCamera;
