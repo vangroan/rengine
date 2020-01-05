@@ -408,7 +408,8 @@ pub struct ScriptChannel(pub(crate) channel::Sender<u32>);
 
 impl ScriptChannel {
     pub fn send(&mut self, message: u32) {
-        self.0.send(message);
+        // TODO: Properly handle error.
+        self.0.send(message).expect("Script channel send failure");
     }
 }
 

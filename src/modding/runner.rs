@@ -110,7 +110,6 @@ impl ScriptRunner {
 
                 Ok(())
             }
-            _ => Ok(()),
         }
     }
 }

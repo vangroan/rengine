@@ -135,7 +135,7 @@ fn create_script_api(lua: &mut rengine::rlua::Lua, script_channel: ScriptChannel
     });
 }
 
-fn handle_script_commands(world: &World, cmds: &[u32]) {
+fn handle_script_commands(_world: &World, cmds: &[u32]) {
     for cmd in cmds {
         println!("handle script commands {}", cmd);
     }

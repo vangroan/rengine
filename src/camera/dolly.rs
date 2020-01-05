@@ -28,6 +28,15 @@ impl Default for DollyCamera {
 #[derive(Debug, Default)]
 pub struct DollyCameraControlSystem;
 
+#[derive(SystemData)]
+pub struct DollyCameraControlSystemData<'a>(
+    Read<'a, DeltaTime>,
+    Read<'a, Vec<Event>>,
+    Read<'a, ActiveCamera>,
+    WriteStorage<'a, CameraView>,
+    ReadStorage<'a, DollyCamera>,
+);
+
 impl DollyCameraControlSystem {
     pub fn new() -> Self {
         Default::default()
@@ -35,39 +44,35 @@ impl DollyCameraControlSystem {
 }
 
 impl<'a> System<'a> for DollyCameraControlSystem {
-    type SystemData = (
-        Read<'a, DeltaTime>,
-        Read<'a, Vec<Event>>,
-        Read<'a, ActiveCamera>,
-        WriteStorage<'a, CameraView>,
-        ReadStorage<'a, DollyCamera>,
-    );
+    type SystemData = DollyCameraControlSystemData<'a>;
 
     fn run(&mut self, data: Self::SystemData) {
         use glutin::{Event::*, MouseScrollDelta::*, TouchPhase, WindowEvent::*};
 
-        let (dt, events, active_camera, mut camera_views, dolly_cameras) = data;
+        let DollyCameraControlSystemData(
+            dt,
+            events,
+            active_camera,
+            mut camera_views,
+            dolly_cameras,
+        ) = data;
         let mut movement = 0.0;
 
         for ev in events.iter() {
-            match ev {
-                WindowEvent { event, .. } => match event {
-                    MouseWheel { delta, phase, .. } => {
-                        if phase == &TouchPhase::Moved {
-                            // Currently only support mouse and not touchpad.
-                            if let LineDelta(_x, y) = delta {
-                                // Mouse wheel increases on up (away from user)
-                                // and decreases on down (towards user).
-                                //
-                                // Flip the sign so dolly closer is decrease and
-                                // dolly further is increase.
-                                movement = -y;
-                            }
+            if let WindowEvent { event, .. } = ev {
+                if let MouseWheel { delta, phase, .. } = event {
+                    if phase == &TouchPhase::Moved {
+                        // Currently only support mouse and not touchpad.
+                        if let LineDelta(_x, y) = delta {
+                            // Mouse wheel increases on up (away from user)
+                            // and decreases on down (towards user).
+                            //
+                            // Flip the sign so dolly closer is decrease and
+                            // dolly further is increase.
+                            movement = -y;
                         }
                     }
-                    _ => {}
-                },
-                _ => {}
+                }
             }
         }
 

@@ -54,22 +54,18 @@ impl<'a> System<'a> for GridCameraControlSystem {
         let mut offset: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 
         for ev in events.iter() {
-            match ev {
-                WindowEvent { event, .. } => match event {
-                    KeyboardInput { input, .. } => {
-                        if input.state == ElementState::Released {
-                            if let Some(key_code) = input.virtual_keycode {
-                                match key_code {
-                                    VirtualKeyCode::PageUp => offset.y = 1.0,
-                                    VirtualKeyCode::PageDown => offset.y = -1.0,
-                                    _ => {}
-                                }
+            if let WindowEvent { event, .. } = ev {
+                if let KeyboardInput { input, .. } = event {
+                    if input.state == ElementState::Released {
+                        if let Some(key_code) = input.virtual_keycode {
+                            match key_code {
+                                VirtualKeyCode::PageUp => offset.y = 1.0,
+                                VirtualKeyCode::PageDown => offset.y = -1.0,
+                                _ => {}
                             }
                         }
                     }
-                    _ => {}
-                },
-                _ => {}
+                }
             }
         }
 

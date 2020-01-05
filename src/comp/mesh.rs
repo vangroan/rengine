@@ -77,25 +77,25 @@ impl MeshBuilder {
         let normal = glm::vec3(0., 0., -1.).into();
         self.vertices.extend(&[
             Vertex {
-                pos: p4.clone(),
+                pos: p4,
                 uv: [back_tex.x(), back_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p0.clone(),
+                pos: p0,
                 uv: [back_tex.w(), back_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p2.clone(),
+                pos: p2,
                 uv: [back_tex.w(), back_tex.y()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p6.clone(),
+                pos: p6,
                 uv: [back_tex.x(), back_tex.y()],
                 normal,
                 color: WHITE,
@@ -112,25 +112,25 @@ impl MeshBuilder {
         let normal = glm::vec3(0., 0., 1.).into();
         self.vertices.extend(&[
             Vertex {
-                pos: p1.clone(),
+                pos: p1,
                 uv: [front_tex.x(), front_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p5.clone(),
+                pos: p5,
                 uv: [front_tex.w(), front_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p7.clone(),
+                pos: p7,
                 uv: [front_tex.w(), front_tex.y()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p3.clone(),
+                pos: p3,
                 uv: [front_tex.x(), front_tex.y()],
                 normal,
                 color: WHITE,
@@ -147,25 +147,25 @@ impl MeshBuilder {
         let normal = glm::vec3(-1., 0., 0.).into();
         self.vertices.extend(&[
             Vertex {
-                pos: p0.clone(),
+                pos: p0,
                 uv: [left_tex.x(), left_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p1.clone(),
+                pos: p1,
                 uv: [left_tex.w(), left_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p3.clone(),
+                pos: p3,
                 uv: [left_tex.w(), left_tex.y()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p2.clone(),
+                pos: p2,
                 uv: [left_tex.x(), left_tex.y()],
                 normal,
                 color: WHITE,
@@ -182,25 +182,25 @@ impl MeshBuilder {
         let normal = glm::vec3(1., 0., 0.).into();
         self.vertices.extend(&[
             Vertex {
-                pos: p5.clone(),
+                pos: p5,
                 uv: [right_tex.x(), right_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p4.clone(),
+                pos: p4,
                 uv: [right_tex.w(), right_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p6.clone(),
+                pos: p6,
                 uv: [right_tex.w(), right_tex.y()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p7.clone(),
+                pos: p7,
                 uv: [right_tex.x(), right_tex.y()],
                 normal,
                 color: WHITE,
@@ -217,25 +217,25 @@ impl MeshBuilder {
         let normal = glm::vec3(0., -1., 0.).into();
         self.vertices.extend(&[
             Vertex {
-                pos: p0.clone(),
+                pos: p0,
                 uv: [bottom_tex.x(), bottom_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p4.clone(),
+                pos: p4,
                 uv: [bottom_tex.w(), bottom_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p5.clone(),
+                pos: p5,
                 uv: [bottom_tex.w(), bottom_tex.y()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p1.clone(),
+                pos: p1,
                 uv: [bottom_tex.x(), bottom_tex.y()],
                 normal,
                 color: WHITE,
@@ -252,25 +252,25 @@ impl MeshBuilder {
         let normal = glm::vec3(0., 1., 0.).into();
         self.vertices.extend(&[
             Vertex {
-                pos: p7.clone(),
+                pos: p7,
                 uv: [top_tex.x(), top_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p6.clone(),
+                pos: p6,
                 uv: [top_tex.w(), top_tex.h()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p2.clone(),
+                pos: p2,
                 uv: [top_tex.w(), top_tex.y()],
                 normal,
                 color: WHITE,
             },
             Vertex {
-                pos: p3.clone(),
+                pos: p3,
                 uv: [top_tex.x(), top_tex.y()],
                 normal,
                 color: WHITE,
