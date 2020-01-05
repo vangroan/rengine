@@ -25,9 +25,13 @@ rengine.register_entity('core:plant', {
 })
 
 function rengine.on_start()
-    print('Start hook called')
+    print('Start scene script')
     skelly.spawn_skelly(12, 12, 8)
     skelly.spawn_skelly(13, 12, 8)
     skelly.spawn_skelly(14, 12, 8)
+end
+
+function rengine.on_stop()
+    print('Stop scene script')
 end
 

@@ -346,21 +346,35 @@ impl Scene for Game {
         //
         // In a real game, the mod load, init and start can happen
         // in different scenes at different times.
-        let cmds = ctx.world.exec(|mut mods: WriteExpect<Mods>| {
-            match mods.scene_hook(SceneHook::AfterStart) {
-                Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
-                Err(e) => {
-                    println!("{:?}", e);
-                    vec![]
-                }
-            }
-        });
+        let cmds =
+            ctx.world.exec(
+                |mut mods: WriteExpect<Mods>| match mods.scene_hook(SceneHook::Start) {
+                    Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
+                    Err(e) => {
+                        println!("{:?}", e);
+                        vec![]
+                    }
+                },
+            );
         handle_script_commands(&ctx.world, &cmds);
 
         None
     }
 
     fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        // Notify scripts that scene will stop.
+        let cmds =
+            ctx.world.exec(
+                |mut mods: WriteExpect<Mods>| match mods.scene_hook(SceneHook::Stop) {
+                    Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
+                    Err(e) => {
+                        println!("{:?}", e);
+                        vec![]
+                    }
+                },
+            );
+        handle_script_commands(&ctx.world, &cmds);
+
         // Shutdown mods
         ctx.world.exec(|mut mods: WriteExpect<Mods>| {
             mods.shutdown().expect("mod shutdown");

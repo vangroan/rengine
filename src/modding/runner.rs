@@ -92,13 +92,31 @@ impl ScriptRunner {
         let lib_name: &str = &self.lib_name;
 
         match hook {
-            AfterStart => {
+            Start => {
                 let result: rlua::Result<()> = self.lua.context(move |lua_ctx| {
                     let globals = lua_ctx.globals();
                     let lib_table: rlua::Table = globals.get(lib_name)?;
 
                     // The mod does not have to declare a hook.
                     let func_result: rlua::Result<rlua::Function> = lib_table.get("on_start");
+                    if let Ok(func) = func_result {
+                        func.call::<_, ()>(())?;
+                    }
+
+                    Ok(())
+                });
+
+                result?;
+
+                Ok(())
+            }
+            Stop => {
+                let result: rlua::Result<()> = self.lua.context(move |lua_ctx| {
+                    let globals = lua_ctx.globals();
+                    let lib_table: rlua::Table = globals.get(lib_name)?;
+
+                    // The mod does not have to declare a hook.
+                    let func_result: rlua::Result<rlua::Function> = lib_table.get("on_stop");
                     if let Ok(func) = func_result {
                         func.call::<_, ()>(())?;
                     }

@@ -15,5 +15,8 @@ pub enum ModCmd {
 
 pub enum SceneHook {
     /// Scene has started.
-    AfterStart,
+    Start,
+
+    /// Scene has stopped.
+    Stop,
 }
