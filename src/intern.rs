@@ -50,7 +50,7 @@ impl !Sync for InternedStr {}
 /// another thread, and attempting to retrieve a string from its local
 /// collection would yield an unexpected string or an out-of-range error.
 ///
-/// Currently unimplementing traits built-in traits is only supported in
+/// Currently unimplementing built-in traits is only supported in
 /// nightly.
 #[cfg(feature = "nightly-features")]
 impl !Send for InternedStr {}
