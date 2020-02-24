@@ -104,6 +104,7 @@ pub struct ModMeta {
         channel::Receiver<errors::Error>,
     ),
 
+    // TODO: Currently unimplemented.
     /// Stream of outgoing commands that have been sent by script runners
     /// during script execution.
     script_cmds: (channel::Sender<u32>, channel::Receiver<u32>),
