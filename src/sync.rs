@@ -51,7 +51,6 @@ use crossbeam::channel;
 /// thread_b.join();
 ///
 /// ```
-#[derive(Clone)]
 pub struct ChannelPair<T: Send> {
     sender: channel::Sender<T>,
     receiver: channel::Receiver<T>,
@@ -83,5 +82,15 @@ impl<T: Send> ChannelPair<T> {
 
     pub fn receive(&mut self) -> Result<T, RecvError> {
         self.receiver.recv()
+    }
+}
+
+/// Implicit implementation via derive doesn't work.
+impl<T: Send> Clone for ChannelPair<T> {
+    fn clone(&self) -> Self {
+        ChannelPair {
+            sender: self.sender.clone(),
+            receiver: self.receiver.clone(),
+        }
     }
 }

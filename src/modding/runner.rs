@@ -1,7 +1,7 @@
-use super::chan::ChannelPair;
 use super::cmd::ModCmd;
 use super::cmd::SceneHook;
 use crate::errors;
+use crate::sync::ChannelPair;
 use crossbeam::channel;
 use rlua::Lua;
 use std::fs::File;
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 pub struct ScriptRunner {
     pub(crate) lua: Lua,
-    pub(crate) chan: ChannelPair,
+    pub(crate) chan: ChannelPair<Vec<ModCmd>>,
     pub(crate) init_script: PathBuf,
     pub(crate) lib_name: String,
     pub(crate) errors: channel::Sender<errors::Error>,

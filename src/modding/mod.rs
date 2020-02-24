@@ -1,5 +1,6 @@
 use crate::errors;
 use crate::intern::{intern, InternedStr};
+use crate::sync::ChannelPair;
 use crossbeam::{channel, channel::SendError};
 use log::{error, trace, warn};
 use rlua::Lua;
@@ -13,8 +14,8 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use toml;
 use walkdir::{DirEntry, WalkDir};
+// use std::clone::Clone;
 
-mod chan;
 mod cmd;
 mod runner;
 mod validate;
@@ -85,10 +86,10 @@ pub struct ModMeta {
     /// and from the script runner.
     ///
     /// Use this to comminucate with the script runner.
-    hub: chan::ChannelPair,
+    hub: ChannelPair<Vec<ModCmd>>,
 
     /// Clone this to a script runner when one is spawned.
-    chan: chan::ChannelPair,
+    chan: ChannelPair<Vec<ModCmd>>,
 
     /// Handle to the script runner thread, which can be joined on when
     /// shutting down gracefully.
@@ -176,7 +177,7 @@ impl Mods {
                 let id = intern(&format!("{}:{}", mod_name.as_ref(), meta.version));
 
                 if let Entry::Vacant(e) = self.mods.entry(id) {
-                    let (hub_chan, mod_chan) = chan::ChannelPair::create();
+                    let (hub_chan, mod_chan) = ChannelPair::create();
                     let error_chan = channel::unbounded();
                     let script_cmds_chan = channel::unbounded();
 
