@@ -1,4 +1,4 @@
-/// Tools for inter-thread communication.
+//! Tools for inter-thread communication.
 pub use channel::{RecvError, SendError};
 use crossbeam::channel;
 
