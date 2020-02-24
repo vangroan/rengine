@@ -43,6 +43,7 @@ pub mod render;
 pub mod res;
 mod scene;
 pub mod sprite;
+pub mod sync;
 pub mod sys;
 pub mod text;
 pub mod util;
