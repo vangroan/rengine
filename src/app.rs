@@ -8,6 +8,7 @@ use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::gui::GuiGraph;
+use crate::modding::Mods;
 use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
@@ -19,6 +20,7 @@ use gfx_glyph::GlyphBrushBuilder;
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
 use log::{error, trace};
 use specs::{Builder, Dispatcher, DispatcherBuilder, RunNow, World};
+use std::path::Path;
 use std::time::Instant;
 
 const DEFAULT_FONT_DATA: &[u8] = include_bytes!("../resources/fonts/DejaVuSans.ttf");
@@ -32,6 +34,7 @@ pub struct App<'comp, 'thread> {
     dispatcher: Dispatcher<'comp, 'thread>,
     bkg_color: colors::Color,
     initial_scene: Option<Box<dyn Scene>>,
+    mods: Option<(&'static str, &'static str)>,
 }
 
 impl<'a, 'b> App<'a, 'b> {
@@ -65,6 +68,7 @@ impl<'a, 'b> App<'a, 'b> {
             mut dispatcher,
             initial_scene,
             bkg_color,
+            mods,
             ..
         } = self;
 
@@ -202,6 +206,18 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Text Rendering
         let mut text_renderer = DrawTextSystem::new(channel.clone());
+
+        // Modding
+        if let Some((lib_name, mod_path)) = mods {
+            let path = Path::new(mod_path);
+            trace!(
+                "Initialising Modding. Library name: {}, Path: {}",
+                lib_name,
+                path.to_str().unwrap()
+            );
+
+            world.add_resource(Mods::new(lib_name, path));
+        }
 
         // Scenes
         let mut scene_stack = SceneStack::new();
@@ -363,6 +379,7 @@ pub struct AppBuilder {
     title: &'static str,
     bkg_color: colors::Color,
     initial_scene: Option<Box<dyn Scene>>,
+    mods: Option<(&'static str, &'static str)>,
 }
 
 impl Default for AppBuilder {
@@ -372,6 +389,7 @@ impl Default for AppBuilder {
             title: "rengine",
             bkg_color: colors::BLACK,
             initial_scene: None,
+            mods: None,
         }
     }
 }
@@ -408,6 +426,12 @@ impl AppBuilder {
         S: 'static + Scene,
     {
         self.initial_scene = Some(Box::new(scene));
+        self
+    }
+
+    #[inline]
+    pub fn add_modding(mut self, lib_name: &'static str, mod_path: &'static str) -> Self {
+        self.mods = Some((lib_name, mod_path));
         self
     }
 
@@ -465,6 +489,7 @@ impl AppBuilder {
             dispatcher,
             bkg_color: self.bkg_color,
             initial_scene,
+            mods: self.mods.take(),
         })
     }
 }

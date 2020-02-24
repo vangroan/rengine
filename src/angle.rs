@@ -13,10 +13,8 @@
 //!     angle.into().as_radians() + PI
 //! }
 //!
-//! fn main() {
-//!     assert_eq!(PI * 2.0, add_pi(PI));
-//!     assert_eq!(PI * 2.0, add_pi(Deg(180.)));
-//! }
+//! assert_eq!(PI * 2.0, add_pi(PI));
+//! assert_eq!(PI * 2.0, add_pi(Deg(180.)));
 //! ```
 
 use num_traits::cast::FromPrimitive;

@@ -12,10 +12,13 @@ use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
+use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
-use rengine::specs::{Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteStorage};
+use rengine::specs::{
+    Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteExpect, WriteStorage,
+};
 use rengine::sprite::{Billboard, BillboardSystem};
 use rengine::text::TextBatch;
 use rengine::util::FpsCounter;
@@ -106,6 +109,36 @@ fn create_sprite<V: Into<glm::Vec3>>(
         )
         .with(Transform::default().with_position(pos))
         .build()
+}
+
+fn create_script_api(lua: &mut rengine::rlua::Lua, script_channel: ScriptChannel) {
+    let _result: rlua::Result<()> = lua.context(|ctx| {
+        let sender = script_channel.clone();
+        let lib = ctx.create_table()?;
+
+        let spawn_skelly = ctx.create_function(
+            move |_, (x, y, z): (rlua::Number, rlua::Number, rlua::Number)| {
+                // let mut sender = script_channel.clone();
+                println!("spawn_skelly({}, {}, {})", x, y, z);
+
+                // sender.send(x as u32);
+                sender.clone().send(x as u32);
+
+                Ok(())
+            },
+        )?;
+        lib.set("spawn_skelly", spawn_skelly)?;
+
+        let globals = ctx.globals();
+        globals.set("skelly", lib)?;
+        Ok(())
+    });
+}
+
+fn handle_script_commands(_world: &World, cmds: &[u32]) {
+    for cmd in cmds {
+        println!("handle script commands {}", cmd);
+    }
 }
 
 pub struct Game {
@@ -299,10 +332,54 @@ impl Scene for Game {
 
         self.entities.push(self.fps_counter_entity.unwrap());
 
+        // Load Mod Meta
+        ctx.world.exec(|mut mods: WriteExpect<Mods>| {
+            if let Err(e) = mods.load_mods() {
+                println!("{:?}", e);
+            }
+            if let Err(e) = mods.init_mods(create_script_api) {
+                println!("{:?}", e);
+            }
+        });
+
+        // Execute mod start.
+        //
+        // In a real game, the mod load, init and start can happen
+        // in different scenes at different times.
+        let cmds =
+            ctx.world.exec(
+                |mut mods: WriteExpect<Mods>| match mods.scene_hook(SceneHook::Start) {
+                    Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
+                    Err(e) => {
+                        println!("{:?}", e);
+                        vec![]
+                    }
+                },
+            );
+        handle_script_commands(&ctx.world, &cmds);
+
         None
     }
 
     fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        // Notify scripts that scene will stop.
+        let cmds =
+            ctx.world.exec(
+                |mut mods: WriteExpect<Mods>| match mods.scene_hook(SceneHook::Stop) {
+                    Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
+                    Err(e) => {
+                        println!("{:?}", e);
+                        vec![]
+                    }
+                },
+            );
+        handle_script_commands(&ctx.world, &cmds);
+
+        // Shutdown mods
+        ctx.world.exec(|mut mods: WriteExpect<Mods>| {
+            mods.shutdown().expect("mod shutdown");
+        });
+
         // ensure entities are freed
         let maybe_err = ctx.world.delete_entities(&self.entities).err();
         if let Some(err) = maybe_err {
@@ -439,7 +516,7 @@ impl Scene for Game {
                     // Tile hit, add to previous
                     if occupied {
                         if let Some(last_voxel) = last_voxel {
-                            chunk_ctrl.lazy_update(last_voxel.clone(), TileVoxel { tile_id: 1 });
+                            chunk_ctrl.lazy_update(last_voxel, TileVoxel { tile_id: 1 });
 
                             self.added = true;
                         }
@@ -463,6 +540,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .size(800, 600)
         .background_color([0.3, 0.4, 0.5, 1.0])
         .init_scene(Game::new())
+        .add_modding("rengine", "./examples/mods")
         .build()?;
 
     app.run()?;

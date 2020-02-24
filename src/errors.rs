@@ -18,9 +18,10 @@ error_chain! {
         EncoderRecv(RecvError);
         GlutinCreate(CreationError);
 
-        // `error-chain` currently does not
-        // currently support polymorphism.
+        // `error-chain` does not currently support polymorphism.
         GraphicsEncoderSend(SendError<GraphicsEncoder>);
+        Lua(rlua::Error);
+        Toml(toml::de::Error);
     }
 
     errors {
@@ -31,6 +32,22 @@ error_chain! {
         NoInitialScene {
             description("no initial scene configured")
             display("no initial scene configured")
+        }
+        ModLoad {
+            description("failed to load mods")
+            display("failed to load mods")
+        }
+        ModScriptThread {
+            description("script runner thread panic")
+            display("script runner thread panic")
+        }
+        ModDispatch {
+            description("did not receive command buffer back from script runner")
+            display("did not receive command buffer back from script runner")
+        }
+        ModComposite(v: Vec<Error>) {
+            description("multiple script failures")
+            display("multiple script failures: {} errors", v.len())
         }
     }
 }

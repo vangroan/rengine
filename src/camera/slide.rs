@@ -17,46 +17,59 @@ pub struct SlideCamera {
 
 impl SlideCamera {
     pub fn new() -> Self {
+        Default::default()
+    }
+}
+
+impl Default for SlideCamera {
+    fn default() -> Self {
         SlideCamera { speed: 10.0 }
     }
 }
 
+#[derive(Default)]
 pub struct SlideCameraControlSystem {
     cursor_pos: Option<LogicalPosition>,
 }
 
+#[derive(SystemData)]
+pub struct SlideCameraControlSystemData<'a>(
+    Read<'a, Vec<Event>>,
+    Read<'a, DeviceDimensions>,
+    Read<'a, DeltaTime>,
+    Read<'a, ActiveCamera>,
+    ReadStorage<'a, CameraView>,
+    WriteStorage<'a, FocusTarget>,
+    ReadStorage<'a, SlideCamera>,
+);
+
 impl SlideCameraControlSystem {
     pub fn new() -> Self {
-        SlideCameraControlSystem { cursor_pos: None }
+        Default::default()
     }
 }
 
 impl<'a> System<'a> for SlideCameraControlSystem {
-    type SystemData = (
-        Read<'a, Vec<Event>>,
-        Read<'a, DeviceDimensions>,
-        Read<'a, DeltaTime>,
-        Read<'a, ActiveCamera>,
-        ReadStorage<'a, CameraView>,
-        WriteStorage<'a, FocusTarget>,
-        ReadStorage<'a, SlideCamera>,
-    );
+    type SystemData = SlideCameraControlSystemData<'a>;
 
     fn run(&mut self, data: Self::SystemData) {
         use glutin::{Event::*, WindowEvent::*};
 
-        let (events, device_dim, dt, active_camera, camera_views, mut focus_targets, slide_cameras) =
-            data;
+        let SlideCameraControlSystemData(
+            events,
+            device_dim,
+            dt,
+            active_camera,
+            camera_views,
+            mut focus_targets,
+            slide_cameras,
+        ) = data;
 
         for ev in events.iter() {
-            match ev {
-                WindowEvent { event, .. } => match event {
-                    CursorMoved { position, .. } => {
-                        self.cursor_pos = Some(position.clone());
-                    }
-                    _ => {}
-                },
-                _ => {}
+            if let WindowEvent { event, .. } = ev {
+                if let CursorMoved { position, .. } = event {
+                    self.cursor_pos = Some(*position);
+                }
             }
         }
 

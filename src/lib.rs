@@ -12,6 +12,9 @@ extern crate log;
 pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
 extern crate num_traits;
+extern crate regex;
+pub extern crate rlua;
+extern crate serde;
 extern crate shred;
 #[macro_use]
 extern crate shred_derive;
@@ -19,6 +22,8 @@ extern crate shrev;
 pub extern crate specs;
 #[macro_use]
 extern crate specs_derive;
+extern crate toml;
+extern crate walkdir;
 
 pub mod angle;
 mod app;
@@ -30,12 +35,15 @@ mod float;
 mod gfx_types;
 mod graphics;
 pub mod gui;
+pub mod intern;
+pub mod modding;
 pub mod noise;
 pub mod option;
 pub mod render;
 pub mod res;
 mod scene;
 pub mod sprite;
+pub mod sync;
 pub mod sys;
 pub mod text;
 pub mod util;

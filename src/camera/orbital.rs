@@ -58,6 +58,15 @@ pub struct OrbitalCameraControlSystem {
     input_state: ElementState,
 }
 
+#[derive(SystemData)]
+pub struct OrbitalCameraControlSystemData<'a>(
+    Read<'a, Vec<Event>>,
+    ReadExpect<'a, DeviceDimensions>,
+    Read<'a, ActiveCamera>,
+    WriteStorage<'a, CameraView>,
+    ReadStorage<'a, OrbitalCamera>,
+);
+
 impl OrbitalCameraControlSystem {
     pub fn new() -> Self {
         Default::default()
@@ -75,24 +84,24 @@ impl Default for OrbitalCameraControlSystem {
 }
 
 impl<'a> System<'a> for OrbitalCameraControlSystem {
-    type SystemData = (
-        Read<'a, Vec<Event>>,
-        ReadExpect<'a, DeviceDimensions>,
-        Read<'a, ActiveCamera>,
-        WriteStorage<'a, CameraView>,
-        ReadStorage<'a, OrbitalCamera>,
-    );
+    type SystemData = OrbitalCameraControlSystemData<'a>;
 
     fn run(&mut self, data: Self::SystemData) {
         use glutin::{Event::*, MouseButton, WindowEvent::*};
 
-        let (events, device_dim, active_camera, mut camera_views, orbital_cameras) = data;
+        let OrbitalCameraControlSystemData(
+            events,
+            device_dim,
+            active_camera,
+            mut camera_views,
+            orbital_cameras,
+        ) = data;
 
         let mut cursor_still = true;
 
         for ev in events.iter() {
-            match ev {
-                WindowEvent { event, .. } => match event {
+            if let WindowEvent { event, .. } = ev {
+                match event {
                     CursorMoved { position, .. } => {
                         let current_pos = position.to_physical(device_dim.dpi_factor());
                         if let Some(last_pos) = self.last_cursor_pos.take() {
@@ -120,8 +129,7 @@ impl<'a> System<'a> for OrbitalCameraControlSystem {
                         }
                     }
                     _ => {}
-                },
-                _ => {}
+                }
             }
         }
 

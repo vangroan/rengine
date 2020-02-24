@@ -8,12 +8,13 @@ use specs::{Component, DenseVecStorage, Read, System, WriteStorage};
 
 /// Marks a camera with grid based control.
 ///
-/// FIXME: Because the system assigns the target in `GridCamera` to the
-///        camera's target, the `GridCamera` becomes the source of truth
-///        for the camera's target.
+/// # FIXME
+/// Because the system assigns the target in `GridCamera` to the
+/// camera's target, the `GridCamera` becomes the source of truth
+/// for the camera's target.
 ///
-///        Logic needs to change so that `GridCamera` does not overrule
-///        other systems that are changing camera look-at.
+/// Logic needs to change so that `GridCamera` does not overrule
+/// other systems that are changing camera look-at.
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
 pub struct GridCamera;
@@ -54,22 +55,18 @@ impl<'a> System<'a> for GridCameraControlSystem {
         let mut offset: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 
         for ev in events.iter() {
-            match ev {
-                WindowEvent { event, .. } => match event {
-                    KeyboardInput { input, .. } => {
-                        if input.state == ElementState::Released {
-                            if let Some(key_code) = input.virtual_keycode {
-                                match key_code {
-                                    VirtualKeyCode::PageUp => offset.y = 1.0,
-                                    VirtualKeyCode::PageDown => offset.y = -1.0,
-                                    _ => {}
-                                }
+            if let WindowEvent { event, .. } = ev {
+                if let KeyboardInput { input, .. } = event {
+                    if input.state == ElementState::Released {
+                        if let Some(key_code) = input.virtual_keycode {
+                            match key_code {
+                                VirtualKeyCode::PageUp => offset.y = 1.0,
+                                VirtualKeyCode::PageDown => offset.y = -1.0,
+                                _ => {}
                             }
                         }
                     }
-                    _ => {}
-                },
-                _ => {}
+                }
             }
         }
 

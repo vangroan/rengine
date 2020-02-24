@@ -123,33 +123,33 @@ const MASK_TOP: VoxelAdjacencyMask = VoxelAdjacencyMask(0b_0100_0000_0000_0000_0
 /// have a side rendered.
 impl VoxelAdjacencyMask {
     #[inline]
-    pub fn empty_back(&self) -> bool {
-        *self & MASK_BACK != MASK_BACK
+    pub fn empty_back(self) -> bool {
+        self & MASK_BACK != MASK_BACK
     }
 
     #[inline]
-    pub fn empty_front(&self) -> bool {
-        *self & MASK_FRONT != MASK_FRONT
+    pub fn empty_front(self) -> bool {
+        self & MASK_FRONT != MASK_FRONT
     }
 
     #[inline]
-    pub fn empty_left(&self) -> bool {
-        *self & MASK_LEFT != MASK_LEFT
+    pub fn empty_left(self) -> bool {
+        self & MASK_LEFT != MASK_LEFT
     }
 
     #[inline]
-    pub fn empty_right(&self) -> bool {
-        *self & MASK_RIGHT != MASK_RIGHT
+    pub fn empty_right(self) -> bool {
+        self & MASK_RIGHT != MASK_RIGHT
     }
 
     #[inline]
-    pub fn empty_bottom(&self) -> bool {
-        *self & MASK_BOTTOM != MASK_BOTTOM
+    pub fn empty_bottom(self) -> bool {
+        self & MASK_BOTTOM != MASK_BOTTOM
     }
 
     #[inline]
-    pub fn empty_top(&self) -> bool {
-        *self & MASK_TOP != MASK_TOP
+    pub fn empty_top(self) -> bool {
+        self & MASK_TOP != MASK_TOP
     }
 }
 

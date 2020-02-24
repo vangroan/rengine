@@ -70,13 +70,11 @@ impl Transform {
     /// use rengine::comp::{Transform, Z_AXIS};
     /// use std::f32::consts::PI;
     ///
-    /// fn main() {
-    ///     // 45 degrees
-    ///     let angle = 45. * (PI / 180.);
+    /// // 45 degrees
+    /// let angle = 45. * (PI / 180.);
     ///
-    ///     let mut t = Transform::new()
-    ///         .with_rotate(angle, Z_AXIS);
-    /// }
+    /// let mut t = Transform::new()
+    ///     .with_rotate(angle, Z_AXIS);
     /// ```
     #[inline]
     pub fn with_rotate<A, V>(mut self, angle: A, axis: V) -> Self

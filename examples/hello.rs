@@ -156,12 +156,8 @@ impl Scene for Game {
             tex_rects.clone(),
         ));
 
-        self.entities.push(create_block(
-            ctx,
-            [-0.6, 0., 0.],
-            tex.clone(),
-            tex_rects.clone(),
-        ));
+        self.entities
+            .push(create_block(ctx, [-0.6, 0., 0.], tex, tex_rects));
 
         None
     }
