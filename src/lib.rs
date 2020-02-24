@@ -35,6 +35,7 @@ mod float;
 mod gfx_types;
 mod graphics;
 pub mod gui;
+pub mod input;
 pub mod intern;
 pub mod modding;
 pub mod noise;
