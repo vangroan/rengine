@@ -27,6 +27,12 @@ pub enum UserInput {
     Mouse(MouseButton),
 }
 
+#[derive(Serialize, Deserialize)]
+struct InputMapModel<T> {
+    keyboard: HashMap<String, T>,
+    mouse: HashMap<String, T>,
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -59,7 +65,12 @@ mod test {
         //     .mapping
         //     .insert(UserInput::Mouse(MouseButton::Left), TestAction::Jump);
 
-        let data = vec![UserInput::Mouse(MouseButton::Left)];
+        let mut data = InputMapModel {
+            keyboard: HashMap::new(),
+            mouse: HashMap::new(),
+        };
+        data.keyboard
+            .insert(VirtualKeyCode::A.debug(), TestAction::WalkForward);
         let input_map_data = toml::to_string(&data).unwrap();
         let mut file = fs::File::create(".tmp/input-map.toml").unwrap();
         file.write_all(&input_map_data.into_bytes()).unwrap();
