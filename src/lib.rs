@@ -15,7 +15,7 @@ extern crate num_traits;
 extern crate regex;
 pub extern crate rlua;
 extern crate serde;
-extern crate shred;
+pub extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 extern crate shrev;
