@@ -5,7 +5,7 @@ use std::ops::{Add, Sub};
 ///
 /// Float positions can implicitly be converted
 /// to a coordinate, with rounding handled correctly.
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VoxelCoord {
     pub i: i32,
     pub j: i32,
@@ -41,6 +41,18 @@ impl Add for VoxelCoord {
     type Output = VoxelCoord;
 
     fn add(self, rhs: Self) -> Self::Output {
+        VoxelCoord {
+            i: self.i + rhs.i,
+            j: self.j + rhs.j,
+            k: self.k + rhs.k,
+        }
+    }
+}
+
+impl Add<&VoxelCoord> for &VoxelCoord {
+    type Output = VoxelCoord;
+
+    fn add(self, rhs: &VoxelCoord) -> Self::Output {
         VoxelCoord {
             i: self.i + rhs.i,
             j: self.j + rhs.j,
@@ -201,5 +213,24 @@ impl From<(f32, f32, f32)> for ChunkCoord {
             j: val.1.floor() as i32,
             k: val.2.floor() as i32,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_voxel_coord_arithmetic() {
+        assert_eq!(
+            VoxelCoord::new(1, 2, 3),
+            VoxelCoord::new(0, 1, 2) + VoxelCoord::new(1, 1, 1),
+            "Adding voxel coordinate by value failed"
+        );
+        assert_eq!(
+            VoxelCoord::new(1, 2, 3),
+            &VoxelCoord::new(0, 1, 2) + &VoxelCoord::new(1, 1, 1),
+            "Adding volel coordinate by reference failed"
+        );
     }
 }
