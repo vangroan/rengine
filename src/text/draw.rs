@@ -4,7 +4,6 @@ use crate::text::TextBatch;
 use gfx_device::{CommandBuffer, Resources};
 use gfx_glyph::VariedSection;
 use specs::{Join, ReadStorage, World};
-use std::error::Error;
 
 pub struct DrawTextSystem {
     channel: ChannelPair<Resources, CommandBuffer>,
@@ -42,7 +41,7 @@ impl DrawTextSystem {
                     .send_block(encoder)
                     .expect("Text render failed sending encoder back to main loop");
             }
-            Err(err) => eprintln!("{}, {}", err, err.description()),
+            Err(err) => eprintln!("{}", err),
         }
     }
 }

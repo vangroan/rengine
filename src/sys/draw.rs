@@ -6,7 +6,6 @@ use crate::render::ChannelPair;
 use crate::res::ViewPort;
 use nalgebra::Matrix4;
 use specs::{Join, Read, ReadExpect, ReadStorage, System};
-use std::error::Error;
 
 pub struct DrawSystem {
     channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,
@@ -97,10 +96,10 @@ impl<'a> System<'a> for DrawSystem {
                 }
 
                 if let Err(err) = self.channel.send_block(encoder) {
-                    eprintln!("{}, {}", err, err.description());
+                    eprintln!("{}", err);
                 }
             }
-            Err(err) => eprintln!("{}, {}", err, err.description()),
+            Err(err) => eprintln!("{}", err),
         }
     }
 }

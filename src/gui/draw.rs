@@ -2,7 +2,6 @@ use crate::gui::GuiDrawable;
 use crate::render::ChannelPair;
 use gfx_device::{CommandBuffer, Resources};
 use specs::{Join, ReadStorage, System};
-use std::error::Error;
 
 pub struct DrawGuiSystem {
     channel: ChannelPair<Resources, CommandBuffer>,
@@ -33,7 +32,7 @@ impl<'a> System<'a> for DrawGuiSystem {
                     .send_block(_encoder)
                     .expect("GUI render failed sending encoder back to main loop");
             }
-            Err(err) => eprintln!("{}, {}", err, err.description()),
+            Err(err) => eprintln!("{}", err),
         }
     }
 }
