@@ -2,12 +2,18 @@ use chrono::prelude::*;
 use crossbeam::{bounded, select, tick, unbounded, Receiver, Sender};
 use log::{trace, warn};
 use std::borrow::Borrow;
-use std::collections::btree_map;
 use std::collections::{BTreeMap, VecDeque};
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+
+pub mod types {
+    /// Time taken to update scene.
+    pub const SCENE_UPDATE: u16 = 100;
+    /// Time taken sending the graphics encoder to gfx.
+    pub const GRAPHICS_RENDER: u16 = 200;
+}
 
 /// Central hub for recording and aggregating metrics.
 pub struct MetricHub {
@@ -71,8 +77,9 @@ impl MetricHub {
                                 .or_insert_with(|| {
                                     TimeSeries {
                                         interval: Duration::from_secs(1),
+                                        next_slot: 0,
                                         measurements: BTreeMap::new(),
-                                        data_points: VecDeque::new()
+                                        data_points: VecDeque::new(),
                                     }
                                 });
 
@@ -92,35 +99,58 @@ impl MetricHub {
                             process_timeseries(key.aggregate, timeseries);
                         }
                     }
-                    recv(cancel_recv) -> _msg => break 'message_pump,
+                    recv(cancel_recv) -> _msg => {
+                        break 'message_pump;
+                    }
                 }
+                // So we don't starve other threads.
+                thread::yield_now();
             }
             trace!("Metric worker thread shut down.");
         })
     }
 
-    pub fn timer(&self, metric_id: u16, aggregate: MetricAggregate) -> TimerMetric<'_> {
+    /// Measure time taken by a block of code.
+    pub fn timer(&self, metric_id: u16, aggregate: MetricAggregate) -> TimerMetric {
+        // println!("Start timer");
         TimerMetric {
-            hub: self,
+            sender: self.message_sender.clone(),
             metric_id,
             start_at: Instant::now(),
             aggregate,
+            stopped: false,
         }
     }
 
-    pub fn time_series(&self, metric_id: u16, aggregate: MetricAggregate) -> TimeSeriesRef<'_> {
-        // let mut ts_map = self.timeseries.lock().expect("Metric hub mutex poisoned");
-        // let key = MetricKey {
-        //     metric_id,
-        //     aggregate,
-        // };
-
-        // TimeSeriesRef {
-        //     time_series: ts_map.entry(key).or_insert_with(|| TimeSeries {
-        //         data_points: VecDeque::new(),
-        //     }),
-        // }
-        unimplemented!()
+    /// Builds a time series, containing aggregated datapoints.
+    pub fn make_time_series(
+        &self,
+        metric_id: u16,
+        aggregate: MetricAggregate,
+        out: &mut [DataPoint],
+        start: usize,
+        length: usize,
+    ) {
+        let mut timeseries_map = self
+            .timeseries_map
+            .lock()
+            .expect("Metric hub mutex has been poisoned");
+        let timeseries = timeseries_map
+            .entry(MetricKey {
+                metric_id,
+                aggregate,
+            })
+            .or_insert_with(|| TimeSeries {
+                interval: Duration::from_secs(1),
+                next_slot: 0,
+                measurements: BTreeMap::new(),
+                data_points: VecDeque::new(),
+            });
+        let mut index = start;
+        for data_point in timeseries.data_points.iter().take(length) {
+            out[index] = data_point.clone();
+            index += 1;
+        }
     }
 }
 
@@ -138,7 +168,9 @@ impl Drop for MetricHub {
     }
 }
 
-fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries) {}
+fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries) {
+    warn!("metric aggregation not implemented");
+}
 
 #[derive(Debug, Clone)]
 pub struct MetricSettings {
@@ -160,16 +192,43 @@ pub enum MetricAggregate {
     P99,
 }
 
-pub struct TimerMetric<'a> {
-    hub: &'a MetricHub,
+pub struct TimerMetric {
+    sender: Sender<MetricMessage>,
     metric_id: u16,
     start_at: Instant,
     aggregate: MetricAggregate,
+    stopped: bool,
 }
 
-impl<'a> Drop for TimerMetric<'a> {
+impl TimerMetric {
+    #[inline]
+    pub fn stopped(&self) -> bool {
+        self.stopped
+    }
+
+    fn stop(&mut self) {
+        if !self.stopped {
+            // println!("Stop timer");
+            let msg = MetricMessage::TimeMeasurement {
+                key: MetricKey {
+                    metric_id: self.metric_id,
+                    aggregate: self.aggregate,
+                },
+                duration: self.start_at.elapsed(),
+                datetime: Local::now(),
+            };
+
+            if let Err(err) = self.sender.send(msg) {
+                warn!("Timer failed to record metric: {}", err);
+            }
+            self.stopped = true;
+        }
+    }
+}
+
+impl Drop for TimerMetric {
     fn drop(&mut self) {
-        // TODO: record to hub
+        self.stop();
     }
 }
 
@@ -226,13 +285,25 @@ impl MetricMessage {
 /// Aggregated metrics.
 pub struct TimeSeries {
     interval: Duration,
+    next_slot: i64,
     measurements: BTreeMap<i64, Vec<MetricMessage>>,
-    data_points: VecDeque<f32>,
+    data_points: VecDeque<DataPoint>,
 }
 
+#[derive(Debug, Clone)]
 pub struct DataPoint {
-    timestamp: u32,
-    value: f32,
+    pub datetime: DateTime<Local>,
+    pub value: f32,
+}
+
+impl Default for DataPoint {
+    #[inline]
+    fn default() -> Self {
+        DataPoint {
+            datetime: Local::now(),
+            value: 0.,
+        }
+    }
 }
 
 /// A borrowed reference to a time series.

@@ -1,6 +1,7 @@
 use crate::camera::{ActiveCamera, CameraProjection, CameraView};
 use crate::comp::{GlTexture, Mesh, Transform};
 use crate::gfx_types::{self, pipe, DepthTarget, PipelineBundle, RenderTarget};
+use crate::metrics::{types::GRAPHICS_RENDER, MetricAggregate, MetricHub};
 use crate::option::lift2;
 use crate::render::ChannelPair;
 use crate::res::ViewPort;
@@ -14,6 +15,7 @@ pub struct DrawSystem {
 }
 
 pub type DrawSystemData<'a> = (
+    Read<'a, MetricHub>,
     ReadExpect<'a, PipelineBundle<pipe::Meta>>,
     ReadExpect<'a, ViewPort>,
     Read<'a, ActiveCamera>,
@@ -44,6 +46,7 @@ impl<'a> System<'a> for DrawSystem {
     fn run(
         &mut self,
         (
+            metrics,
             pipeline,
             view_port,
             active_camera,
@@ -56,6 +59,8 @@ impl<'a> System<'a> for DrawSystem {
     ) {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
+                let _render_timer = metrics.timer(GRAPHICS_RENDER, MetricAggregate::Maximum);
+
                 // Without a camera, we draw according to the default OpenGL behaviour
                 let (proj_matrix, view_matrix) = active_camera
                     .camera_entity()

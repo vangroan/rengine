@@ -12,6 +12,7 @@ use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
+use rengine::metrics::{types::GRAPHICS_RENDER, DataPoint, MetricAggregate, MetricHub};
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
@@ -399,6 +400,7 @@ impl Scene for Game {
         use glutin::ElementState;
         use glutin::Event::*;
         use glutin::MouseButton;
+        use glutin::VirtualKeyCode;
         use glutin::WindowEvent::*;
 
         if let WindowEvent { event, .. } = ev {
@@ -420,6 +422,27 @@ impl Scene for Game {
                         if state == &ElementState::Released {
                             self.added = false;
                         }
+                    }
+                }
+                KeyboardInput { input, .. } => {
+                    if input.virtual_keycode == Some(VirtualKeyCode::F5)
+                        && input.state == ElementState::Released
+                    {
+                        println!("Metrics");
+                        ctx.world.exec(|metrics: Read<'_, MetricHub>| {
+                            let length = 64;
+                            let mut timeseries = vec![DataPoint::default(); length];
+                            metrics.make_time_series(
+                                GRAPHICS_RENDER,
+                                MetricAggregate::Maximum,
+                                &mut timeseries,
+                                0,
+                                length,
+                            );
+                            for data_point in timeseries {
+                                println!("{}: {}", data_point.datetime, data_point.value);
+                            }
+                        });
                     }
                 }
                 _ => {}
