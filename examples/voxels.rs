@@ -524,7 +524,7 @@ impl Scene for Game {
                         // Stop
                         break 'add;
                     } else {
-                        last_voxel = Some(raycast_info.voxel_coord().clone());
+                        last_voxel = Some(*raycast_info.voxel_coord());
                     }
                 }
             }
