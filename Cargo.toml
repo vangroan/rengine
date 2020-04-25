@@ -9,7 +9,7 @@ license = "MIT"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-crossbeam = "0.7.1"
+crossbeam = "0.7.3"
 daggy = "0.6.0"
 error-chain = "0.12.1"
 gfx = "0.18.1"
