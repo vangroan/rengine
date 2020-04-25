@@ -8,6 +8,7 @@ use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::gui::GuiGraph;
+use crate::metrics::MetricHub;
 use crate::modding::Mods;
 use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
@@ -84,6 +85,9 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<SlideCamera>();
         world.register::<GlTexture>();
         world.register::<TextBatch>();
+
+        // Statistics Metrics
+        world.add_resource(MetricHub::default());
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());

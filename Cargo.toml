@@ -8,6 +8,7 @@ categories = ["game-engines"]
 license = "MIT"
 
 [dependencies]
+chrono = { version = "0.4", features = ["serde"] }
 crossbeam = "0.7.1"
 daggy = "0.6.0"
 error-chain = "0.12.1"
