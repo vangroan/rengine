@@ -1,3 +1,4 @@
+/// Tools for measuring metrics statistics.
 use chrono::prelude::*;
 use crossbeam::{bounded, select, tick, unbounded, Receiver, Sender};
 use log::{trace, warn};
@@ -9,9 +10,9 @@ use std::time::{Duration, Instant};
 
 pub mod types {
     /// Time taken to update scene.
-    pub const SCENE_UPDATE: u16 = 100;
+    pub const SCENE_UPDATE: u16 = 1000;
     /// Time taken sending the graphics encoder to gfx.
-    pub const GRAPHICS_RENDER: u16 = 200;
+    pub const GRAPHICS_RENDER: u16 = 2000;
 }
 
 /// Central hub for recording and aggregating metrics.
@@ -76,6 +77,7 @@ impl MetricHub {
                                 .or_insert_with(|| {
                                     TimeSeries::new(settings.aggregate_interval, settings.data_point_count)
                                 });
+                            // Convert metrics into raw measurements.
                             timeseries
                                 .measurements
                                 .entry(msg.slot(timeseries.interval)
@@ -333,7 +335,7 @@ impl TimeSeries {
 #[derive(Debug, Clone)]
 struct RawMeasurement {
     timestamp: i64,
-    value: f32,
+    value: f64,
 }
 
 impl From<MetricMessage> for RawMeasurement {
@@ -343,13 +345,13 @@ impl From<MetricMessage> for RawMeasurement {
                 duration, datetime, ..
             } => RawMeasurement {
                 // Duration as float seconds
-                value: (duration.as_millis() as f32) / 1000.0,
+                value: (duration.as_nanos() as f64) / 1000.0,
                 timestamp: datetime.timestamp(),
             },
             MetricMessage::IncrMeasurement {
                 amount, datetime, ..
             } => RawMeasurement {
-                value: amount as f32,
+                value: amount as f64,
                 timestamp: datetime.timestamp(),
             },
         }
@@ -359,7 +361,7 @@ impl From<MetricMessage> for RawMeasurement {
 #[derive(Debug, Clone)]
 pub struct DataPoint {
     pub datetime: DateTime<Local>,
-    pub value: f32,
+    pub value: f64,
 }
 
 impl Default for DataPoint {
@@ -373,10 +375,10 @@ impl Default for DataPoint {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-struct NonNan(f32);
+struct NonNan(f64);
 
 impl NonNan {
-    fn new(val: f32) -> Option<NonNan> {
+    fn new(val: f64) -> Option<NonNan> {
         if val.is_nan() {
             None
         } else {
@@ -393,9 +395,9 @@ impl Ord for NonNan {
     }
 }
 
-impl Into<f32> for NonNan {
+impl Into<f64> for NonNan {
     #[inline]
-    fn into(self) -> f32 {
+    fn into(self) -> f64 {
         self.0
     }
 }

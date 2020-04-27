@@ -440,7 +440,7 @@ impl Scene for Game {
                                 length,
                             );
                             let now_seconds = chrono::Local::now().timestamp();
-                            let mut data_points: Vec<(i64, f32)> = timeseries
+                            let mut data_points: Vec<(i64, f64)> = timeseries
                                 .iter()
                                 .map(|dp| {
                                     let delta_seconds = now_seconds - dp.datetime.timestamp();
@@ -450,7 +450,7 @@ impl Scene for Game {
                             data_points.sort_by(|a, b| a.0.cmp(&b.0));
 
                             for dp in &data_points {
-                                println!("{}: {}", dp.0, dp.1);
+                                println!("{}: {}ns", dp.0, dp.1);
                             }
                         });
                     }
