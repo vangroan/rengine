@@ -1,9 +1,8 @@
 use chrono::prelude::*;
 use crossbeam::{bounded, select, tick, unbounded, Receiver, Sender};
 use log::{trace, warn};
-use std::borrow::Borrow;
+use std::cmp::{Ord, Ordering};
 use std::collections::{BTreeMap, VecDeque};
-use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -75,20 +74,14 @@ impl MetricHub {
                             let timeseries = ts_map
                                 .entry(msg.key())
                                 .or_insert_with(|| {
-                                    TimeSeries {
-                                        interval: Duration::from_secs(1),
-                                        next_slot: 0,
-                                        measurements: BTreeMap::new(),
-                                        data_points: VecDeque::new(),
-                                    }
+                                    TimeSeries::new(settings.aggregate_interval, settings.data_point_count)
                                 });
-
                             timeseries
                                 .measurements
                                 .entry(msg.slot(timeseries.interval)
                                           .expect("divide by zero"))
                                 .or_insert_with(|| vec![])
-                                .push(msg);
+                                .push(msg.into());
                         }
                     }
                     recv(ticker) -> _instant => {
@@ -112,7 +105,6 @@ impl MetricHub {
 
     /// Measure time taken by a block of code.
     pub fn timer(&self, metric_id: u16, aggregate: MetricAggregate) -> TimerMetric {
-        // println!("Start timer");
         TimerMetric {
             sender: self.message_sender.clone(),
             metric_id,
@@ -140,11 +132,11 @@ impl MetricHub {
                 metric_id,
                 aggregate,
             })
-            .or_insert_with(|| TimeSeries {
-                interval: Duration::from_secs(1),
-                next_slot: 0,
-                measurements: BTreeMap::new(),
-                data_points: VecDeque::new(),
+            .or_insert_with(|| {
+                TimeSeries::new(
+                    self.settings.aggregate_interval,
+                    self.settings.data_point_count,
+                )
             });
         let mut index = start;
         for data_point in timeseries.data_points.iter().take(length) {
@@ -169,7 +161,34 @@ impl Drop for MetricHub {
 }
 
 fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries) {
-    warn!("metric aggregation not implemented");
+    if let Some(slot) = timeseries.measurements.iter().map(|(key, _)| *key).next() {
+        // Important: remove element to cleanup memory.
+        if let Some(measurements) = timeseries.measurements.remove(&slot) {
+            match aggregate {
+                MetricAggregate::Maximum => {
+                    let max_value = measurements
+                        .into_iter()
+                        .map(|raw| NonNan::new(raw.value).expect("Metric value was nan"))
+                        .max();
+                    let naive = NaiveDateTime::from_timestamp(slot, 0);
+                    let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+                    timeseries.data_points.push_back(DataPoint {
+                        datetime: datetime.into(),
+                        value: max_value.unwrap().into(),
+                    });
+                }
+                _ => warn!("Aggregate {:?} unimplemented", aggregate),
+            }
+        }
+    }
+
+    // Important: Limit the size of the time series for memory usage.
+    if timeseries.data_points.len() > timeseries.max_data_points {
+        let overflow = timeseries.data_points.len() - timeseries.max_data_points;
+        for _ in 0..overflow {
+            timeseries.data_points.pop_front();
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -179,6 +198,15 @@ pub struct MetricSettings {
     /// Interval on which the background worker thread aggregates measurements
     /// into data points.
     aggregate_interval: Duration,
+}
+
+impl Default for MetricSettings {
+    fn default() -> Self {
+        MetricSettings {
+            data_point_count: 64,
+            aggregate_interval: Duration::from_secs(1),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -206,7 +234,7 @@ impl TimerMetric {
         self.stopped
     }
 
-    fn stop(&mut self) {
+    pub fn stop(&mut self) {
         if !self.stopped {
             // println!("Stop timer");
             let msg = MetricMessage::TimeMeasurement {
@@ -283,11 +311,48 @@ impl MetricMessage {
 }
 
 /// Aggregated metrics.
-pub struct TimeSeries {
+struct TimeSeries {
     interval: Duration,
-    next_slot: i64,
-    measurements: BTreeMap<i64, Vec<MetricMessage>>,
+    measurements: BTreeMap<i64, Vec<RawMeasurement>>,
     data_points: VecDeque<DataPoint>,
+    max_data_points: usize,
+}
+
+impl TimeSeries {
+    fn new(interval: Duration, max_data_points: usize) -> Self {
+        TimeSeries {
+            interval,
+            measurements: BTreeMap::new(),
+            data_points: VecDeque::new(),
+            max_data_points,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RawMeasurement {
+    timestamp: i64,
+    value: f32,
+}
+
+impl From<MetricMessage> for RawMeasurement {
+    fn from(m: MetricMessage) -> Self {
+        match m {
+            MetricMessage::TimeMeasurement {
+                duration, datetime, ..
+            } => RawMeasurement {
+                // Duration as float seconds
+                value: (duration.as_millis() as f32) / 1000.0,
+                timestamp: datetime.timestamp(),
+            },
+            MetricMessage::IncrMeasurement {
+                amount, datetime, ..
+            } => RawMeasurement {
+                value: amount as f32,
+                timestamp: datetime.timestamp(),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -306,21 +371,30 @@ impl Default for DataPoint {
     }
 }
 
-/// A borrowed reference to a time series.
-pub struct TimeSeriesRef<'a> {
-    time_series: &'a TimeSeries,
-}
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+struct NonNan(f32);
 
-impl<'a> Deref for TimeSeriesRef<'a> {
-    type Target = TimeSeries;
-
-    fn deref(&self) -> &Self::Target {
-        self.time_series
+impl NonNan {
+    fn new(val: f32) -> Option<NonNan> {
+        if val.is_nan() {
+            None
+        } else {
+            Some(NonNan(val))
+        }
     }
 }
 
-impl<'a> Borrow<TimeSeries> for TimeSeriesRef<'a> {
-    fn borrow(&self) -> &TimeSeries {
-        self.time_series
+impl Eq for NonNan {}
+
+impl Ord for NonNan {
+    fn cmp(&self, rhs: &NonNan) -> Ordering {
+        self.0.partial_cmp(&rhs.0).unwrap()
+    }
+}
+
+impl Into<f32> for NonNan {
+    #[inline]
+    fn into(self) -> f32 {
+        self.0
     }
 }

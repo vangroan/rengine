@@ -59,7 +59,7 @@ impl<'a> System<'a> for DrawSystem {
     ) {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
-                let _render_timer = metrics.timer(GRAPHICS_RENDER, MetricAggregate::Maximum);
+                let mut render_timer = metrics.timer(GRAPHICS_RENDER, MetricAggregate::Maximum);
 
                 // Without a camera, we draw according to the default OpenGL behaviour
                 let (proj_matrix, view_matrix) = active_camera
@@ -103,6 +103,8 @@ impl<'a> System<'a> for DrawSystem {
                 if let Err(err) = self.channel.send_block(encoder) {
                     eprintln!("{}", err);
                 }
+
+                render_timer.stop();
             }
             Err(err) => eprintln!("{}", err),
         }

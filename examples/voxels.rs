@@ -439,8 +439,18 @@ impl Scene for Game {
                                 0,
                                 length,
                             );
-                            for data_point in timeseries {
-                                println!("{}: {}", data_point.datetime, data_point.value);
+                            let now_seconds = chrono::Local::now().timestamp();
+                            let mut data_points: Vec<(i64, f32)> = timeseries
+                                .iter()
+                                .map(|dp| {
+                                    let delta_seconds = now_seconds - dp.datetime.timestamp();
+                                    (delta_seconds, dp.value)
+                                })
+                                .collect();
+                            data_points.sort_by(|a, b| a.0.cmp(&b.0));
+
+                            for dp in &data_points {
+                                println!("{}: {}", dp.0, dp.1);
                             }
                         });
                     }
