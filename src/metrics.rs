@@ -1,8 +1,17 @@
-/// Tools for measuring metrics statistics.
+//! Tools for measuring metrics statistics.
+//!
+//! # Usage
+//!
+//! TODO: Examples
+//!
+//! # Implementation
+//!
+//! TODO: Explain implementation
+use crate::number::NonNan;
 use chrono::prelude::*;
 use crossbeam::{bounded, select, tick, unbounded, Receiver, Sender};
 use log::{trace, warn};
-use std::cmp::{Ord, Ordering};
+use std::cmp::Ord;
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -176,7 +185,7 @@ fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries) {
                     let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
                     timeseries.data_points.push_back(DataPoint {
                         datetime: datetime.into(),
-                        value: max_value.unwrap().into(),
+                        value: max_value.unwrap().into_inner(),
                     });
                 }
                 _ => warn!("Aggregate {:?} unimplemented", aggregate),
@@ -371,33 +380,5 @@ impl Default for DataPoint {
             datetime: Local::now(),
             value: 0.,
         }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-struct NonNan(f64);
-
-impl NonNan {
-    fn new(val: f64) -> Option<NonNan> {
-        if val.is_nan() {
-            None
-        } else {
-            Some(NonNan(val))
-        }
-    }
-}
-
-impl Eq for NonNan {}
-
-impl Ord for NonNan {
-    fn cmp(&self, rhs: &NonNan) -> Ordering {
-        self.0.partial_cmp(&rhs.0).unwrap()
-    }
-}
-
-impl Into<f64> for NonNan {
-    #[inline]
-    fn into(self) -> f64 {
-        self.0
     }
 }

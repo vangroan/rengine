@@ -43,6 +43,7 @@ pub mod intern;
 pub mod metrics;
 pub mod modding;
 pub mod noise;
+pub mod number;
 pub mod option;
 pub mod render;
 pub mod res;
