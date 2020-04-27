@@ -267,6 +267,7 @@ struct MetricKey {
 }
 
 /// Message for the metric hub to communicate with the worker thread.
+#[allow(dead_code)]
 enum MetricMessage {
     TimeMeasurement {
         key: MetricKey,
