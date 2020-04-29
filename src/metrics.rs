@@ -1,4 +1,4 @@
-//! Tools for measuring metrics statistics.
+//! Tools for measuring statistics.
 //!
 //! # Usage
 //!
@@ -15,7 +15,7 @@
 //! // the world and start a timer.
 //! let metrics = world.read_resource::<MetricHub>();
 //!
-//! // Specify a unique id for the metric, along with a aggregation method.
+//! // Specify a unique id for the metric, along with an aggregation method.
 //! const EXAMPLE_METRIC: u16 = 1;
 //! let mut timer = metrics.timer(EXAMPLE_METRIC, MetricAggregate::Maximum);
 //!
