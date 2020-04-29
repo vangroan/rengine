@@ -17,7 +17,9 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-pub mod types {
+pub mod builtin_metrics {
+    //! Type ids for metrics internal to the engine.
+
     /// Time taken to update scene.
     pub const SCENE_UPDATE: u16 = 1000;
     /// Time taken sending the graphics encoder to gfx.

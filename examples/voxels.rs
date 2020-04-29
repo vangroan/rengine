@@ -12,7 +12,7 @@ use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
-use rengine::metrics::{types::GRAPHICS_RENDER, DataPoint, MetricAggregate, MetricHub};
+use rengine::metrics::{builtin_metrics::GRAPHICS_RENDER, DataPoint, MetricAggregate, MetricHub};
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
