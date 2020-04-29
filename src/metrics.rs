@@ -287,11 +287,6 @@ enum MetricMessage {
         duration: Duration,
         datetime: DateTime<Local>,
     },
-    IncrMeasurement {
-        key: MetricKey,
-        amount: u32,
-        datetime: DateTime<Local>,
-    },
 }
 
 impl MetricMessage {
@@ -299,7 +294,6 @@ impl MetricMessage {
     fn key(&self) -> MetricKey {
         match self {
             MetricMessage::TimeMeasurement { key, .. } => *key,
-            MetricMessage::IncrMeasurement { key, .. } => *key,
         }
     }
 
@@ -308,7 +302,6 @@ impl MetricMessage {
     fn slot(&self, interval: Duration) -> Option<i64> {
         let datetime = match self {
             MetricMessage::TimeMeasurement { datetime, .. } => *datetime,
-            MetricMessage::IncrMeasurement { datetime, .. } => *datetime,
         };
 
         let timestamp = datetime.timestamp_millis();
@@ -355,14 +348,8 @@ impl From<MetricMessage> for RawMeasurement {
             MetricMessage::TimeMeasurement {
                 duration, datetime, ..
             } => RawMeasurement {
-                // Duration as float seconds
-                value: (duration.as_nanos() as f64) / 1000.0,
-                timestamp: datetime.timestamp(),
-            },
-            MetricMessage::IncrMeasurement {
-                amount, datetime, ..
-            } => RawMeasurement {
-                value: amount as f64,
+                // Duration as float milliseconds
+                value: (duration.as_nanos() as f64) / 1_000_000.0,
                 timestamp: datetime.timestamp(),
             },
         }

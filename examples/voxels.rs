@@ -450,7 +450,7 @@ impl Scene for Game {
                             data_points.sort_by(|a, b| a.0.cmp(&b.0));
 
                             for dp in &data_points {
-                                println!("{}: {}ns", dp.0, dp.1);
+                                println!("{}: {}ms", dp.0, dp.1);
                             }
                         });
                     }
