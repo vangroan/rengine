@@ -125,7 +125,7 @@ impl MetricHub {
                             .lock()
                             .expect("Metric worker mutex poisoned");
                         for (key, timeseries) in ts_map.iter_mut() {
-                            process_timeseries(key.aggregate, timeseries);
+                            process_timeseries(key.aggregate, timeseries, settings.aggregate_interval);
                         }
                     }
                     recv(cancel_recv) -> _msg => {
@@ -196,8 +196,13 @@ impl Drop for MetricHub {
     }
 }
 
-fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries) {
-    if let Some(slot) = timeseries.measurements.iter().map(|(key, _)| *key).next() {
+/// Process the raw measurements of the given time series into aggregated data points.
+fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries, interval: Duration) {
+    while let Some(slot) = timeseries.measurements.iter().map(|(key, _)| *key).next() {
+        // Don't aggregate the current slot.
+        if datetime_to_slot(&Utc::now(), &interval) == Some(slot) {
+            continue;
+        }
         // Important: remove element to cleanup memory.
         if let Some(measurements) = timeseries.measurements.remove(&slot) {
             match aggregate {
@@ -208,6 +213,7 @@ fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries) {
                         .max();
                     let naive = NaiveDateTime::from_timestamp(slot, 0);
                     let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+
                     timeseries.data_points.push_back(DataPoint {
                         datetime: datetime.into(),
                         value: max_value.unwrap().into_inner(),
@@ -327,16 +333,20 @@ impl MetricMessage {
             MetricMessage::TimeMeasurement { datetime, .. } => *datetime,
         };
 
-        let timestamp = datetime.timestamp_millis();
-        let interval_millis = interval.as_millis() as i64;
+        datetime_to_slot(&datetime, &interval)
+    }
+}
 
-        if interval_millis == 0 {
-            // Divide by zero.
-            None
-        } else {
-            // Integer division rounds down.
-            Some(timestamp / interval_millis)
-        }
+fn datetime_to_slot<Tz: TimeZone>(datetime: &DateTime<Tz>, interval: &Duration) -> Option<i64> {
+    let timestamp = datetime.timestamp_millis();
+    let interval_millis = interval.as_millis() as i64;
+
+    if interval_millis == 0 {
+        // Divide by zero.
+        None
+    } else {
+        // Integer division rounds down.
+        Some(timestamp / interval_millis)
     }
 }
 
