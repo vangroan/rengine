@@ -2,7 +2,30 @@
 //!
 //! # Usage
 //!
-//! TODO: Examples
+//! ```
+//! use rengine::metrics::{DataPoint, MetricAggregate, MetricHub, MetricSettings};
+//! use rengine::specs::World;
+//!
+//! let mut world = World::new();
+//!
+//! // Instantiating the metric hub starts the worker thread immediately.
+//! world.add_resource(MetricHub::new(MetricSettings::default()));
+//!
+//! // To measure time, retrieve the metric hub from
+//! // the world and start a timer.
+//! let metrics = world.read_resource::<MetricHub>();
+//!
+//! // Specify a unique id for the metric, along with a aggregation method.
+//! const EXAMPLE_METRIC: u16 = 1;
+//! let mut timer = metrics.timer(EXAMPLE_METRIC, MetricAggregate::Maximum);
+//!
+//! // Stop the timer, otherwise it will be stopped when it's dropped.
+//! timer.stop();
+//!
+//! // Retrieve aggregated time series from metric hub.
+//! let mut timeseries: Vec<DataPoint> = vec![DataPoint::default(); 64];
+//! metrics.make_time_series(EXAMPLE_METRIC, MetricAggregate::Maximum, &mut timeseries, 0, 64);
+//! ```
 //!
 //! # Implementation
 //!
