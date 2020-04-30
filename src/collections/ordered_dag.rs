@@ -29,7 +29,7 @@ where
     /// will occur.
     ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// use rengine::collections::OrderedDag;
     ///
@@ -39,7 +39,7 @@ where
     /// let node_2_id = graph.insert(2);
     /// let node_3_id = graph.insert(3);
     /// ```
-    pub fn insert(&mut self, node_value: N)  -> NodeId {
+    pub fn insert(&mut self, node_value: N) -> NodeId {
         self.nodes.insert(Node {
             value: node_value,
             edges: vec![],
@@ -52,7 +52,7 @@ where
     /// another root.
     ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// use rengine::collections::OrderedDag;
     ///
@@ -89,15 +89,26 @@ where
     /// # Example
     ///
     /// ```
-    /// use rengine::collections::OrderedDag;
+    /// use rengine::collections::{OrderedDag, OrderedGraphError};
     ///
     /// let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
     ///
     /// let node_1 = graph.insert(1);
     /// let node_2 = graph.insert(2);
-    /// graph.set_edge(node_1, node_2, 0).unwrap();
+    /// let result = graph.set_edge(node_1, node_2, 0);
+    /// assert_eq!(result, Ok(()));
+    /// assert_eq!(graph.out_edge_count(node_1), Some(1));
+    ///
+    /// // Set edge fails when a cycle is detected.
+    /// let result = graph.set_edge(node_2, node_1, 0);
+    /// assert_eq!(result, Err(OrderedGraphError::Cycle));
     /// ```
-    pub fn set_edge(&mut self, source_id: NodeId, target_id: NodeId, edge_value: E) -> Result<(), OrderedGraphError> {
+    pub fn set_edge(
+        &mut self,
+        source_id: NodeId,
+        target_id: NodeId,
+        edge_value: E,
+    ) -> Result<(), OrderedGraphError> {
         let index: usize;
 
         if let Some(node) = self.nodes.get_mut(source_id) {
@@ -133,7 +144,7 @@ where
     ///
     /// ```
     /// use rengine::collections::OrderedDag;
-    /// 
+    ///
     /// let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
     ///
     /// let node_1 = graph.insert(1);
@@ -151,7 +162,7 @@ where
     ///
     /// ```
     /// use rengine::collections::OrderedDag;
-    /// 
+    ///
     /// let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
     ///
     /// let node_1 = graph.insert(1);
@@ -160,6 +171,32 @@ where
     /// ```
     pub fn node_mut(&mut self, node_id: NodeId) -> Option<&mut N> {
         self.nodes.get_mut(node_id).map(|n| &mut n.value)
+    }
+
+    /// The number of edges going out of the given node.
+    ///
+    /// Returns None if the node does not exist.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    ///
+    /// let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
+    ///
+    /// let node_1 = graph.insert(1);
+    /// let node_2 = graph.insert(2);
+    /// let node_3 = graph.insert(3);
+    ///
+    /// graph.set_edge(node_1, node_2, 0).unwrap();
+    /// graph.set_edge(node_1, node_3, 0).unwrap();
+    ///
+    /// assert_eq!(graph.out_edge_count(node_1), Some(2));
+    /// assert_eq!(graph.out_edge_count(node_2), Some(0));
+    /// assert_eq!(graph.out_edge_count(node_3), Some(0));
+    /// ```
+    pub fn out_edge_count(&self, node_id: NodeId) -> Option<usize> {
+        self.nodes.get(node_id).map(|n| n.edges.len())
     }
 
     fn check_cycle(&self, start_node_id: NodeId) -> Option<NodeId> {
@@ -222,7 +259,7 @@ struct Edge<E: Ord> {
     child: NodeId,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum OrderedGraphError {
     /// The graph has been changed in a way that introduced a cycle.
     Cycle,
@@ -235,8 +272,10 @@ impl error::Error for OrderedGraphError {
     fn description(&self) -> &str {
         match self {
             OrderedGraphError::Cycle => "graph detected cycle between nodes",
-            OrderedGraphError::NodeDoesNotExist => "attempt to create edge between nodes that don't exist",
-                    }
+            OrderedGraphError::NodeDoesNotExist => {
+                "attempt to create edge between nodes that don't exist"
+            }
+        }
     }
 }
 
@@ -244,7 +283,9 @@ impl fmt::Display for OrderedGraphError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             OrderedGraphError::Cycle => write!(f, "Ordered graph cycle error"),
-            OrderedGraphError::NodeDoesNotExist => write!(f, "Ordered graph node does not exist error"),
+            OrderedGraphError::NodeDoesNotExist => {
+                write!(f, "Ordered graph node does not exist error")
+            }
         }
     }
 }
