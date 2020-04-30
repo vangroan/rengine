@@ -69,7 +69,8 @@ where
         });
 
         if let Some(pid) = parent_id {
-            self.set_edge(pid, node_id, E::default());
+            // Won't return error because no outgoing edges exist yet.
+            self.set_edge(pid, node_id, E::default()).unwrap();
         }
 
         node_id
@@ -197,6 +198,24 @@ where
     /// ```
     pub fn out_edge_count(&self, node_id: NodeId) -> Option<usize> {
         self.nodes.get(node_id).map(|n| n.edges.len())
+    }
+
+    /// The number of nodes in the graph.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    ///
+    /// let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
+    ///
+    /// let node_1 = graph.insert(1);
+    /// let node_2 = graph.insert(2);
+    /// let node_3 = graph.insert(3);
+    /// assert_eq!(graph.len(), 3);
+    /// ```
+    pub fn len(&self) -> usize {
+        self.nodes.len()
     }
 
     fn check_cycle(&self, start_node_id: NodeId) -> Option<NodeId> {
