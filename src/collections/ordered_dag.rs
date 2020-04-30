@@ -317,3 +317,14 @@ enum VisitColor {
 }
 
 new_key_type! { pub struct NodeId; }
+
+// ------- //
+// Walkers //
+// ------- //
+
+pub trait Walker {
+    type Node;
+    type Edge: Ord;
+
+    fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId>;
+}
