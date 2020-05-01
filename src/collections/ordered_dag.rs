@@ -6,7 +6,7 @@ use slotmap::SlotMap;
 use std::cmp::Ord;
 use std::collections::HashMap;
 use std::error;
-use std::fmt;
+use std::fmt::{self, Debug};
 
 /// Directed acyclic graph, where node children are kept sorted.
 pub struct OrderedDag<N, E: Ord> {
@@ -110,30 +110,43 @@ where
         target_id: NodeId,
         edge_value: E,
     ) -> Result<(), OrderedGraphError> {
-        let index: usize;
+        if let Some(index) = self.set_edge_unchecked(source_id, target_id, edge_value) {
+            if let Some(_in_node) = self.check_cycle(source_id) {
+                // Cycle detected, remove newly inserted edge.
+                let _ = self.nodes.get_mut(source_id).unwrap().edges.remove(index);
+                Err(OrderedGraphError::Cycle)
+            } else {
+                Ok(())
+            }
+        } else {
+            Err(OrderedGraphError::NodeDoesNotExist)
+        }
+    }
 
+    /// Add or update an edge without checking for cycles.
+    ///
+    /// Returns the index of the inserted edge on success, or None
+    /// if the target node doesn't exist.
+    fn set_edge_unchecked(
+        &mut self,
+        source_id: NodeId,
+        target_id: NodeId,
+        edge_value: E,
+    ) -> Option<usize> {
         if let Some(node) = self.nodes.get_mut(source_id) {
             if let Some(idx) = node.edges.iter().position(|e| e.child == target_id) {
                 // Edge exists. Replace value.
                 node.edges.get_mut(idx).unwrap().value = edge_value;
-                index = idx;
+                Some(idx)
             } else {
                 node.edges.push(Edge {
                     value: edge_value,
                     child: target_id,
                 });
-                index = node.edges.len() - 1;
-            };
+                Some(node.edges.len() - 1)
+            }
         } else {
-            return Err(OrderedGraphError::NodeDoesNotExist);
-        }
-
-        if let Some(_in_node) = self.check_cycle(source_id) {
-            // Cycle detected, remove newly inserted edge.
-            let _ = self.nodes.get_mut(source_id).unwrap().edges.remove(index);
-            Err(OrderedGraphError::Cycle)
-        } else {
-            Ok(())
+            None
         }
     }
 
@@ -228,13 +241,13 @@ where
         ) -> Option<NodeId> {
             let child_iter = g.nodes.get(u).unwrap().edges.iter().map(|e| e.child);
             for v in child_iter {
-                let color = *s.get(&v).unwrap_or(&VisitColor::White);
+                let color = *s.entry(v).or_insert(VisitColor::White);
                 if color == VisitColor::Grey {
                     // Cycle detected. Return parent node.
                     return Some(u);
                 }
 
-                if color != VisitColor::Black {
+                if color == VisitColor::Black {
                     return None;
                 }
 
@@ -254,6 +267,33 @@ where
 
         state.insert(start_node_id, VisitColor::Grey);
         return dfs_visit(self, start_node_id, &mut state);
+    }
+}
+
+impl<N, E> OrderedDag<N, E>
+where
+    N: Debug,
+    E: Ord + Debug,
+{
+    /// Builds a string representation of the whole graph.
+    pub fn string(&self) -> String {
+        let mut sb = String::new();
+
+        for (node_id, node) in self.nodes.iter() {
+            if node.edges.len() == 0 {
+                sb.push_str(&format!("{:?} ->\n", node_id));
+            } else if node.edges.len() == 1 {
+                let child_id = node.edges.iter().next().unwrap().child;
+                sb.push_str(&format!("{:?} -> {:?}\n", node_id, child_id));
+            } else {
+                sb.push_str(&format!("{:?}\n", node_id));
+                for edge_id in node.edges.iter().map(|e| e.child) {
+                    sb.push_str(&format!("  -> {:?}\n", edge_id));
+                }
+            }
+        }
+
+        sb
     }
 }
 
@@ -327,4 +367,23 @@ pub trait Walker {
     type Edge: Ord;
 
     fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId>;
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_check_cycle() {
+        let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
+
+        let node_1 = graph.insert(1);
+        let node_2 = graph.insert(2);
+        graph.set_edge(node_1, node_2, 0).unwrap();
+        assert_eq!(graph.check_cycle(node_1), None);
+
+        graph.set_edge_unchecked(node_2, node_1, 0).unwrap();
+        println!("{}", graph.string());
+        assert!(graph.check_cycle(node_1).is_some());
+    }
 }
