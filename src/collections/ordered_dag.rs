@@ -75,7 +75,7 @@ where
 
         if let Some(pid) = parent_id {
             // Won't return error because no outgoing edges exist yet.
-            self.set_edge(pid, node_id, E::default()).unwrap();
+            self.set_edge_unchecked(pid, node_id, E::default()).unwrap();
         }
 
         node_id
@@ -92,6 +92,11 @@ where
     ///
     /// # Errors
     ///
+    /// Returns errors when the source node id does not exist, or when the edge
+    /// would create a cycle.
+    ///
+    /// When a cycle is detected, the edge will not be created.
+    ///
     /// # Example
     ///
     /// ```
@@ -103,11 +108,12 @@ where
     /// let node_2 = graph.insert(2);
     /// let result = graph.set_edge(node_1, node_2, 0);
     /// assert_eq!(result, Ok(()));
-    /// assert_eq!(graph.out_edge_count(node_1), Some(1));
+    /// assert_eq!(graph.out_edge_len(node_1), Some(1));
     ///
     /// // Set edge fails when a cycle is detected.
     /// let result = graph.set_edge(node_2, node_1, 0);
     /// assert_eq!(result, Err(OrderedGraphError::Cycle));
+    /// assert_eq!(graph.out_edge_len(node_2), Some(0));
     /// ```
     pub fn set_edge(
         &mut self,
@@ -210,11 +216,11 @@ where
     /// graph.set_edge(node_1, node_2, 0).unwrap();
     /// graph.set_edge(node_1, node_3, 0).unwrap();
     ///
-    /// assert_eq!(graph.out_edge_count(node_1), Some(2));
-    /// assert_eq!(graph.out_edge_count(node_2), Some(0));
-    /// assert_eq!(graph.out_edge_count(node_3), Some(0));
+    /// assert_eq!(graph.out_edge_len(node_1), Some(2));
+    /// assert_eq!(graph.out_edge_len(node_2), Some(0));
+    /// assert_eq!(graph.out_edge_len(node_3), Some(0));
     /// ```
-    pub fn out_edge_count(&self, node_id: NodeId) -> Option<usize> {
+    pub fn out_edge_len(&self, node_id: NodeId) -> Option<usize> {
         self.nodes.get(node_id).map(|n| n.edges.len())
     }
 
