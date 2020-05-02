@@ -7,6 +7,11 @@ use std::cmp::Ord;
 use std::collections::HashMap;
 use std::error;
 use std::fmt::{self, Debug};
+use std::marker::PhantomData;
+
+pub mod prelude {
+    pub use super::{OrderedDag, Walker};
+}
 
 /// Directed acyclic graph, where node children are kept sorted.
 pub struct OrderedDag<N, E: Ord> {
@@ -90,7 +95,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use rengine::collections::{OrderedDag, OrderedGraphError};
+    /// use rengine::collections::{OrderedDag, ordered_dag::OrderedGraphError};    
     ///
     /// let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
     ///
@@ -297,6 +302,63 @@ where
     }
 }
 
+impl<N, E> OrderedDag<N, E>
+where
+    E: Ord,
+{
+    /// Traverse the graph in pre-order.
+    ///
+    /// If the graph does not contain the given node id, the walker
+    /// will do nothing.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    /// use rengine::collections::ordered_dag::Walker;
+    ///
+    /// //       a
+    /// //      / \
+    /// //     /   \
+    /// //    b     c
+    /// //   / \
+    /// //  /   \
+    /// // d     e
+    /// //
+    /// // pre_order = a, b, d, e, c
+    ///
+    /// let mut graph: OrderedDag<&'static str, i64> = OrderedDag::new();
+    /// let node_1 = graph.insert("a");
+    /// let node_2 = graph.insert("b");
+    /// let node_3 = graph.insert("c");
+    /// let node_4 = graph.insert("d");
+    /// let node_5 = graph.insert("e");
+    /// graph.set_edge(node_1, node_2, 0);
+    /// graph.set_edge(node_1, node_3, 0);
+    /// graph.set_edge(node_2, node_4, 0);
+    /// graph.set_edge(node_2, node_5, 0);
+    ///
+    /// let mut walker = graph.walk_pre_order(node_1);
+    /// let mut result = String::new();
+    ///
+    /// while let Some(node_id) = walker.next(&graph) {
+    ///     result.push_str(graph.node(node_id).unwrap());
+    /// }
+    ///
+    /// assert_eq!(result.as_str(), "abdec");
+    /// ```
+    pub fn walk_pre_order(&self, start_node: NodeId) -> PreOrderWalk<N, E> {
+        PreOrderWalk {
+            stack: if self.nodes.contains_key(start_node) {
+                vec![start_node]
+            } else {
+                vec![]
+            },
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<N, E> Default for OrderedDag<N, E>
 where
     E: Ord + Default,
@@ -358,15 +420,48 @@ enum VisitColor {
 
 new_key_type! { pub struct NodeId; }
 
-// ------- //
-// Walkers //
-// ------- //
+// -------------------- //
+// Traversal Algorithms //
+// -------------------- //
 
 pub trait Walker {
     type Node;
     type Edge: Ord;
 
     fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId>;
+}
+
+pub struct PreOrderWalk<N, E> {
+    stack: Vec<NodeId>,
+    _marker: PhantomData<(N, E)>,
+}
+
+impl<N, E> Walker for PreOrderWalk<N, E>
+where
+    E: Ord,
+{
+    type Node = N;
+    type Edge = E;
+    fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId> {
+        if let Some(node_id) = self.stack.pop() {
+            let mut iter = graph
+                .nodes
+                .get(node_id)
+                .unwrap()
+                .edges
+                .iter()
+                .map(|e| e.child);
+            // The stack pops from the back, so the first child to
+            // be visited must be added last.
+            while let Some(child_id) = iter.next_back() {
+                self.stack.push(child_id);
+            }
+
+            Some(node_id)
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
