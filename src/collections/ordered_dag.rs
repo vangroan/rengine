@@ -7,6 +7,7 @@ use std::cmp::Ord;
 use std::collections::HashMap;
 use std::error;
 use std::fmt::{self, Debug};
+use std::iter::Iterator;
 use std::marker::PhantomData;
 
 pub mod prelude {
@@ -20,7 +21,7 @@ pub struct OrderedDag<N, E: Ord> {
 
 impl<N, E> OrderedDag<N, E>
 where
-    E: Ord + Default,
+    E: Ord,
 {
     pub fn new() -> Self {
         OrderedDag {
@@ -67,7 +68,10 @@ where
     /// let node_2_id = graph.insert(2);
     /// let node_3_id = graph.insert(3);
     /// ```
-    pub fn insert_at(&mut self, node_value: N, parent_id: Option<NodeId>) -> NodeId {
+    pub fn insert_at(&mut self, node_value: N, parent_id: Option<NodeId>) -> NodeId
+    where
+        E: Default,
+    {
         let node_id = self.nodes.insert(Node {
             value: node_value,
             edges: vec![],
@@ -242,6 +246,52 @@ where
         self.nodes.len()
     }
 
+    /// Sorts the edges of all nodes.
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    /// use rengine::collections::ordered_dag::{NodeId, Walker};
+    ///
+    /// fn make_string(g: &OrderedDag<&str, i64>, node_id: NodeId) -> String {
+    ///     g.walk_pre_order(node_id)
+    ///         .iter(&g)
+    ///         .map(|(_node_id, node_val)| *node_val)
+    ///         .collect::<Vec<&str>>()
+    ///         .join("")
+    /// }
+    ///
+    /// let mut graph: OrderedDag<&'static str, i64> = OrderedDag::new();
+    ///
+    /// //        a
+    /// //       /|\
+    /// //      / | \
+    /// //     /  |  \
+    /// //    23  11  7
+    /// //   /    |    \
+    /// //  b     c     d
+    ///
+    /// let node_1 = graph.insert("a");
+    /// let node_2 = graph.insert("b");
+    /// let node_3 = graph.insert("c");
+    /// let node_4 = graph.insert("d");
+    /// graph.set_edge(node_1, node_2, 23);
+    /// graph.set_edge(node_1, node_3, 11);
+    /// graph.set_edge(node_1, node_4, 7);
+    ///
+    /// graph.sort();
+    /// assert_eq!(make_string(&graph, node_1), "adcb");
+    ///
+    /// // Move "b" to the front
+    /// graph.set_edge(node_1, node_2, 6);
+    /// graph.sort();
+    /// assert_eq!(make_string(&graph, node_1), "abdc");
+    /// ```
+    pub fn sort(&mut self) {
+        for (_, node) in self.nodes.iter_mut() {
+            node.edges.sort();
+        }
+    }
+
     fn check_cycle(&self, start_node_id: NodeId) -> Option<NodeId> {
         let mut state: HashMap<NodeId, VisitColor> = HashMap::new();
 
@@ -279,15 +329,13 @@ where
         state.insert(start_node_id, VisitColor::Grey);
         return dfs_visit(self, start_node_id, &mut state);
     }
-}
 
-impl<N, E> OrderedDag<N, E>
-where
-    N: Debug,
-    E: Ord + Debug,
-{
     /// Builds a string representation of the whole graph.
-    pub fn string(&self) -> String {
+    pub fn string(&self) -> String
+    where
+        N: Debug,
+        E: Ord + Debug,
+    {
         let mut sb = String::new();
 
         for (node_id, node) in self.nodes.iter() {
@@ -435,6 +483,40 @@ pub trait Walker {
     type Edge: Ord;
 
     fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId>;
+
+    fn iter<'a>(
+        self,
+        graph: &'a OrderedDag<Self::Node, Self::Edge>,
+    ) -> WalkerIter<'a, Self::Node, Self::Edge, Self>
+    where
+        Self: Sized,
+    {
+        WalkerIter {
+            walker: self,
+            graph,
+        }
+    }
+}
+
+pub struct WalkerIter<'a, N, E: Ord, W: Walker<Node = N, Edge = E>> {
+    walker: W,
+    graph: &'a OrderedDag<N, E>,
+}
+
+impl<'a, N, E, W> Iterator for WalkerIter<'a, N, E, W>
+where
+    E: Ord,
+    W: Walker<Node = N, Edge = E>,
+{
+    type Item = (NodeId, &'a N);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(node_id) = self.walker.next(&self.graph) {
+            self.graph.node(node_id).map(|node_val| (node_id, node_val))
+        } else {
+            None
+        }
+    }
 }
 
 pub struct PreOrderWalk<N, E> {
