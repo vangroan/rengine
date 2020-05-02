@@ -22,12 +22,15 @@ extern crate shrev;
 pub extern crate specs;
 #[macro_use]
 extern crate specs_derive;
+#[macro_use]
+extern crate slotmap;
 extern crate toml;
 extern crate walkdir;
 
 pub mod angle;
 mod app;
 pub mod camera;
+pub mod collections;
 pub mod colors;
 pub mod comp;
 mod errors;
