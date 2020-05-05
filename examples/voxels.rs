@@ -15,7 +15,7 @@ use rengine::glutin::dpi::PhysicalPosition;
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
-use rengine::render::Material;
+use rengine::render::{Gizmo, Material};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
 use rengine::specs::{
     Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteExpect, WriteStorage,
@@ -72,7 +72,8 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Enti
     // Note: Mesh is generated later
     let entity = world
         .create_entity()
-        .with(tex)
+        .with(Material::Basic { texture: tex })
+        .with(Gizmo)
         .with(TileVoxelChunk::new(chunk_id.clone()))
         .with(Transform::new().with_position([
             chunk_id.i as f32 * CHUNK_DIM8 as f32,
@@ -96,7 +97,8 @@ fn create_sprite<V: Into<glm::Vec3>>(
 ) -> Entity {
     world
         .create_entity()
-        .with(tex)
+        .with(Material::Basic { texture: tex })
+        .with(Gizmo)
         .with(Billboard)
         .with(
             MeshBuilder::new()

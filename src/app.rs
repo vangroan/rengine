@@ -9,7 +9,7 @@ use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::gui::GuiGraph;
 use crate::modding::Mods;
-use crate::render::{ChannelPair, Material};
+use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
@@ -75,6 +75,8 @@ impl<'a, 'b> App<'a, 'b> {
         // Engine Components
         world.register::<Mesh>();
         world.register::<Transform>();
+        world.register::<Material>();
+        world.register::<Gizmo>();
         world.register::<CameraView>();
         world.register::<CameraProjection>();
         world.register::<FocusTarget>();
@@ -131,38 +133,38 @@ impl<'a, 'b> App<'a, 'b> {
         // TODO: message passing to notify systems of events
         let mut camera_resize_system = CameraResizeSystem::new();
 
-        // Materials
-        world.register::<Material>();
+        // Basic render PSO
+        {
+            // Shader program
+            let shader_program = graphics
+                .factory
+                .link_program(
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/basic_150.glslv"
+                    )),
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/basic_150.glslf"
+                    )),
+                )
+                .unwrap();
 
-        // Shader program
-        let shader_program = graphics
-            .factory
-            .link_program(
-                include_bytes!(concat!(
-                    env!("CARGO_MANIFEST_DIR"),
-                    "/src/shaders/basic_150.glslv"
-                )),
-                include_bytes!(concat!(
-                    env!("CARGO_MANIFEST_DIR"),
-                    "/src/shaders/basic_150.glslf"
-                )),
-            )
-            .unwrap();
+            // Pipeline State Object
+            let pso = graphics
+                .factory
+                .create_pipeline_from_program(
+                    &shader_program,
+                    gfx::Primitive::TriangleList,
+                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    pipe::new(),
+                )
+                .unwrap();
 
-        // Pipeline State Object
-        let pso = graphics
-            .factory
-            .create_pipeline_from_program(
-                &shader_program,
-                gfx::Primitive::TriangleList,
-                gfx::state::Rasterizer::new_fill().with_cull_back(),
-                pipe::new(),
-            )
-            .unwrap();
-
-        // Bundle program and pipeline state object together to avoid
-        // lifetime issues with world resources borrowing each other.
-        world.add_resource(PipelineBundle::new(pso, shader_program));
+            // Bundle program and pipeline state object together to avoid
+            // lifetime issues with world resources borrowing each other.
+            world.add_resource(PipelineBundle::new(pso, shader_program));
+        }
 
         // Gizmo Wireframe PSO
         {
@@ -354,10 +356,10 @@ impl<'a, 'b> App<'a, 'b> {
             });
 
             // Cooperatively give up CPU time
-            // ::std::thread::yield_now();
+            ::std::thread::yield_now();
 
             // TODO: Remove sleep; call update and render on separate timers
-            ::std::thread::sleep(::std::time::Duration::from_millis(1));
+            // ::std::thread::sleep(::std::time::Duration::from_millis(1));
         }
 
         Ok(())
@@ -452,7 +454,7 @@ impl AppBuilder {
         let context_builder = ContextBuilder::new()
             .with_gl(GlRequest::Specific(Api::OpenGl, (3, 2)))
             .with_gl_profile(GlProfile::Core) // modern OpenGL only
-            .with_vsync(true);
+            .with_vsync(false);
 
         // Init
         let (window, device, factory, render_target, depth_stencil) =
