@@ -9,7 +9,7 @@ use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::gui::GuiGraph;
 use crate::modding::Mods;
-use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
+use crate::render::{ChannelPair, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
@@ -131,6 +131,9 @@ impl<'a, 'b> App<'a, 'b> {
         // TODO: message passing to notify systems of events
         let mut camera_resize_system = CameraResizeSystem::new();
 
+        // Materials
+        world.register::<Material>();
+
         // Shader program
         let shader_program = graphics
             .factory
@@ -177,17 +180,19 @@ impl<'a, 'b> App<'a, 'b> {
                 )
                 .unwrap();
 
+            let mut fillmode = gfx::state::Rasterizer::new_fill();
+            fillmode.method = gfx::state::RasterMethod::Line(1); // Render lines
             let gizmo_pso = graphics
                 .factory
                 .create_pipeline_from_program(
                     &gizmo_shader,
                     gfx::Primitive::TriangleList,
-                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    fillmode,
                     gizmo_pipe::new(),
                 )
                 .unwrap();
 
-            world.add_resource(GizmoPipelineBundle::new(gizmo_pso, gizmo_shader));
+            world.add_resource(PipelineBundle::new(gizmo_pso, gizmo_shader));
         }
 
         // Encoder
@@ -201,8 +206,6 @@ impl<'a, 'b> App<'a, 'b> {
             graphics.render_target.clone(),
             graphics.depth_stencil.clone(),
         );
-        let mut _gizmo_renderer =
-            GizmoDrawSystem::new(channel.clone(), graphics.render_target.clone());
 
         // Text Rendering
         let mut text_renderer = DrawTextSystem::new(channel.clone());

@@ -15,6 +15,7 @@ use rengine::glutin::dpi::PhysicalPosition;
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
+use rengine::render::Material;
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
 use rengine::specs::{
     Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteExpect, WriteStorage,

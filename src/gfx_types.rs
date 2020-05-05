@@ -62,8 +62,9 @@ gfx_defines! {
         // Enables the scissor test
         scissor: gfx::Scissor = (),
 
-        // This makes the BlendMode part of the pipeline, which is fine for the simple case
-        out: gfx::RenderTarget<ColorFormat> = "Target0",
+        render_target: gfx::RenderTarget<ColorFormat> = "Target0",
+
+        depth_target: gfx::DepthTarget<DepthFormat> = gfx::preset::depth::LESS_EQUAL_WRITE,
     }
 
     pipeline line_pipe {

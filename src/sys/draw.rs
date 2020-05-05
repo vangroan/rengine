@@ -1,11 +1,11 @@
 use crate::camera::{ActiveCamera, CameraProjection, CameraView};
 use crate::comp::{GlTexture, Mesh, Transform};
-use crate::gfx_types::{self, pipe, DepthTarget, PipelineBundle, RenderTarget};
+use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, RenderTarget};
 use crate::option::lift2;
-use crate::render::ChannelPair;
+use crate::render::{ChannelPair, Material};
 use crate::res::ViewPort;
 use nalgebra::Matrix4;
-use specs::{Join, Read, ReadExpect, ReadStorage, System};
+use specs::{Join, Read, ReadExpect, ReadStorage, System, SystemData};
 
 pub struct DrawSystem {
     channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,
@@ -13,16 +13,19 @@ pub struct DrawSystem {
     pub(crate) depth_target: DepthTarget<gfx_device::Resources>,
 }
 
-pub type DrawSystemData<'a> = (
-    ReadExpect<'a, PipelineBundle<pipe::Meta>>,
-    ReadExpect<'a, ViewPort>,
-    Read<'a, ActiveCamera>,
-    ReadStorage<'a, Mesh>,
-    ReadStorage<'a, GlTexture>,
-    ReadStorage<'a, Transform>,
-    ReadStorage<'a, CameraView>,
-    ReadStorage<'a, CameraProjection>,
-);
+#[derive(SystemData)]
+pub struct DrawSystemData<'a> {
+    basic_pipe_bundle: ReadExpect<'a, PipelineBundle<pipe::Meta>>,
+    gizmo_pipe_bundle: ReadExpect<'a, PipelineBundle<gizmo_pipe::Meta>>,
+    view_port: ReadExpect<'a, ViewPort>,
+    active_camera: Read<'a, ActiveCamera>,
+    meshes: ReadStorage<'a, Mesh>,
+    materials: ReadStorage<'a, Material>,
+    textures: ReadStorage<'a, GlTexture>,
+    transforms: ReadStorage<'a, Transform>,
+    cam_views: ReadStorage<'a, CameraView>,
+    cam_projs: ReadStorage<'a, CameraProjection>,
+}
 
 impl DrawSystem {
     pub fn new(
@@ -41,19 +44,19 @@ impl DrawSystem {
 impl<'a> System<'a> for DrawSystem {
     type SystemData = DrawSystemData<'a>;
 
-    fn run(
-        &mut self,
-        (
-            pipeline,
+    fn run(&mut self, data: Self::SystemData) {
+        let DrawSystemData {
+            basic_pipe_bundle,
+            gizmo_pipe_bundle,
             view_port,
             active_camera,
             meshes,
+            materials,
             textures,
             transforms,
             cam_views,
             cam_projs,
-        ): Self::SystemData,
-    ) {
+        } = data;
         match self.channel.recv_block() {
             Ok(mut encoder) => {
                 // Without a camera, we draw according to the default OpenGL behaviour
@@ -83,7 +86,6 @@ impl<'a> System<'a> for DrawSystem {
                         vbuf: mesh.vbuf.clone(),
                         sampler: (tex.bundle.view.clone(), tex.bundle.sampler.clone()),
                         transforms: mesh.transbuf.clone(),
-                        // TODO: Camera position and zoom
                         view: view_matrix.into(),
                         proj: proj_matrix.into(),
                         // The rectangle to allow rendering within
@@ -92,7 +94,29 @@ impl<'a> System<'a> for DrawSystem {
                         depth_target: self.depth_target.clone(),
                     };
 
-                    encoder.draw(&mesh.slice, &pipeline.pso, &data);
+                    encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
+                }
+
+                for (ref mesh, ref mat, ref trans) in (&meshes, &materials, &transforms).join() {
+                    // Choose pipeline based on material
+                    match mat {
+                        Material::Gizmo => {
+                            // Prepare data
+                            let data = gizmo_pipe::Data {
+                                vbuf: mesh.vbuf.clone(),
+                                model: trans.matrix().into(),
+                                view: view_matrix.into(),
+                                proj: proj_matrix.into(),
+                                // The rectangle to allow rendering within
+                                scissor: view_port.rect,
+                                render_target: self.render_target.clone(),
+                                depth_target: self.depth_target.clone(),
+                            };
+
+                            encoder.draw(&mesh.slice, &gizmo_pipe_bundle.pso, &data);
+                        }
+                        _ => unimplemented!(),
+                    }
                 }
 
                 if let Err(err) = self.channel.send_block(encoder) {

@@ -1,7 +1,7 @@
 mod channel;
 mod draw;
-mod draw_gizmo;
+mod material;
 
 pub use channel::*;
 pub use draw::*;
-pub use draw_gizmo::*;
+pub use material::*;
