@@ -33,6 +33,7 @@ pub mod camera;
 pub mod collections;
 pub mod colors;
 pub mod comp;
+pub mod draw2d;
 mod errors;
 mod float;
 mod gfx_types;
