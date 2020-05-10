@@ -1,6 +1,9 @@
 use log::trace;
 use rengine;
+use rengine::comp::MeshBuilder;
 use rengine::draw2d::Canvas;
+use rengine::gui;
+use rengine::specs::Entity;
 use rengine::{Context, Scene, Trans};
 use std::error::Error;
 
@@ -23,17 +26,37 @@ impl Scene for Intro {
 
 struct Game {
     canvas: Canvas,
+    entities: Vec<Entity>,
 }
 
 impl Game {
     fn new(ctx: &mut Context<'_>) -> Game {
         Game {
             canvas: Canvas::new(&mut ctx.graphics, 640, 480).unwrap(),
+            entities: vec![],
         }
     }
 }
 
-impl Scene for Game {}
+impl Scene for Game {
+    fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        trace!("Game on start");
+
+        None
+    }
+
+    fn on_stop(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        trace!("Game on stop");
+
+        if let Err(err) = ctx.world.delete_entities(&self.entities) {
+            panic!(err);
+        }
+
+        self.entities.clear();
+
+        None
+    }
+}
 
 fn main() -> Result<(), Box<dyn Error>> {
     let app = rengine::AppBuilder::new()

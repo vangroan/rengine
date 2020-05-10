@@ -4,10 +4,12 @@ use crate::camera::{
 };
 use crate::colors;
 use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Transform};
+use crate::draw2d::Canvas;
 use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
-use crate::gui::GuiGraph;
+use crate::gui::GuiDrawable;
+use crate::gui::{DrawGuiSystem, GuiGraph};
 use crate::modding::Mods;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
@@ -86,6 +88,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<SlideCamera>();
         world.register::<GlTexture>();
         world.register::<TextBatch>();
+        world.register::<GuiDrawable>();
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
@@ -212,6 +215,14 @@ impl<'a, 'b> App<'a, 'b> {
         // Text Rendering
         let mut text_renderer = DrawTextSystem::new(channel.clone());
 
+        // Gui Rendering
+        let mut gui_renderer = DrawGuiSystem::new(
+            channel.clone(),
+            Canvas::new(&mut graphics, physical_w as u16, physical_h as u16).unwrap(),
+            graphics.render_target.clone(),
+            graphics.depth_stencil.clone(),
+        );
+
         // Modding
         if let Some((lib_name, mod_path)) = mods {
             let path = Path::new(mod_path);
@@ -336,6 +347,9 @@ impl<'a, 'b> App<'a, 'b> {
             // Render Text
             text_renderer.render(&mut world, &mut graphics);
 
+            // Render Gui
+            gui_renderer.run_now(&world.res);
+
             // Commit Render
             {
                 let mut encoder = channel.recv_block()?;
@@ -454,7 +468,7 @@ impl AppBuilder {
         let context_builder = ContextBuilder::new()
             .with_gl(GlRequest::Specific(Api::OpenGl, (3, 2)))
             .with_gl_profile(GlProfile::Core) // modern OpenGL only
-            .with_vsync(false);
+            .with_vsync(true);
 
         // Init
         let (window, device, factory, render_target, depth_stencil) =
