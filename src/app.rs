@@ -8,8 +8,7 @@ use crate::draw2d::Canvas;
 use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
-use crate::gui::GuiDrawable;
-use crate::gui::{DrawGuiSystem, GuiGraph};
+use crate::gui::{widgets, DrawGuiSystem, GuiDrawable, GuiGraph};
 use crate::modding::Mods;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
@@ -89,6 +88,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<GlTexture>();
         world.register::<TextBatch>();
         world.register::<GuiDrawable>();
+        world.register::<widgets::Button>();
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
@@ -123,7 +123,7 @@ impl<'a, 'b> App<'a, 'b> {
         // Default Camera
         let camera_entity = world
             .create_entity()
-            .with(Transform::new().with_position([0., 0., -2.]))
+            .with(Transform::new().with_position([0., 0., 2.]))
             .with(CameraProjection::with_device_size((
                 logical_w as u16,
                 logical_h as u16,

@@ -5,6 +5,7 @@ mod builder;
 mod draw;
 mod drawable;
 mod widget;
+pub mod widgets;
 
 pub use builder::*;
 pub use draw::*;
