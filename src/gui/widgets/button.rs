@@ -1,6 +1,7 @@
 use crate::colors::*;
-use crate::comp::{GlTexture, MeshBuilder, Transform};
+use crate::comp::{GlTexture, Transform};
 use crate::graphics::GraphicContext;
+use crate::gui::GuiMeshBuilder;
 use crate::render::Material;
 use crate::res::TextureAssets;
 use specs::{Builder, Component, DenseVecStorage, EntityBuilder};
@@ -22,15 +23,15 @@ impl Button {
         );
         builder
             .with(Button)
-            .with(Transform::default().with_position([0.0, 0.0, -10.0]))
+            .with(Transform::default().with_position([0.0, 0.0, 0.0]))
             .with(Material::Basic { texture })
             .with(
                 // TODO: replace with 9-patch
-                MeshBuilder::new()
-                    .quad_with_uvs(
-                        [0.0, 0.0, 0.0],
+                GuiMeshBuilder::new()
+                    .quad(
+                        [0.0, 0.0],
                         [1.0, 1.0],
-                        [WHITE, WHITE, WHITE, WHITE],
+                        [GREEN, GREEN, GREEN, GREEN],
                         [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
                     )
                     .build(graphics_context),

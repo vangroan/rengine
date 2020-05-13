@@ -4,12 +4,14 @@ use specs::Entity;
 mod builder;
 mod draw;
 mod drawable;
+mod mesh;
 mod widget;
 pub mod widgets;
 
 pub use builder::*;
 pub use draw::*;
 pub use drawable::*;
+pub use mesh::*;
 pub use widget::*;
 
 // TODO: Layout

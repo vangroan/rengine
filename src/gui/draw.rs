@@ -1,8 +1,11 @@
+use crate::camera::CameraProjection;
+use crate::comp::Transform;
 use crate::draw2d::Canvas;
-use crate::gfx_types::{DepthTarget, PipelineBundle, RenderTarget};
+use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, RenderTarget};
 use crate::graphics::GraphicContext;
-use crate::gui::GuiDrawable;
-use crate::render::ChannelPair;
+use crate::gui::{GuiDrawable, GuiMesh};
+use crate::render::{ChannelPair, Material};
+use crate::res::ViewPort;
 use gfx_device::{CommandBuffer, Resources};
 use specs::{Join, ReadExpect, ReadStorage, System};
 
@@ -11,6 +14,18 @@ pub struct DrawGuiSystem {
     canvas: Canvas,
     render_target: RenderTarget<gfx_device::Resources>,
     depth_target: DepthTarget<gfx_device::Resources>,
+    camera: CameraProjection,
+}
+
+#[derive(SystemData)]
+pub struct DrawGuiSystemData<'a> {
+    basic_pipe_bundle: ReadExpect<'a, PipelineBundle<pipe::Meta>>,
+    gizmo_pipe_bundle: ReadExpect<'a, PipelineBundle<gizmo_pipe::Meta>>,
+    view_port: ReadExpect<'a, ViewPort>,
+    materials: ReadStorage<'a, Material>,
+    transforms: ReadStorage<'a, Transform>,
+    gui_meshes: ReadStorage<'a, GuiMesh>,
+    gui_drawables: ReadStorage<'a, GuiDrawable>,
 }
 
 impl DrawGuiSystem {
@@ -25,32 +40,75 @@ impl DrawGuiSystem {
             canvas,
             render_target,
             depth_target,
+            camera: CameraProjection::default(),
         }
     }
 }
 
 impl<'a> System<'a> for DrawGuiSystem {
-    type SystemData = (
-        // ReadExpect<'a, PipelineBundle<pipe::Meta>>,
-        ReadStorage<'a, GuiDrawable>,
-    );
+    type SystemData = DrawGuiSystemData<'a>;
 
     fn run(&mut self, data: Self::SystemData) {
-        let (drawables,) = data;
+        let DrawGuiSystemData {
+            basic_pipe_bundle,
+            gizmo_pipe_bundle,
+            view_port,
+            materials,
+            transforms,
+            gui_meshes,
+            gui_drawables,
+        } = data;
+
+        self.camera.set_device_size((1024, 768));
 
         match self.channel.recv_block() {
-            Ok(_encoder) => {
-                for (drawable,) in (&drawables,).join() {
-                    match drawable {
-                        GuiDrawable::Text(_txt) => draw_txt(),
-                        GuiDrawable::Rectangle(_rect) => { /* Draw to canvas */ }
+            Ok(mut encoder) => {
+                // for (drawable,) in (&drawables,).join() {
+                //     match drawable {
+                //         GuiDrawable::Text(_txt) => draw_txt(),
+                //         GuiDrawable::Rectangle(_rect) => { /* Draw to canvas */ }
+                //     }
+                // }
+
+                // Draw to screen
+                for (ref mesh, ref mat, ref trans) in (&gui_meshes, &materials, &transforms).join()
+                {
+                    match mat {
+                        Material::Basic { texture } => {
+                            // Convert to pipeline transform type
+                            let trans = gfx_types::Transform {
+                                transform: trans.matrix().into(),
+                            };
+
+                            // Send transform to graphics card
+                            encoder
+                                .update_buffer(&mesh.transbuf, &[trans], 0)
+                                .expect("Failed to update buffer");
+                            // Prepare data
+                            let data = pipe::Data {
+                                vbuf: mesh.vbuf.clone(),
+                                sampler: (
+                                    texture.bundle.view.clone(),
+                                    texture.bundle.sampler.clone(),
+                                ),
+                                transforms: mesh.transbuf.clone(),
+                                view: glm::Mat4x4::identity().into(),
+                                // proj: self.camera.orthographic([0.0, 0.0, 0.0]).into(),
+                                proj: glm::Mat4x4::identity().into(),
+                                // The rectangle to allow rendering within
+                                scissor: view_port.rect,
+                                render_target: self.render_target.clone(),
+                                depth_target: self.depth_target.clone(),
+                            };
+
+                            encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
+                        }
+                        _ => unimplemented!(),
                     }
                 }
 
-                // Draw to screen
-
                 self.channel
-                    .send_block(_encoder)
+                    .send_block(encoder)
                     .expect("GUI render failed sending encoder back to main loop");
             }
             Err(err) => eprintln!("{}", err),

@@ -8,7 +8,7 @@ use crate::draw2d::Canvas;
 use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
-use crate::gui::{widgets, DrawGuiSystem, GuiDrawable, GuiGraph};
+use crate::gui::{widgets, DrawGuiSystem, GuiDrawable, GuiGraph, GuiMesh};
 use crate::modding::Mods;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
@@ -88,6 +88,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<GlTexture>();
         world.register::<TextBatch>();
         world.register::<GuiDrawable>();
+        world.register::<GuiMesh>();
         world.register::<widgets::Button>();
 
         // Event Streams
