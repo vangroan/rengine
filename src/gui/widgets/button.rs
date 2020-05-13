@@ -30,7 +30,7 @@ impl Button {
                 GuiMeshBuilder::new()
                     .quad(
                         [0.0, 0.0],
-                        [1.0, 1.0],
+                        [0.01, 0.01],
                         [GREEN, GREEN, GREEN, GREEN],
                         [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
                     )

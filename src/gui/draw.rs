@@ -5,15 +5,15 @@ use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, Rend
 use crate::graphics::GraphicContext;
 use crate::gui::{GuiDrawable, GuiMesh};
 use crate::render::{ChannelPair, Material};
-use crate::res::ViewPort;
+use crate::res::{DeviceDimensions, ViewPort};
 use gfx_device::{CommandBuffer, Resources};
 use specs::{Join, ReadExpect, ReadStorage, System};
 
 pub struct DrawGuiSystem {
     channel: ChannelPair<Resources, CommandBuffer>,
     canvas: Canvas,
-    render_target: RenderTarget<gfx_device::Resources>,
-    depth_target: DepthTarget<gfx_device::Resources>,
+    pub(crate) render_target: RenderTarget<gfx_device::Resources>,
+    pub(crate) depth_target: DepthTarget<gfx_device::Resources>,
     camera: CameraProjection,
 }
 
@@ -22,6 +22,7 @@ pub struct DrawGuiSystemData<'a> {
     basic_pipe_bundle: ReadExpect<'a, PipelineBundle<pipe::Meta>>,
     gizmo_pipe_bundle: ReadExpect<'a, PipelineBundle<gizmo_pipe::Meta>>,
     view_port: ReadExpect<'a, ViewPort>,
+    device_dim: ReadExpect<'a, DeviceDimensions>,
     materials: ReadStorage<'a, Material>,
     transforms: ReadStorage<'a, Transform>,
     gui_meshes: ReadStorage<'a, GuiMesh>,
@@ -53,13 +54,18 @@ impl<'a> System<'a> for DrawGuiSystem {
             basic_pipe_bundle,
             gizmo_pipe_bundle,
             view_port,
+            device_dim,
             materials,
             transforms,
             gui_meshes,
             gui_drawables,
         } = data;
 
-        self.camera.set_device_size((1024, 768));
+        let device_physical_size = device_dim.physical_size();
+        self.camera.set_device_size((
+            device_physical_size.width as u16,
+            device_physical_size.height as u16,
+        ));
 
         match self.channel.recv_block() {
             Ok(mut encoder) => {
@@ -93,8 +99,8 @@ impl<'a> System<'a> for DrawGuiSystem {
                                 ),
                                 transforms: mesh.transbuf.clone(),
                                 view: glm::Mat4x4::identity().into(),
-                                // proj: self.camera.orthographic([0.0, 0.0, 0.0]).into(),
-                                proj: glm::Mat4x4::identity().into(),
+                                proj: self.camera.orthographic([0.0, 0.0, 0.0]).into(),
+                                // proj: glm::Mat4x4::identity().into(),
                                 // The rectangle to allow rendering within
                                 scissor: view_port.rect,
                                 render_target: self.render_target.clone(),
