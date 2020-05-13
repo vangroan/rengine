@@ -302,6 +302,8 @@ impl<'a, 'b> App<'a, 'b> {
                         // Ensure no dangling shared references
                         renderer.render_target = graphics.render_target.clone();
                         renderer.depth_target = graphics.depth_stencil.clone();
+                        gui_renderer.render_target = graphics.render_target.clone();
+                        gui_renderer.depth_target = graphics.depth_stencil.clone();
 
                         // Update view port/scissor rectangle for rendering systems
                         let (win_w, win_h): (u32, u32) = physical_size.into();
