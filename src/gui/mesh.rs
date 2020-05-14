@@ -40,6 +40,7 @@ impl GuiMeshBuilder {
         self.vertices.len() as u16
     }
 
+    /// Creates a quad with an origin at the bottom left.
     pub fn quad<V>(
         mut self,
         position: V,
@@ -51,17 +52,18 @@ impl GuiMeshBuilder {
         V: Into<glm::Vec2>,
     {
         let pos = position.into();
-        let (w, h) = (size[0] / 2.0, size[1] / 2.0);
+        // let (w, h) = (size[0] / 2.0, size[1] / 2.0);
+        let [w, h] = size;
         let index = self.next_index();
 
         self.vertices
-            .push(vertex([pos.x - w, pos.y - h], uvs[0], colors[0]));
+            .push(vertex([pos.x, pos.y - h], uvs[0], colors[0]));
         self.vertices
             .push(vertex([pos.x + w, pos.y - h], uvs[1], colors[1]));
         self.vertices
-            .push(vertex([pos.x + w, pos.y + h], uvs[2], colors[2]));
+            .push(vertex([pos.x + w, pos.y], uvs[2], colors[2]));
         self.vertices
-            .push(vertex([pos.x - w, pos.y + h], uvs[3], colors[3]));
+            .push(vertex([pos.x, pos.y], uvs[3], colors[3]));
 
         // triangle 1
         self.indices.extend(&[index, index + 1, index + 2]);
