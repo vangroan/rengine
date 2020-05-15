@@ -5,6 +5,7 @@ mod builder;
 mod draw;
 mod drawable;
 mod mesh;
+mod proj;
 mod widget;
 pub mod widgets;
 
@@ -12,6 +13,7 @@ pub use builder::*;
 pub use draw::*;
 pub use drawable::*;
 pub use mesh::*;
+pub use proj::*;
 pub use widget::*;
 
 // TODO: Layout
