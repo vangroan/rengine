@@ -64,6 +64,7 @@ impl<'a> System<'a> for DrawGuiSystem {
         } = data;
 
         let device_physical_size = *device_dim.physical_size();
+        let dpi_factor = device_dim.dpi_factor() as f32;
         self.camera.set_device_size((
             device_physical_size.width as u16,
             device_physical_size.height as u16,
@@ -103,7 +104,7 @@ impl<'a> System<'a> for DrawGuiSystem {
                                 view: glm::Mat4x4::identity().into(),
                                 // proj: self.camera.orthographic([0.0, 0.0, 0.0]).into(),
                                 // proj: glm::Mat4x4::identity().into(),
-                                proj: create_matrix(device_physical_size).into(),
+                                proj: create_matrix(device_physical_size, dpi_factor).into(),
                                 // The rectangle to allow rendering within
                                 scissor: view_port.rect,
                                 render_target: self.render_target.clone(),
@@ -133,7 +134,7 @@ fn draw_txt() {}
 ///   - Explain missing z coordinate
 ///   - Explain scale to cancel window stretch
 ///   - Explain translate by whole window size
-fn create_matrix<P>(device_size: P) -> Matrix4<f32>
+fn create_matrix<P>(device_size: P, dpi_factor: f32) -> Matrix4<f32>
 where
     P: Into<PhysicalSize>,
 {
@@ -143,7 +144,9 @@ where
     } = device_size.into();
 
     // The normalised device coordinates (-1 to 1) will be mapped to a -500 to +500 pixels.
-    let pixel_scale = 1000.0;
+    //
+    // Higher DPI factor means more pixels can fit into the same area.
+    let pixel_scale = 1000.0 * dpi_factor;
     let (w, h) = (device_w as f32 / pixel_scale, device_h as f32 / pixel_scale);
 
     let mut m: Matrix4<f32> = Matrix4::identity();
