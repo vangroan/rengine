@@ -3,9 +3,10 @@ use rengine;
 use rengine::camera::CameraView;
 use rengine::comp::{MeshBuilder, Transform};
 use rengine::draw2d::Canvas;
+use rengine::gui::GuiMouseMoveSystem;
 use rengine::gui::{self, widgets};
 use rengine::res::DeltaTime;
-use rengine::specs::{Builder, Entity, Join, Read, ReadStorage, WriteStorage};
+use rengine::specs::{Builder, Entity, Join, Read, ReadStorage, RunNow, WriteStorage};
 use rengine::{Context, Scene, Trans};
 use std::error::Error;
 
@@ -75,6 +76,8 @@ impl Scene for Game {
                 }
             },
         );
+
+        GuiMouseMoveSystem.run_now(&ctx.world.res);
 
         None
     }
