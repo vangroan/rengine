@@ -1,11 +1,23 @@
-use super::super::WidgetBounds;
+use super::super::{GuiMeshBuilder, Placement, WidgetBounds};
 use crate::colors::*;
 use crate::comp::{GlTexture, Transform};
 use crate::graphics::GraphicContext;
-use crate::gui::GuiMeshBuilder;
 use crate::render::Material;
 use crate::res::TextureAssets;
-use specs::{Builder, Component, DenseVecStorage, EntityBuilder};
+use specs::{Builder, Component, DenseVecStorage, Entity, EntityBuilder, World};
+
+pub fn create_text_button(world: &mut World, graphics: &mut GraphicContext, _text: &str) -> Entity {
+    let _texture = GlTexture::from_bundle(
+        world
+            .write_resource::<TextureAssets>()
+            .default_texture(graphics.factory_mut()),
+    );
+
+    // Create Text
+
+    // Create Sprite
+    world.create_entity().build()
+}
 
 #[derive(Component)]
 #[storage(DenseVecStorage)]
@@ -25,6 +37,7 @@ impl Button {
         );
         builder
             .with(Button)
+            .with(Placement::zero())
             .with(Transform::default().with_position([0.0, 0.0, 0.0]))
             .with(WidgetBounds::new(100.0, 100.0))
             .with(Material::Basic { texture })

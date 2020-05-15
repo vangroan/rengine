@@ -8,7 +8,7 @@ use crate::draw2d::Canvas;
 use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
-use crate::gui::{widgets, DrawGuiSystem, GuiDrawable, GuiGraph, GuiMesh, WidgetBounds};
+use crate::gui::{self, widgets, DrawGuiSystem, GuiGraph};
 use crate::modding::Mods;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
@@ -87,10 +87,15 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<SlideCamera>();
         world.register::<GlTexture>();
         world.register::<TextBatch>();
-        world.register::<GuiDrawable>();
-        world.register::<GuiMesh>();
-        world.register::<WidgetBounds>();
-        world.register::<widgets::Button>();
+
+        // GUI Components
+        {
+            world.register::<gui::GuiDrawable>();
+            world.register::<gui::GuiMesh>();
+            world.register::<gui::WidgetBounds>();
+            world.register::<gui::Placement>();
+            world.register::<widgets::Button>();
+        }
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
