@@ -1,6 +1,7 @@
 use daggy::Dag;
 use specs::Entity;
 
+mod aabb;
 mod builder;
 mod draw;
 mod drawable;
@@ -9,6 +10,7 @@ mod proj;
 mod widget;
 pub mod widgets;
 
+pub use aabb::*;
 pub use builder::*;
 pub use draw::*;
 pub use drawable::*;

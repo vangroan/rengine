@@ -8,7 +8,7 @@ use crate::draw2d::Canvas;
 use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
-use crate::gui::{widgets, DrawGuiSystem, GuiDrawable, GuiGraph, GuiMesh};
+use crate::gui::{widgets, DrawGuiSystem, GuiDrawable, GuiGraph, GuiMesh, WidgetBounds};
 use crate::modding::Mods;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
@@ -89,6 +89,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<TextBatch>();
         world.register::<GuiDrawable>();
         world.register::<GuiMesh>();
+        world.register::<WidgetBounds>();
         world.register::<widgets::Button>();
 
         // Event Streams
@@ -292,6 +293,7 @@ impl<'a, 'b> App<'a, 'b> {
                         // Coordinates use physical size
                         let dpi_factor = graphics.window.window().get_hidpi_factor();
                         let physical_size = logical_size.to_physical(dpi_factor);
+                        // println!("dpi_factor={} {:?} {:?}", dpi_factor, physical_size, logical_size);
 
                         // Required by some platforms
                         graphics.window.resize(physical_size);
