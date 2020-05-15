@@ -38,9 +38,10 @@ impl<'a> WidgetBuilder<'a> {
         } = self;
 
         // TODO: Return error when GUI is not in world
-        world
-            .res
-            .try_fetch_mut::<GuiGraph>()
-            .map(|mut gui| gui.insert_entity(entity, parent))
+        // world
+        //     .res
+        //     .try_fetch_mut::<GuiGraph>()
+        //     .map(|mut gui| gui.insert_entity(entity, parent))
+        unimplemented!()
     }
 }

@@ -94,6 +94,7 @@ impl<'a, 'b> App<'a, 'b> {
             world.register::<gui::GuiMesh>();
             world.register::<gui::WidgetBounds>();
             world.register::<gui::Placement>();
+            world.register::<gui::PackMode>();
             world.register::<widgets::Button>();
         }
 
@@ -102,7 +103,9 @@ impl<'a, 'b> App<'a, 'b> {
 
         // GUI
         let root_entity = world.create_entity().build();
-        world.add_resource(GuiGraph::with_root(root_entity));
+        let gui_graph = GuiGraph::with_root(root_entity);
+        world.add_resource(gui::LayoutDirty::with_node_id(gui_graph.root_id())); // Initial layout pass
+        world.add_resource(gui_graph);
 
         // Graphics Commands to allow allocating resources
         // from systems to draw thread.
