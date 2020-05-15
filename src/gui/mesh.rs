@@ -3,8 +3,7 @@ use crate::gfx_types::{Transform, Vertex};
 use crate::graphics::GraphicContext;
 use gfx::handle::Buffer;
 use gfx::traits::FactoryExt;
-use gfx::{Factory, Slice};
-use glm;
+use gfx::Slice;
 use specs::{Component, DenseVecStorage};
 
 #[derive(Component)]
@@ -74,11 +73,11 @@ impl GuiMeshBuilder {
         self
     }
 
-    pub fn nine_patch(mut self) -> Self {
+    pub fn nine_patch(self) -> Self {
         unimplemented!()
     }
 
-    pub fn build(mut self, ctx: &mut GraphicContext) -> GuiMesh {
+    pub fn build(self, ctx: &mut GraphicContext) -> GuiMesh {
         let (vbuf, slice) = ctx
             .factory
             .create_vertex_buffer_with_slice(&self.vertices[..], &self.indices[..]);
