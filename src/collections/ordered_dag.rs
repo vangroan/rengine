@@ -246,6 +246,23 @@ where
         self.nodes.len()
     }
 
+    /// Returns true if the graph is empty.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    ///
+    /// let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
+    ///
+    /// assert!(graph.is_empty());
+    /// graph.insert(1);
+    /// assert!(!graph.is_empty());
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.nodes.is_empty()
+    }
+
     /// Sorts the edges of all nodes.
     ///
     /// ```
@@ -323,11 +340,11 @@ where
             let c = s.entry(u).or_insert(VisitColor::Black);
             *c = VisitColor::Black;
 
-            return None;
+            None
         }
 
         state.insert(start_node_id, VisitColor::Grey);
-        return dfs_visit(self, start_node_id, &mut state);
+        dfs_visit(self, start_node_id, &mut state)
     }
 
     /// Builds a string representation of the whole graph.
@@ -339,7 +356,7 @@ where
         let mut sb = String::new();
 
         for (node_id, node) in self.nodes.iter() {
-            if node.edges.len() == 0 {
+            if node.edges.is_empty() {
                 sb.push_str(&format!("{:?} ->\n", node_id));
             } else if node.edges.len() == 1 {
                 let child_id = node.edges.iter().next().unwrap().child;
