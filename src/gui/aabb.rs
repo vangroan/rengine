@@ -3,7 +3,7 @@ use nalgebra::Point2;
 use specs::{Component, DenseVecStorage};
 
 /// Axis-aligned bounding box in logical pixel size.
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[storage(DenseVecStorage)]
 pub struct WidgetBounds {
     width: f32,
@@ -20,6 +20,21 @@ impl WidgetBounds {
             width: size.width as f32,
             height: size.height as f32,
         }
+    }
+
+    #[inline]
+    pub fn set_size<V>(&mut self, size: V)
+    where
+        V: Into<[f32; 2]>,
+    {
+        let [width, height] = size.into();
+        self.width = width;
+        self.height = height;
+    }
+
+    #[inline]
+    pub fn size(&self) -> [f32; 2] {
+        [self.width, self.height]
     }
 
     /// Returns whether the given point is within the local

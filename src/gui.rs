@@ -1,4 +1,5 @@
-use crate::collections::ordered_dag::{NodeId, OrderedDag};
+use crate::collections::ordered_dag::prelude::*;
+use crate::collections::ordered_dag::ChildrenWalk;
 use specs::Entity;
 
 mod aabb;
@@ -47,9 +48,22 @@ impl GuiGraph {
         self.root_id
     }
 
+    /// Retrieve the entity id at the root of the graph.
+    ///
+    /// # Panics
+    ///
+    /// If the root entity was removed from the graph.
+    #[inline]
+    pub fn root_entity(&self) -> Entity {
+        *self
+            .graph
+            .node(self.root_id)
+            .expect("GUI root entity not found in graph")
+    }
+
     pub fn insert_entity(&mut self, entity: Entity, parent: Option<NodeId>) -> NodeId {
         // When no parent is specified, add to root.
-        let parent_index = parent.unwrap_or_else(|| self.root_id.clone());
+        let parent_index = parent.unwrap_or_else(|| self.root_id);
 
         self.graph.insert_at(entity, Some(parent_index))
     }
@@ -63,6 +77,14 @@ impl GuiGraph {
     pub fn delete_entities(&mut self, _entities: &[Entity]) {
         unimplemented!()
     }
+
+    pub fn walk_children(&self, node_id: NodeId) -> WidgetChildrenWalk {
+        WidgetChildrenWalk(self.graph.walk_children(node_id))
+    }
+
+    pub fn debug_print(&self) {
+        println!("{}", self.graph.string());
+    }
 }
 
 /// Edge of the Widget parent -> child
@@ -70,4 +92,12 @@ impl GuiGraph {
 #[derive(Debug, Default, PartialOrd, Ord, PartialEq, Eq)]
 struct Child {
     order_index: u16,
+}
+
+pub struct WidgetChildrenWalk(ChildrenWalk<Entity, Child>);
+
+impl WidgetChildrenWalk {
+    pub fn next(&mut self, gui_graph: &GuiGraph) -> Option<NodeId> {
+        self.0.next(&gui_graph.graph)
+    }
 }

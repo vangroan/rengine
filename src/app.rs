@@ -96,13 +96,14 @@ impl<'a, 'b> App<'a, 'b> {
             world.register::<gui::Placement>();
             world.register::<gui::PackMode>();
             world.register::<widgets::Button>();
+            world.register::<widgets::Container>();
         }
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
 
         // GUI
-        let root_entity = world.create_entity().build();
+        let root_entity = widgets::create_frame(&mut world);
         let gui_graph = GuiGraph::with_root(root_entity);
         world.add_resource(gui::LayoutDirty::with_node_id(gui_graph.root_id())); // Initial layout pass
         world.add_resource(gui_graph);

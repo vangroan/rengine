@@ -20,8 +20,6 @@
 //! ```
 use glutin::dpi::PhysicalSize;
 use nalgebra::{Matrix4, Vector3};
-use num_traits::Float;
-use std::fmt;
 
 /// Create the view matrix of the GUI.
 ///

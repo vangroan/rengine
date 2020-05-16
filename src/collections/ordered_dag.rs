@@ -11,7 +11,7 @@ use std::iter::Iterator;
 use std::marker::PhantomData;
 
 pub mod prelude {
-    pub use super::{OrderedDag, Walker};
+    pub use super::{NodeId, OrderedDag, Walker};
 }
 
 /// Directed acyclic graph, where node children are kept sorted.
@@ -428,6 +428,50 @@ where
             _marker: PhantomData,
         }
     }
+
+    /// Walk the immediate children of the given node.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    /// use rengine::collections::ordered_dag::Walker;
+    ///
+    /// //       a
+    /// //      / \
+    /// //     /   \
+    /// //    b     c
+    /// //   / \
+    /// //  /   \
+    /// // d     e
+    ///
+    /// let mut graph: OrderedDag<&'static str, i64> = OrderedDag::new();
+    /// let node_1 = graph.insert("a");
+    /// let node_2 = graph.insert("b");
+    /// let node_3 = graph.insert("c");
+    /// let node_4 = graph.insert("d");
+    /// let node_5 = graph.insert("e");
+    /// graph.set_edge(node_1, node_2, 0);
+    /// graph.set_edge(node_1, node_3, 0);
+    /// graph.set_edge(node_2, node_4, 0);
+    /// graph.set_edge(node_2, node_5, 0);
+    ///
+    /// let mut walker = graph.walk_children(node_1);
+    /// let mut result = String::new();
+    ///
+    /// while let Some(node_id) = walker.next(&graph) {
+    ///     result.push_str(graph.node(node_id).unwrap());
+    /// }
+    ///
+    /// assert_eq!(result.as_str(), "bc");
+    /// ```
+    pub fn walk_children(&self, node_id: NodeId) -> ChildrenWalk<N, E> {
+        ChildrenWalk {
+            node_id,
+            cursor: 0,
+            _marker: PhantomData,
+        }
+    }
 }
 
 impl<N, E> Default for OrderedDag<N, E>
@@ -563,6 +607,32 @@ where
             }
 
             Some(node_id)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct ChildrenWalk<N, E> {
+    node_id: NodeId,
+    cursor: usize,
+    _marker: PhantomData<(N, E)>,
+}
+
+impl<N, E> Walker for ChildrenWalk<N, E>
+where
+    E: Ord,
+{
+    type Node = N;
+    type Edge = E;
+    fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId> {
+        if let Some(edge) = graph
+            .nodes
+            .get(self.node_id)
+            .and_then(|n| n.edges.get(self.cursor))
+        {
+            self.cursor += 1;
+            Some(edge.child)
         } else {
             None
         }

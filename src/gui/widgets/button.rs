@@ -1,4 +1,4 @@
-use super::super::{GuiMeshBuilder, Placement, WidgetBounds};
+use super::super::{GuiGraph, GuiMeshBuilder, Placement, WidgetBounds};
 use crate::colors::*;
 use crate::comp::{GlTexture, Transform};
 use crate::graphics::GraphicContext;
@@ -7,7 +7,7 @@ use crate::res::TextureAssets;
 use specs::{Builder, Component, DenseVecStorage, Entity, EntityBuilder, World};
 
 pub fn create_text_button(world: &mut World, graphics: &mut GraphicContext, _text: &str) -> Entity {
-    let _texture = GlTexture::from_bundle(
+    let texture = GlTexture::from_bundle(
         world
             .write_resource::<TextureAssets>()
             .default_texture(graphics.factory_mut()),
@@ -16,7 +16,31 @@ pub fn create_text_button(world: &mut World, graphics: &mut GraphicContext, _tex
     // Create Text
 
     // Create Sprite
-    world.create_entity().build()
+    let sprite_entity = world
+        .create_entity()
+        .with(Button)
+        .with(Placement::new(0.5, 0.5))
+        .with(Transform::default().with_position([0.0, 0.0, 0.0]))
+        .with(WidgetBounds::new(100.0, 100.0))
+        .with(Material::Basic { texture })
+        .with(
+            // TODO: replace with 9-patch
+            GuiMeshBuilder::new()
+                .quad(
+                    [0.0, 0.0],
+                    [0.1, 0.1], // logical size / 1000.0 for now
+                    [GREEN, GREEN, GREEN, GREEN],
+                    [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
+                )
+                .build(graphics),
+        )
+        .build();
+
+    let _sprite_node = world
+        .write_resource::<GuiGraph>()
+        .insert_entity(sprite_entity, None);
+
+    sprite_entity
 }
 
 #[derive(Component)]
@@ -37,7 +61,7 @@ impl Button {
         );
         builder
             .with(Button)
-            .with(Placement::zero())
+            .with(Placement::new(0.5, 0.5))
             .with(Transform::default().with_position([0.0, 0.0, 0.0]))
             .with(WidgetBounds::new(100.0, 100.0))
             .with(Material::Basic { texture })

@@ -21,6 +21,7 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
                     for (entity, aabb) in (&entities, &aabbs).join() {
                         if aabb.intersect_point([x, y]) {
                             println!("intersect {} {} {:?}", x, y, entity);
+                            break;
                         }
                     }
                 }

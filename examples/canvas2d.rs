@@ -3,8 +3,8 @@ use rengine;
 use rengine::camera::CameraView;
 use rengine::comp::{MeshBuilder, Transform};
 use rengine::draw2d::Canvas;
-use rengine::gui::GuiMouseMoveSystem;
 use rengine::gui::{self, widgets};
+use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem};
 use rengine::res::DeltaTime;
 use rengine::specs::{Builder, Entity, Join, Read, ReadStorage, RunNow, WriteStorage};
 use rengine::{Context, Scene, Trans};
@@ -45,9 +45,13 @@ impl Scene for Game {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         println!("Game on start");
 
-        self.entities
-            .push(widgets::Button::bundle(ctx.world.create_entity(), &mut ctx.graphics).build());
+        self.entities.push(widgets::create_text_button(
+            &mut ctx.world,
+            &mut ctx.graphics,
+            "Hello World",
+        ));
         println!("entitites {:?}", self.entities);
+        ctx.world.read_resource::<GuiGraph>().debug_print();
 
         None
     }
@@ -78,6 +82,7 @@ impl Scene for Game {
         );
 
         GuiMouseMoveSystem.run_now(&ctx.world.res);
+        GuiLayoutSystem.run_now(&ctx.world.res);
 
         None
     }
