@@ -681,7 +681,7 @@ where
     fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId> {
         while let Some(node_id) = self.stack.pop() {
             self.out.push(node_id);
-            let mut iter = graph
+            let iter = graph
                 .nodes
                 .get(node_id)
                 .unwrap()
@@ -689,7 +689,7 @@ where
                 .iter()
                 .map(|e| e.child);
 
-            while let Some(child_id) = iter.next() {
+            for child_id in iter {
                 self.stack.push(child_id);
             }
         }
