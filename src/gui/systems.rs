@@ -1,4 +1,4 @@
-use super::{GuiGraph, WidgetBounds};
+use super::{GlobalPosition, GuiGraph, WidgetBounds};
 use crate::comp::Transform;
 use crate::option::lift2;
 use glutin::{Event, WindowEvent};
@@ -12,11 +12,12 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
         Entities<'a>,
         ReadExpect<'a, GuiGraph>,
         ReadStorage<'a, WidgetBounds>,
+        ReadStorage<'a, GlobalPosition>,
         ReadStorage<'a, Transform>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (events, entities, gui_graph, aabbs, transforms) = data;
+        let (events, entities, gui_graph, aabbs, global_positions, transforms) = data;
 
         for ev in events.iter() {
             if let Event::WindowEvent { event, .. } = ev {
@@ -27,10 +28,14 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
 
                     while let Some(node_id) = walker.next(&gui_graph) {
                         if let Some(entity) = gui_graph.get_entity(node_id) {
-                            let maybe_components = lift2(aabbs.get(entity), transforms.get(entity));
-                            if let Some((bounds, transform)) = maybe_components {
+                            let maybe_components =
+                                lift2(aabbs.get(entity), global_positions.get(entity));
+                            if let Some((bounds, global_pos)) = maybe_components {
                                 // Bounds are in the widget's local space.
-                                if bounds.intersect_point([mouse_x, mouse_y]) {
+                                let global_point = global_pos.point();
+                                let local_point =
+                                    [mouse_x - global_point.x, mouse_y - global_point.y];
+                                if bounds.intersect_point(local_point) {
                                     println!(
                                         "intersect ({}, {}) ({}, {}) {:?}",
                                         mouse_x, mouse_y, world_x, world_y, entity

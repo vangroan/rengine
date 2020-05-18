@@ -1,5 +1,5 @@
 //! Layout engine.
-use super::{create_gui_proj_matrix, GuiGraph, Placement, WidgetBounds};
+use super::{create_gui_proj_matrix, GlobalPosition, GuiGraph, Placement, WidgetBounds};
 use crate::collections::ordered_dag::prelude::*;
 use crate::comp::Transform;
 use crate::res::DeviceDimensions;
@@ -57,6 +57,10 @@ pub fn process_layout(
             parent_measure.suggested_pos,
             (parent_measure.suggested_pos / 1000.0).to_homogeneous()
         );
+
+        if let Some(global_pos) = data.global_positions.get_mut(entity) {
+            global_pos.set_point(parent_measure.suggested_pos);
+        }
 
         // Convert logical pixel position to graphics position.
         // TODO: Pixel scale from GUI settings resource.
@@ -141,6 +145,7 @@ pub struct LayoutData<'a> {
     layout_dirty: Write<'a, LayoutDirty>,
     bounds: WriteStorage<'a, WidgetBounds>,
     placements: ReadStorage<'a, Placement>,
+    global_positions: WriteStorage<'a, GlobalPosition>,
     packs: ReadStorage<'a, Pack>,
     transforms: WriteStorage<'a, Transform>,
 }

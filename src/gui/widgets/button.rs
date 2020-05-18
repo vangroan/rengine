@@ -1,4 +1,4 @@
-use super::super::{GuiGraph, GuiMeshBuilder, Placement, WidgetBounds};
+use super::super::{GlobalPosition, GuiGraph, GuiMeshBuilder, Placement, WidgetBounds};
 use crate::collections::ordered_dag::NodeId;
 use crate::colors::*;
 use crate::comp::{GlTexture, Transform};
@@ -25,7 +25,8 @@ pub fn create_text_button(
     let sprite_entity = world
         .create_entity()
         .with(Button)
-        .with(Placement::new(0.5, 0.5))
+        .with(Placement::new(0.0, 0.0))
+        .with(GlobalPosition::new(0., 0.))
         .with(Transform::default())
         .with(WidgetBounds::new(100.0, 100.0))
         .with(Material::Basic { texture })

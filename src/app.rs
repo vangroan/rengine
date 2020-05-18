@@ -95,6 +95,7 @@ impl<'a, 'b> App<'a, 'b> {
             world.register::<gui::WidgetBounds>();
             world.register::<gui::Placement>();
             world.register::<gui::Pack>();
+            world.register::<gui::GlobalPosition>();
             world.register::<widgets::Button>();
             world.register::<widgets::Container>();
         }
