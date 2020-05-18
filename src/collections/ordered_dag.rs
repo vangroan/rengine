@@ -377,7 +377,7 @@ impl<N, E> OrderedDag<N, E>
 where
     E: Ord,
 {
-    /// Traverse the graph in pre-order.
+    /// Traverse the graph depth-first in pre-order.
     ///
     /// If the graph does not contain the given node id, the walker
     /// will do nothing.
@@ -425,6 +425,59 @@ where
             } else {
                 vec![]
             },
+            _marker: PhantomData,
+        }
+    }
+
+    /// Traverse the graph depth-first in post-order.
+    ///
+    /// If the graph does not contain the given node id, the walker
+    /// will do nothing.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    /// use rengine::collections::ordered_dag::Walker;
+    ///
+    /// //       a
+    /// //      / \
+    /// //     /   \
+    /// //    b     c
+    /// //   / \
+    /// //  /   \
+    /// // d     e
+    /// //
+    /// // post_order = d, e, b, c, a
+    ///
+    /// let mut graph: OrderedDag<&'static str, i64> = OrderedDag::new();
+    /// let node_1 = graph.insert("a");
+    /// let node_2 = graph.insert("b");
+    /// let node_3 = graph.insert("c");
+    /// let node_4 = graph.insert("d");
+    /// let node_5 = graph.insert("e");
+    /// graph.set_edge(node_1, node_2, 0);
+    /// graph.set_edge(node_1, node_3, 0);
+    /// graph.set_edge(node_2, node_4, 0);
+    /// graph.set_edge(node_2, node_5, 0);
+    ///
+    /// let mut walker = graph.walk_post_order(node_1);
+    /// let mut result = String::new();
+    ///
+    /// while let Some(node_id) = walker.next(&graph) {
+    ///     result.push_str(graph.node(node_id).unwrap());
+    /// }
+    ///
+    /// assert_eq!(result.as_str(), "debca");
+    /// ```
+    pub fn walk_post_order(&self, start_node: NodeId) -> PostOrderWalk<N, E> {
+        PostOrderWalk {
+            stack: if self.nodes.contains_key(start_node) {
+                vec![start_node]
+            } else {
+                vec![]
+            },
+            out: vec![],
             _marker: PhantomData,
         }
     }
@@ -610,6 +663,38 @@ where
         } else {
             None
         }
+    }
+}
+
+pub struct PostOrderWalk<N, E> {
+    stack: Vec<NodeId>,
+    out: Vec<NodeId>,
+    _marker: PhantomData<(N, E)>,
+}
+
+impl<N, E> Walker for PostOrderWalk<N, E>
+where
+    E: Ord,
+{
+    type Node = N;
+    type Edge = E;
+    fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId> {
+        while let Some(node_id) = self.stack.pop() {
+            self.out.push(node_id);
+            let mut iter = graph
+                .nodes
+                .get(node_id)
+                .unwrap()
+                .edges
+                .iter()
+                .map(|e| e.child);
+
+            while let Some(child_id) = iter.next() {
+                self.stack.push(child_id);
+            }
+        }
+
+        self.out.pop()
     }
 }
 

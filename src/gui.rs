@@ -1,5 +1,5 @@
 use crate::collections::ordered_dag::prelude::*;
-use crate::collections::ordered_dag::ChildrenWalk;
+use crate::collections::ordered_dag::{ChildrenWalk, PostOrderWalk};
 use specs::Entity;
 
 mod aabb;
@@ -78,6 +78,10 @@ impl GuiGraph {
         unimplemented!()
     }
 
+    pub fn walk_dfs_post_order(&self, node_id: NodeId) -> WidgetDfsPostOrderWalk {
+        WidgetDfsPostOrderWalk(self.graph.walk_post_order(node_id))
+    }
+
     pub fn walk_children(&self, node_id: NodeId) -> WidgetChildrenWalk {
         WidgetChildrenWalk(self.graph.walk_children(node_id))
     }
@@ -92,6 +96,14 @@ impl GuiGraph {
 #[derive(Debug, Default, PartialOrd, Ord, PartialEq, Eq)]
 struct Child {
     order_index: u16,
+}
+
+pub struct WidgetDfsPostOrderWalk(PostOrderWalk<Entity, Child>);
+
+impl WidgetDfsPostOrderWalk {
+    pub fn next(&mut self, gui_graph: &GuiGraph) -> Option<NodeId> {
+        self.0.next(&gui_graph.graph)
+    }
 }
 
 pub struct WidgetChildrenWalk(ChildrenWalk<Entity, Child>);
