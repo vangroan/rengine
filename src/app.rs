@@ -94,7 +94,7 @@ impl<'a, 'b> App<'a, 'b> {
             world.register::<gui::GuiMesh>();
             world.register::<gui::WidgetBounds>();
             world.register::<gui::Placement>();
-            world.register::<gui::PackMode>();
+            world.register::<gui::Pack>();
             world.register::<widgets::Button>();
             world.register::<widgets::Container>();
         }

@@ -6,8 +6,8 @@ use specs::{Component, DenseVecStorage};
 #[derive(Component, Clone)]
 #[storage(DenseVecStorage)]
 pub struct WidgetBounds {
-    width: f32,
-    height: f32,
+    pub(crate) width: f32,
+    pub(crate) height: f32,
 }
 
 impl WidgetBounds {

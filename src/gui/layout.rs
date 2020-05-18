@@ -51,50 +51,80 @@ pub fn process_layout(
     proj: Matrix4<f32>,
 ) {
     if let Some(entity) = data.gui_graph.get_entity(node_id) {
-        // New local position of the current widget, relative to its parent.
-        //
-        // All calculations are in logical pixels.
-        let pos: Vector3<f32>;
-
-        // If the Widget has an optional Placement, its new position is set
-        // relative the view.
-        if let Some(placement) = data.placements.get(entity) {
-            println!("{:?} {:?}", entity, placement);
-            let offset = placement.offset();
-            let parent_size = parent_measure.bounds.size();
-            pos = Vector3::new(parent_size[0] * offset.x, parent_size[1] * offset.y, 0.0);
-        } else {
-            // Use the suggested transform from the parent Widget.
-            pos = parent_measure.suggested_pos.to_homogeneous();
-        }
-
-        println!("{:?} new position {:?}", entity, pos);
-
-        if let Some(pack_mode) = data.pack_modes.get(entity) {
-            match pack_mode {
-                PackMode::Frame => {}
-                _ => unimplemented!(),
-            }
-        }
+        println!(
+            "{:?} suggested position {:?} {:?}",
+            entity,
+            parent_measure.suggested_pos,
+            (parent_measure.suggested_pos / 1000.0).to_homogeneous()
+        );
 
         // Convert logical pixel position to graphics position.
-        // let render_position = proj.try_inverse().unwrap().transform_vector(&pos);
-        // TODO: Create matrix that will transform logical pixel positions and sizes to render world space.
-        // data.transforms
-        //     .get_mut(entity)
-        //     .unwrap_or_else(|| panic!("{:?} {:?} has no transform for layout", node_id, entity))
-        //     .set_position(pos / 1000.0);
+        // TODO: Pixel scale from GUI settings resource.
+        let mut render_position = (parent_measure.suggested_pos / 1000.0).to_homogeneous();
 
-        let bounds = data.bounds.get(entity).unwrap().clone();
+        // GUI y increases downwards, graphics y increases upwards.
+        render_position.y *= -1.;
 
+        // Transform's position is subordinate to the layout engine.
+        data.transforms
+            .get_mut(entity)
+            .unwrap_or_else(|| panic!("{:?} {:?} has no transform for layout", node_id, entity))
+            .set_position(render_position);
+
+        // Using Walker because an iterator borrows the graph.
         let mut walker = data.gui_graph.walk_children(node_id);
+
+        // Accumulated value of the widths and heights of the previous children, in logical pixels.
+        let mut acc_pack = [0.0, 0.0];
+
         while let Some(child_node_id) = walker.next(&data.gui_graph) {
-            println!("child {:?}", child_node_id);
+            println!("child node id {:?}", child_node_id);
+
+            // Parent suggesting a new position for the child.
+            let mut pos = Point2::new(0., 0.);
+
+            // Suggeted available space that the child may take up.
+            let bounds = data.bounds.get(entity).unwrap().clone();
+
+            if let Some(pack) = data.packs.get(entity) {
+                match pack.mode {
+                    PackMode::Frame => {
+                        // TODO: Offset from anchor
+                        pos = Point2::new(0., 0.);
+                    }
+                    PackMode::Horizontal => {
+                        pos = Point2::new(acc_pack[0], 0.);
+
+                        // Add bounds of current child to accumulator so the
+                        // next child can be positioned by it.
+                        acc_pack[0] += pack.margin[0]
+                            + data
+                                .bounds
+                                .get(data.gui_graph.get_entity(child_node_id).unwrap())
+                                .map(|b| b.width)
+                                .unwrap_or_default();
+                    }
+                    PackMode::Vertical => {
+                        pos = Point2::new(0., acc_pack[1]);
+
+                        // Add bounds of current child to accumulator so the
+                        // next child can be positioned by it.
+                        acc_pack[1] += pack.margin[1]
+                            + data
+                                .bounds
+                                .get(data.gui_graph.get_entity(child_node_id).unwrap())
+                                .map(|b| b.height)
+                                .unwrap_or_default();
+                    }
+                    PackMode::Grid { .. } => unimplemented!(),
+                }
+            }
+
             let pm = ParentMeasurements {
                 // TODO: new bounds rect from pack mode
-                bounds: bounds.clone(),
+                bounds: bounds,
                 // TODO: suggested position from pack mode
-                suggested_pos: Point2::new(pos.x, pos.y),
+                suggested_pos: pos,
             };
             process_layout(data, child_node_id, pm, proj);
         }
@@ -111,7 +141,7 @@ pub struct LayoutData<'a> {
     layout_dirty: Write<'a, LayoutDirty>,
     bounds: WriteStorage<'a, WidgetBounds>,
     placements: ReadStorage<'a, Placement>,
-    pack_modes: ReadStorage<'a, PackMode>,
+    packs: ReadStorage<'a, Pack>,
     transforms: WriteStorage<'a, Transform>,
 }
 
@@ -126,8 +156,25 @@ pub struct ParentMeasurements {
     suggested_pos: Point2<f32>,
 }
 
-#[derive(Component)]
+/// Indicates that the children of a Widget must be arranged in some way.
+#[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
+pub struct Pack {
+    pub mode: PackMode,
+    /// The vertical and horizontal spacing between child widgets in logical pixels.
+    pub margin: [f32; 2],
+}
+
+impl Pack {
+    pub fn new(mode: PackMode) -> Self {
+        Pack {
+            mode,
+            margin: [0.0, 0.0],
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum PackMode {
     Vertical,
     Horizontal,

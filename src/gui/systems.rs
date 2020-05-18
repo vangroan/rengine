@@ -18,9 +18,13 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
             if let Event::WindowEvent { event, .. } = ev {
                 if let WindowEvent::CursorMoved { position, .. } = event {
                     let (x, y) = (position.x as f32, position.y as f32);
+                    let (world_x, world_y) = (x / 1000.0, -y / 1000.0);
                     for (entity, aabb) in (&entities, &aabbs).join() {
                         if aabb.intersect_point([x, y]) {
-                            println!("intersect {} {} {:?}", x, y, entity);
+                            println!(
+                                "intersect ({}, {}) ({}, {}) {:?}",
+                                x, y, world_x, world_y, entity
+                            );
                             break;
                         }
                     }

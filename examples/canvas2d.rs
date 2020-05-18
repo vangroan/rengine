@@ -45,11 +45,23 @@ impl Scene for Game {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         println!("Game on start");
 
-        self.entities.push(widgets::create_text_button(
-            &mut ctx.world,
-            &mut ctx.graphics,
-            "Hello World",
-        ));
+        let btn_group_id = widgets::create_hbox(&mut ctx.world);
+        let btn_grp_node_id = ctx
+            .world
+            .write_resource::<GuiGraph>()
+            .insert_entity(btn_group_id, None);
+        self.entities.push(btn_group_id);
+
+        for i in 0..4 {
+            let btn_id = widgets::create_text_button(
+                &mut ctx.world,
+                &mut ctx.graphics,
+                &format!("Button {}", i),
+                Some(btn_grp_node_id),
+            );
+            self.entities.push(btn_id);
+        }
+
         println!("entitites {:?}", self.entities);
         ctx.world.read_resource::<GuiGraph>().debug_print();
 
