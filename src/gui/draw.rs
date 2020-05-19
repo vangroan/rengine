@@ -1,4 +1,4 @@
-use super::{create_gui_proj_matrix, GuiDrawable, GuiMesh};
+use super::{create_gui_proj_matrix, GuiDrawable, GuiMesh, GuiSettings};
 use crate::camera::{CameraProjection, CameraView};
 use crate::comp::Transform;
 use crate::draw2d::Canvas;
@@ -27,6 +27,7 @@ pub struct DrawGuiSystemData<'a> {
     device_dim: ReadExpect<'a, DeviceDimensions>,
     materials: ReadStorage<'a, Material>,
     transforms: ReadStorage<'a, Transform>,
+    gui_settings: ReadExpect<'a, GuiSettings>,
     gui_meshes: ReadStorage<'a, GuiMesh>,
     gui_drawables: ReadStorage<'a, GuiDrawable>,
 }
@@ -59,6 +60,7 @@ impl<'a> System<'a> for DrawGuiSystem {
             device_dim,
             materials,
             transforms,
+            gui_settings,
             gui_meshes,
             gui_drawables,
         } = data;
@@ -69,6 +71,9 @@ impl<'a> System<'a> for DrawGuiSystem {
             device_physical_size.width as u16,
             device_physical_size.height as u16,
         ));
+
+        let proj_matrix =
+            create_gui_proj_matrix(device_physical_size, gui_settings.pixel_scale, dpi_factor);
 
         match self.channel.recv_block() {
             Ok(mut encoder) => {
@@ -102,15 +107,7 @@ impl<'a> System<'a> for DrawGuiSystem {
                                 ),
                                 transforms: mesh.transbuf.clone(),
                                 view: glm::Mat4x4::identity().into(),
-                                // proj: self.camera.orthographic([0.0, 0.0, 0.0]).into(),
-                                // proj: glm::Mat4x4::identity().into(),
-                                // proj: create_matrix(device_physical_size, dpi_factor).into(),
-                                proj: create_gui_proj_matrix(
-                                    device_physical_size,
-                                    1000.0,
-                                    dpi_factor,
-                                )
-                                .into(),
+                                proj: proj_matrix.into(),
                                 // The rectangle to allow rendering within
                                 scissor: view_port.rect,
                                 render_target: self.render_target.clone(),
