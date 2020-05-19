@@ -4,7 +4,7 @@ use rengine::camera::CameraView;
 use rengine::comp::{MeshBuilder, Transform};
 use rengine::draw2d::Canvas;
 use rengine::gui::{self, widgets};
-use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem};
+use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, WidgetBuilder};
 use rengine::res::DeltaTime;
 use rengine::specs::{Builder, Entity, Join, Read, ReadStorage, RunNow, WriteStorage};
 use rengine::{Context, Scene, Trans};
@@ -53,13 +53,18 @@ impl Scene for Game {
         self.entities.push(btn_group_id);
 
         for i in 0..4 {
-            let btn_id = widgets::create_text_button(
-                &mut ctx.world,
-                &mut ctx.graphics,
-                &format!("Button {}", i),
-                Some(btn_grp_node_id),
-            );
-            self.entities.push(btn_id);
+            // let btn_id = widgets::create_text_button(
+            //     &mut ctx.world,
+            //     &mut ctx.graphics,
+            //     &format!("Button {}", i),
+            //     Some(btn_grp_node_id),
+            // );
+            let (btn_entity, _btn_id) = widgets::Button::text(&format!("Click Me {}", i))
+                .child_of(btn_grp_node_id)
+                .background_image("examples/ui.png")
+                .background_uv([[0.0, 0.125], [0.125, 0.125], [0.125, 0.0], [0.0, 0.0]])
+                .build(&mut ctx.world, &mut ctx.graphics);
+            self.entities.push(btn_entity);
         }
 
         println!("entitites {:?}", self.entities);

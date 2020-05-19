@@ -2,6 +2,8 @@ use crate::collections::ordered_dag::prelude::*;
 use crate::collections::ordered_dag::{ChildrenWalk, PostOrderWalk};
 use specs::Entity;
 
+pub use crate::collections::ordered_dag::NodeId;
+
 mod builder;
 mod draw;
 mod drawable;
