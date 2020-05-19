@@ -1,4 +1,4 @@
-use super::{GlobalPosition, GuiGraph, WidgetBounds};
+use super::{BoundsRect, GlobalPosition, GuiGraph};
 use crate::comp::Transform;
 use crate::option::lift2;
 use glutin::{Event, WindowEvent};
@@ -11,7 +11,7 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
         Read<'a, Vec<Event>>,
         Entities<'a>,
         ReadExpect<'a, GuiGraph>,
-        ReadStorage<'a, WidgetBounds>,
+        ReadStorage<'a, BoundsRect>,
         ReadStorage<'a, GlobalPosition>,
         ReadStorage<'a, Transform>,
     );

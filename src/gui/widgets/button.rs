@@ -1,4 +1,4 @@
-use super::super::{GlobalPosition, GuiGraph, GuiMeshBuilder, Placement, WidgetBounds};
+use super::super::{BoundsRect, GlobalPosition, GuiGraph, GuiMeshBuilder, Placement};
 use crate::collections::ordered_dag::NodeId;
 use crate::colors::*;
 use crate::comp::{GlTexture, Transform};
@@ -28,7 +28,7 @@ pub fn create_text_button(
         .with(Placement::new(0.0, 0.0))
         .with(GlobalPosition::new(0., 0.))
         .with(Transform::default())
-        .with(WidgetBounds::new(100.0, 100.0))
+        .with(BoundsRect::new(100.0, 100.0))
         .with(Material::Basic { texture })
         .with(
             // TODO: replace with 9-patch
@@ -70,7 +70,7 @@ impl Button {
             .with(Button)
             .with(Placement::new(0.5, 0.5))
             .with(Transform::default().with_position([0.0, 0.0, 0.0]))
-            .with(WidgetBounds::new(100.0, 100.0))
+            .with(BoundsRect::new(100.0, 100.0))
             .with(Material::Basic { texture })
             .with(
                 // TODO: replace with 9-patch

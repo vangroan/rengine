@@ -92,7 +92,7 @@ impl<'a, 'b> App<'a, 'b> {
         {
             world.register::<gui::GuiDrawable>();
             world.register::<gui::GuiMesh>();
-            world.register::<gui::WidgetBounds>();
+            world.register::<gui::BoundsRect>();
             world.register::<gui::Placement>();
             world.register::<gui::Pack>();
             world.register::<gui::GlobalPosition>();

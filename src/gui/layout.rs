@@ -1,5 +1,5 @@
 //! Layout engine.
-use super::{create_gui_proj_matrix, GlobalPosition, GuiGraph, Placement, WidgetBounds};
+use super::{create_gui_proj_matrix, GuiGraph};
 use crate::collections::ordered_dag::prelude::*;
 use crate::comp::Transform;
 use crate::res::DeviceDimensions;
@@ -7,6 +7,10 @@ use glutin::dpi::LogicalSize;
 use log::warn;
 use nalgebra::{Matrix4, Point2, Vector2, Vector3};
 use specs::{Component, DenseVecStorage, ReadExpect, ReadStorage, System, Write, WriteStorage};
+
+// ------- //
+// Systems //
+// ------- //
 
 pub struct GuiLayoutSystem;
 
@@ -33,7 +37,7 @@ impl<'a> System<'a> for GuiLayoutSystem {
             // TODO: Is it reasonable to use a node id in the dirty flag to start
             //       the recalc from an arbitrary node?
             let parent_measure = ParentMeasurements {
-                bounds: WidgetBounds::new(width as f32, height as f32),
+                bounds: BoundsRect::new(width as f32, height as f32),
                 suggested_pos: Point2::new(0.0, 0.0),
             };
             process_layout(&mut data, node_id, parent_measure, proj_matrix);
@@ -144,7 +148,7 @@ pub struct LayoutData<'a> {
     device_dim: ReadExpect<'a, DeviceDimensions>,
     gui_graph: ReadExpect<'a, GuiGraph>,
     layout_dirty: Write<'a, LayoutDirty>,
-    bounds: WriteStorage<'a, WidgetBounds>,
+    bounds: WriteStorage<'a, BoundsRect>,
     placements: ReadStorage<'a, Placement>,
     global_positions: WriteStorage<'a, GlobalPosition>,
     packs: ReadStorage<'a, Pack>,
@@ -155,12 +159,42 @@ pub struct LayoutData<'a> {
 /// a recursive layout pass.
 pub struct ParentMeasurements {
     /// The parent widget's bounding box.
-    bounds: WidgetBounds,
+    bounds: BoundsRect,
 
     /// A global world position the parent has calculated that child can
     /// optionally use to position itself.
     suggested_pos: Point2<f32>,
 }
+
+// --------- //
+// Resources //
+// --------- //
+
+/// Marks the GUI graph as dirty, starting at the given node.
+#[derive(Debug, Default)]
+pub struct LayoutDirty(Option<NodeId>);
+
+impl LayoutDirty {
+    pub fn with_node_id(node_id: NodeId) -> Self {
+        LayoutDirty(Some(node_id))
+    }
+
+    pub fn set_node_id(&mut self, node_id: NodeId) {
+        self.0 = Some(node_id);
+    }
+
+    pub fn node_id(&self) -> Option<NodeId> {
+        self.0
+    }
+
+    pub fn take_node_id(&mut self) -> Option<NodeId> {
+        self.0.take()
+    }
+}
+
+// ---------- //
+// Components //
+// ---------- //
 
 /// Indicates that the children of a Widget must be arranged in some way.
 #[derive(Component, Debug)]
@@ -188,28 +222,6 @@ pub enum PackMode {
     Frame,
 }
 
-/// Marks the GUI graph as dirty, starting at the given node.
-#[derive(Debug, Default)]
-pub struct LayoutDirty(Option<NodeId>);
-
-impl LayoutDirty {
-    pub fn with_node_id(node_id: NodeId) -> Self {
-        LayoutDirty(Some(node_id))
-    }
-
-    pub fn set_node_id(&mut self, node_id: NodeId) {
-        self.0 = Some(node_id);
-    }
-
-    pub fn node_id(&self) -> Option<NodeId> {
-        self.0
-    }
-
-    pub fn take_node_id(&mut self) -> Option<NodeId> {
-        self.0.take()
-    }
-}
-
 pub enum MeasurementMode {
     /// In Parent mode the Widget will conform to the space its
     /// parent assigns to it.
@@ -219,4 +231,165 @@ pub enum MeasurementMode {
     /// content, and will be asked by the parent how much space
     /// it needs.
     Content,
+}
+
+/// Widget position in logical pixels, in the global world space.
+///
+/// This value is set by the layout engine and has no effect if
+/// changed by the user.
+#[derive(Component, Debug)]
+#[storage(DenseVecStorage)]
+pub struct GlobalPosition(Point2<f32>);
+
+impl GlobalPosition {
+    pub fn new(x: f32, y: f32) -> Self {
+        GlobalPosition(Point2::new(x, y))
+    }
+
+    #[inline]
+    pub fn point(&self) -> Point2<f32> {
+        self.0
+    }
+
+    #[inline]
+    pub fn set_point<V>(&mut self, point: V)
+    where
+        V: Into<Point2<f32>>,
+    {
+        self.0 = point.into()
+    }
+}
+
+/// Represents a relative position within a View.
+///
+/// To support different sized Windows and Screens, a Placement
+/// can be used in a Node of the GUI graph to offset its own
+/// Transform, and thus its children, by a relative distance.
+///
+/// During a layout pass, the GUI View and Widget's Transform are
+/// used to calculate a position, which is then set as the Transform's
+/// position.
+///
+/// The distance is a normalised Vector. A coordinate of (0.0, 0.0) is
+/// the top left of the View, while (1.0, 1.0) is the bottom right.
+#[derive(Debug, Component)]
+#[storage(DenseVecStorage)]
+pub struct Placement {
+    offset: Vector2<f32>,
+}
+
+impl Placement {
+    pub fn new(x: f32, y: f32) -> Self {
+        Placement::from_vector(Vector2::new(x, y))
+    }
+
+    pub fn from_vector<V>(offset: V) -> Self
+    where
+        V: Into<Vector2<f32>>,
+    {
+        Placement {
+            offset: offset.into(),
+        }
+    }
+
+    pub fn zero() -> Self {
+        Placement::new(0.0, 0.0)
+    }
+
+    #[inline]
+    pub fn offset(&self) -> &Vector2<f32> {
+        &self.offset
+    }
+
+    #[inline]
+    pub fn set_offset<V>(&mut self, offset: V)
+    where
+        V: Into<Vector2<f32>>,
+    {
+        self.offset = offset.into();
+    }
+
+    /// Creates a model matrix from the placement's offset vector.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::gui::Placement;
+    /// use nalgebra::Point3;
+    ///
+    /// let p = Placement::new(0.5, 0.5);
+    /// let m = p.matrix();
+    ///
+    /// let transformed_point = m.transform_point(&Point3::new(0.0, 0.0, 0.0));
+    /// assert_eq!(transformed_point, Point3::new(0.5, 0.5, 0.0));
+    /// ```
+    pub fn matrix(&self) -> Matrix4<f32> {
+        Matrix4::new_translation(&Vector3::<f32>::new(self.offset.x, self.offset.y, 0.0))
+    }
+}
+
+impl Default for Placement {
+    fn default() -> Self {
+        Placement {
+            offset: Vector2::new(0.0, 0.0),
+        }
+    }
+}
+
+/// Axis-aligned bounding box in logical pixel size.
+#[derive(Component, Clone)]
+#[storage(DenseVecStorage)]
+pub struct BoundsRect {
+    pub(crate) width: f32,
+    pub(crate) height: f32,
+}
+
+impl BoundsRect {
+    pub fn new(width: f32, height: f32) -> Self {
+        BoundsRect { width, height }
+    }
+
+    pub fn from_size(size: LogicalSize) -> Self {
+        BoundsRect {
+            width: size.width as f32,
+            height: size.height as f32,
+        }
+    }
+
+    #[inline]
+    pub fn set_size<V>(&mut self, size: V)
+    where
+        V: Into<[f32; 2]>,
+    {
+        let [width, height] = size.into();
+        self.width = width;
+        self.height = height;
+    }
+
+    #[inline]
+    pub fn size(&self) -> [f32; 2] {
+        [self.width, self.height]
+    }
+
+    /// Returns whether the given point is within the local
+    /// bounds, in logical pixels.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::gui::BoundsRect;
+    /// use nalgebra::Point2;
+    ///
+    /// let aabb = BoundsRect::new(120.0, 70.0);
+    /// assert!(aabb.intersect_point([50.0, 50.0]));
+    /// assert!(!aabb.intersect_point([400.0, -200.0]));
+    /// assert!(aabb.intersect_point(Point2::new(50.0, 50.0)));
+    /// ```
+    pub fn intersect_point<V>(&self, point: V) -> bool
+    where
+        V: Into<Point2<f32>>,
+    {
+        let p = point.into();
+        p.x >= 0.0 && p.y >= 0.0 && p.x <= self.width && p.y <= self.height
+    }
 }

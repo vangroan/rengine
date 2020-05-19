@@ -1,4 +1,4 @@
-use super::super::{layout, GlobalPosition, Placement, WidgetBounds};
+use super::super::{layout, BoundsRect, GlobalPosition, Placement};
 use crate::comp::Transform;
 use specs::{Builder, Component, DenseVecStorage, Entity, World};
 
@@ -25,7 +25,7 @@ pub fn create_container(world: &mut World, pack_mode: layout::PackMode) -> Entit
         .with(pack)
         .with(GlobalPosition::new(0., 0.))
         .with(Transform::default().with_position([0.0, 0.0, 0.0]))
-        .with(WidgetBounds::new(100.0, 100.0))
+        .with(BoundsRect::new(100.0, 100.0))
         .build()
 }
 
