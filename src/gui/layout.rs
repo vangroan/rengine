@@ -64,6 +64,7 @@ pub fn process_layout(
 
         // Convert logical pixel position to graphics position.
         // TODO: Pixel scale from GUI settings resource.
+        // NOTE: the resulting vector will have a z component of 1.0
         let mut render_position = (parent_measure.suggested_pos / 1000.0).to_homogeneous();
 
         // GUI y increases downwards, graphics y increases upwards.
