@@ -80,3 +80,15 @@ impl TexRect {
         self.size.y
     }
 }
+
+impl Into<[[f32; 2]; 4]> for TexRect {
+    #[inline]
+    fn into(self) -> [[f32; 2]; 4] {
+        [
+            [self.x(), self.h()],
+            [self.w(), self.h()],
+            [self.w(), self.y()],
+            [self.x(), self.y()],
+        ]
+    }
+}

@@ -62,7 +62,8 @@ impl Scene for Game {
             let (btn_entity, _btn_id) = widgets::Button::text(&format!("Click Me {}", i))
                 .child_of(btn_grp_node_id)
                 .background_image("examples/ui.png")
-                .background_uv([[0.0, 0.125], [0.125, 0.125], [0.125, 0.0], [0.0, 0.0]])
+                // .background_uv([[0.0, 0.125], [0.125, 0.125], [0.125, 0.0], [0.0, 0.0]])
+                .background_src_rect([0, 0], [32, 32])
                 .build(&mut ctx.world, &mut ctx.graphics);
             self.entities.push(btn_entity);
         }

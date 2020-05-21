@@ -95,6 +95,7 @@ impl Button {
             size: [100.0, 100.0],
             background: None,
             background_uv: [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
+            background_src_rect: None,
         }
     }
 }
@@ -105,6 +106,7 @@ pub struct ButtonBuilder {
     size: [f32; 2],
     background: Option<String>,
     background_uv: [[f32; 2]; 4],
+    background_src_rect: Option<[Vector2<u32>; 2]>,
 }
 
 impl ButtonBuilder {
@@ -127,6 +129,14 @@ impl ButtonBuilder {
         self.background_uv = uvs;
         self
     }
+
+    pub fn background_src_rect<V>(mut self, pos: V, size: V) -> Self
+    where
+        V: Into<Vector2<u32>>,
+    {
+        self.background_src_rect = Some([pos.into(), size.into()]);
+        self
+    }
 }
 
 impl WidgetBuilder for ButtonBuilder {
@@ -137,6 +147,7 @@ impl WidgetBuilder for ButtonBuilder {
             size,
             background,
             background_uv,
+            background_src_rect,
         } = self;
 
         let pixel_scale = world.read_resource::<GuiSettings>().pixel_scale;
@@ -152,6 +163,12 @@ impl WidgetBuilder for ButtonBuilder {
                     .write_resource::<TextureAssets>()
                     .default_texture(graphics.factory_mut()),
             ),
+        };
+
+        let uvs = if let Some([pos, size]) = background_src_rect {
+            texture.source_rect().sub_rect(pos, size).into()
+        } else {
+            background_uv
         };
 
         let graphics_size = Vector2::from(size) / pixel_scale;
@@ -173,7 +190,7 @@ impl WidgetBuilder for ButtonBuilder {
                         [0.0, 0.0],
                         graphics_size.into(),
                         [WHITE, WHITE, WHITE, WHITE],
-                        background_uv,
+                        uvs,
                     )
                     .build(graphics),
             )
