@@ -11,6 +11,7 @@ mod layout;
 mod mesh;
 mod proj;
 mod systems;
+pub mod text;
 mod widget;
 pub mod widgets;
 
@@ -33,7 +34,6 @@ pub struct GuiSettings {
     pub pixel_scale: f32,
 }
 
-// TODO: Layout
 // TODO: Cleaning up Widgets when scene is stopped
 
 pub struct GuiGraph {

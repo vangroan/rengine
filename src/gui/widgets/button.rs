@@ -1,5 +1,7 @@
+use super::super::text::TextBatch;
 use super::super::{
-    BoundsRect, GlobalPosition, GuiGraph, GuiMeshBuilder, GuiSettings, Placement, WidgetBuilder,
+    BoundsRect, GlobalPosition, GuiGraph, GuiMeshBuilder, GuiSettings, Pack, PackMode, Placement,
+    WidgetBuilder,
 };
 use crate::collections::ordered_dag::NodeId;
 use crate::colors::*;
@@ -178,6 +180,7 @@ impl WidgetBuilder for ButtonBuilder {
         let sprite_entity = world
             .create_entity()
             .with(Button)
+            .with(Pack::new(PackMode::Frame))
             .with(Placement::new(0.0, 0.0))
             .with(GlobalPosition::new(0., 0.))
             // logical size
@@ -200,6 +203,23 @@ impl WidgetBuilder for ButtonBuilder {
         let sprite_node_id = world
             .write_resource::<GuiGraph>()
             .insert_entity(sprite_entity, parent);
+
+        // Text
+        if let ButtonType::Text(text) = button_type {
+            let text_entity = world
+                .create_entity()
+                .with(Placement::new(0.0, 0.0))
+                .with(GlobalPosition::default())
+                .with(Transform::default())
+                .with(BoundsRect::new(size[0], size[1]))
+                .with(TextBatch::default().with(&text, WHITE))
+                .build();
+
+            let _text_node_id = world
+                .write_resource::<GuiGraph>()
+                .insert_entity(text_entity, Some(sprite_node_id));
+        }
+
         (sprite_entity, sprite_node_id)
     }
 }

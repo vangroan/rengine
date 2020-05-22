@@ -1,4 +1,4 @@
-use super::{create_gui_proj_matrix, GuiDrawable, GuiMesh, GuiSettings};
+use super::{create_gui_proj_matrix, layout, text, GuiDrawable, GuiMesh, GuiSettings};
 use crate::camera::{CameraProjection, CameraView};
 use crate::comp::Transform;
 use crate::draw2d::Canvas;
@@ -7,6 +7,7 @@ use crate::graphics::GraphicContext;
 use crate::render::{ChannelPair, Material};
 use crate::res::{DeviceDimensions, ViewPort};
 use gfx_device::{CommandBuffer, Resources};
+use gfx_glyph::{GlyphBrush, VariedSection};
 use glutin::dpi::{LogicalSize, PhysicalSize};
 use nalgebra::{Matrix4, Vector3};
 use specs::{Join, ReadExpect, ReadStorage, System};
@@ -17,6 +18,7 @@ pub struct DrawGuiSystem {
     pub(crate) render_target: RenderTarget<gfx_device::Resources>,
     pub(crate) depth_target: DepthTarget<gfx_device::Resources>,
     camera: CameraProjection,
+    glyph_brush: GlyphBrush<'static, gfx_device::Resources, gfx_device::Factory>,
 }
 
 #[derive(SystemData)]
@@ -30,6 +32,8 @@ pub struct DrawGuiSystemData<'a> {
     gui_settings: ReadExpect<'a, GuiSettings>,
     gui_meshes: ReadStorage<'a, GuiMesh>,
     gui_drawables: ReadStorage<'a, GuiDrawable>,
+    global_positions: ReadStorage<'a, layout::GlobalPosition>,
+    text_batches: ReadStorage<'a, text::TextBatch>,
 }
 
 impl DrawGuiSystem {
@@ -38,6 +42,7 @@ impl DrawGuiSystem {
         canvas: Canvas,
         render_target: RenderTarget<gfx_device::Resources>,
         depth_target: DepthTarget<gfx_device::Resources>,
+        glyph_brush: GlyphBrush<'static, gfx_device::Resources, gfx_device::Factory>,
     ) -> Self {
         DrawGuiSystem {
             channel,
@@ -45,6 +50,7 @@ impl DrawGuiSystem {
             render_target,
             depth_target,
             camera: CameraProjection::default(),
+            glyph_brush,
         }
     }
 }
@@ -63,6 +69,8 @@ impl<'a> System<'a> for DrawGuiSystem {
             gui_settings,
             gui_meshes,
             gui_drawables,
+            global_positions,
+            text_batches,
         } = data;
 
         let device_physical_size = *device_dim.physical_size();
@@ -120,6 +128,28 @@ impl<'a> System<'a> for DrawGuiSystem {
                     }
                 }
 
+                // Draw Text
+                {
+                    // Project text batches to a form that GlyphBrush can use
+                    let varied_sections: Vec<VariedSection> = (&text_batches, &global_positions)
+                        .join()
+                        .map(|(text_batch, pos)| {
+                            let mut section = text_batch.as_section();
+                            section.screen_position = pos.into();
+                            section
+                        })
+                        .collect();
+
+                    for varied_section in varied_sections.into_iter() {
+                        self.glyph_brush.queue(varied_section);
+                    }
+
+                    self.glyph_brush
+                        .use_queue()
+                        .draw(&mut encoder, &self.render_target)
+                        .expect("Failed drawing text queue");
+                }
+
                 self.channel
                     .send_block(encoder)
                     .expect("GUI render failed sending encoder back to main loop");
@@ -128,5 +158,3 @@ impl<'a> System<'a> for DrawGuiSystem {
         }
     }
 }
-
-fn draw_txt() {}

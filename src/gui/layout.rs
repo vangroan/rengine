@@ -260,6 +260,24 @@ impl GlobalPosition {
     }
 }
 
+impl Default for GlobalPosition {
+    fn default() -> Self {
+        GlobalPosition(Point2::new(0.0, 0.0))
+    }
+}
+
+impl Into<(f32, f32)> for GlobalPosition {
+    fn into(self) -> (f32, f32) {
+        (self.0.x, self.0.y)
+    }
+}
+
+impl Into<(f32, f32)> for &GlobalPosition {
+    fn into(self) -> (f32, f32) {
+        (self.0.x, self.0.y)
+    }
+}
+
 /// Represents a relative position within a View.
 ///
 /// To support different sized Windows and Screens, a Placement

@@ -97,6 +97,7 @@ impl<'a, 'b> App<'a, 'b> {
             world.register::<gui::Placement>();
             world.register::<gui::Pack>();
             world.register::<gui::GlobalPosition>();
+            world.register::<gui::text::TextBatch>();
             world.register::<widgets::Button>();
             world.register::<widgets::Container>();
         }
@@ -237,6 +238,7 @@ impl<'a, 'b> App<'a, 'b> {
             Canvas::new(&mut graphics, physical_w as u16, physical_h as u16).unwrap(),
             graphics.render_target.clone(),
             graphics.depth_stencil.clone(),
+            GlyphBrushBuilder::using_font_bytes(DEFAULT_FONT_DATA).build(graphics.factory.clone()),
         );
 
         // Modding
