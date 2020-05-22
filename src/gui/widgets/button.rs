@@ -100,6 +100,7 @@ impl Button {
     }
 }
 
+#[must_use = "Call .build() on widget builder."]
 pub struct ButtonBuilder {
     parent: Option<NodeId>,
     button_type: ButtonType,
