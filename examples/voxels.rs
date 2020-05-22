@@ -1,6 +1,5 @@
 extern crate rengine;
 
-use crate::rengine::gui::GuiBuilder;
 use log::trace;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
@@ -327,11 +326,12 @@ impl Scene for Game {
                 .build(),
         );
 
-        let _fps_counter_widget_id = ctx
-            .world
-            .create_widget(self.fps_counter_entity.unwrap())
-            .build()
-            .unwrap();
+        // TODO: Text in GUI graph
+        // let _fps_counter_widget_id = ctx
+        //     .world
+        //     .create_widget(self.fps_counter_entity.unwrap())
+        //     .build()
+        //     .unwrap();
 
         self.entities.push(self.fps_counter_entity.unwrap());
 
