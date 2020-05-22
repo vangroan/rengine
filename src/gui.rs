@@ -121,3 +121,33 @@ impl WidgetChildrenWalk {
         self.0.next(&gui_graph.graph)
     }
 }
+
+#[derive(Debug, Default)]
+pub struct HoveredWidget(Option<(Entity, NodeId)>);
+
+impl HoveredWidget {
+    #[inline]
+    pub fn entity(&self) -> Option<Entity> {
+        self.0.map(|(e, _)| e)
+    }
+
+    #[inline]
+    pub fn node_id(&self) -> Option<NodeId> {
+        self.0.map(|(_, n)| n)
+    }
+
+    #[inline]
+    pub fn set(&mut self, entity: Entity, node_id: NodeId) {
+        self.0 = Some((entity, node_id))
+    }
+
+    #[inline]
+    pub fn has_widget(&self) -> bool {
+        self.0.is_some()
+    }
+
+    #[inline]
+    pub fn clear(&mut self) -> Option<(Entity, NodeId)> {
+        self.0.take()
+    }
+}

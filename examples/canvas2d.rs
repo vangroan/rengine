@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate specs_derive;
 
-
 use log::trace;
 use rengine;
 use rengine::camera::CameraView;
@@ -10,7 +9,9 @@ use rengine::draw2d::Canvas;
 use rengine::gui::{self, widgets};
 use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, WidgetBuilder};
 use rengine::res::DeltaTime;
-use rengine::specs::{Builder, Component, DenseVecStorage, Entity, Join, Read, ReadStorage, RunNow, WriteStorage};
+use rengine::specs::{
+    Builder, Component, DenseVecStorage, Entity, Join, Read, ReadStorage, RunNow, WriteStorage,
+};
 use rengine::{Context, Scene, Trans};
 use std::error::Error;
 
@@ -68,7 +69,10 @@ impl Scene for Game {
                 .background_image("examples/ui.png")
                 .background_src_rect([0, 0], [32, 32])
                 .build(&mut ctx.world, &mut ctx.graphics);
-            ctx.world.write_storage::<Counter>().insert(btn_entity, Counter(0)).unwrap();
+            ctx.world
+                .write_storage::<Counter>()
+                .insert(btn_entity, Counter(0))
+                .unwrap();
             self.entities.push(btn_entity);
         }
 
