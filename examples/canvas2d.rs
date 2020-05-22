@@ -1,3 +1,7 @@
+#[macro_use]
+extern crate specs_derive;
+
+
 use log::trace;
 use rengine;
 use rengine::camera::CameraView;
@@ -6,9 +10,13 @@ use rengine::draw2d::Canvas;
 use rengine::gui::{self, widgets};
 use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, WidgetBuilder};
 use rengine::res::DeltaTime;
-use rengine::specs::{Builder, Entity, Join, Read, ReadStorage, RunNow, WriteStorage};
+use rengine::specs::{Builder, Component, DenseVecStorage, Entity, Join, Read, ReadStorage, RunNow, WriteStorage};
 use rengine::{Context, Scene, Trans};
 use std::error::Error;
+
+#[derive(Component)]
+#[storage(DenseVecStorage)]
+struct Counter(u32);
 
 #[derive(Debug)]
 struct Intro;
@@ -16,6 +24,8 @@ struct Intro;
 impl Scene for Intro {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         println!("{:?}: On start", self);
+
+        ctx.world.register::<Counter>();
 
         Trans::replace(Game::new(ctx))
     }
@@ -53,18 +63,12 @@ impl Scene for Game {
         self.entities.push(btn_group_id);
 
         for i in 0..4 {
-            // let btn_id = widgets::create_text_button(
-            //     &mut ctx.world,
-            //     &mut ctx.graphics,
-            //     &format!("Button {}", i),
-            //     Some(btn_grp_node_id),
-            // );
             let (btn_entity, _btn_id) = widgets::Button::text(&format!("Click Me {}", i))
                 .child_of(btn_grp_node_id)
                 .background_image("examples/ui.png")
-                // .background_uv([[0.0, 0.125], [0.125, 0.125], [0.125, 0.0], [0.0, 0.0]])
                 .background_src_rect([0, 0], [32, 32])
                 .build(&mut ctx.world, &mut ctx.graphics);
+            ctx.world.write_storage::<Counter>().insert(btn_entity, Counter(0)).unwrap();
             self.entities.push(btn_entity);
         }
 
