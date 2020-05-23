@@ -77,7 +77,7 @@ impl GuiGraph {
     }
 
     pub fn get_entity(&self, node_id: NodeId) -> Option<Entity> {
-        self.graph.node(node_id).map(|n| *n)
+        self.graph.node(node_id).cloned()
     }
 
     /// Remove all widgets in the GUI that are associated

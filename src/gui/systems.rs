@@ -2,7 +2,7 @@ use super::{BoundsRect, GlobalPosition, GuiGraph, HoveredWidget};
 use crate::comp::Transform;
 use crate::option::lift2;
 use glutin::{Event, WindowEvent};
-use specs::{Entities, Join, Read, ReadExpect, ReadStorage, System, Write};
+use specs::{Entities, Read, ReadExpect, ReadStorage, System, Write};
 
 pub struct GuiMouseMoveSystem;
 

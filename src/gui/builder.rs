@@ -1,5 +1,5 @@
 use crate::graphics::GraphicContext;
-use crate::gui::{GuiGraph, NodeId};
+use crate::gui::NodeId;
 use specs::{Entity, World};
 
 pub struct GuiBuilder<'a> {
@@ -20,34 +20,6 @@ impl<'a> GuiBuilder<'a> {
         self
     }
 }
-
-// pub struct WidgetBuilder<'a> {
-//     entity: Entity,
-//     world: &'a mut World,
-//     parent: Option<WidgetId>,
-// }
-
-// impl<'a> WidgetBuilder<'a> {
-//     pub fn child_of(mut self, parent: WidgetId) -> Self {
-//         self.parent = Some(parent);
-//         self
-//     }
-
-//     pub fn build(self) -> Option<WidgetId> {
-//         let WidgetBuilder {
-//             entity,
-//             world,
-//             parent,
-//         } = self;
-
-//         // TODO: Return error when GUI is not in world
-//         // world
-//         //     .res
-//         //     .try_fetch_mut::<GuiGraph>()
-//         //     .map(|mut gui| gui.insert_entity(entity, parent))
-//         unimplemented!()
-//     }
-// }
 
 pub trait WidgetBuilder {
     fn build(self, world: &mut World, graphics: &mut GraphicContext) -> (Entity, NodeId);

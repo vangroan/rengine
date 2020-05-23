@@ -131,7 +131,7 @@ pub fn process_layout(
 
             let pm = ParentMeasurements {
                 // TODO: new bounds rect from pack mode
-                bounds: bounds,
+                bounds,
                 // TODO: suggested position from pack mode
                 suggested_pos: pos,
             };

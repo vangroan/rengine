@@ -2,7 +2,6 @@ use crate::comp::{Mesh, Transform};
 use crate::gfx_types;
 use crate::graphics::GraphicContext;
 use crate::render::Material;
-use gfx;
 use gfx::format::{ChannelTyped, Formatted};
 use gfx::handle;
 use gfx::Factory;

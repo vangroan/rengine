@@ -5,7 +5,7 @@ use crate::option::lift2;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::ViewPort;
 use nalgebra::Matrix4;
-use specs::{Join, Read, ReadExpect, ReadStorage, System, SystemData};
+use specs::{Join, Read, ReadExpect, ReadStorage, System};
 
 pub struct DrawSystem {
     channel: ChannelPair<gfx_device::Resources, gfx_device::CommandBuffer>,

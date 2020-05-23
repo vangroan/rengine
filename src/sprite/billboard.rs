@@ -1,6 +1,5 @@
 use crate::camera::{ActiveCamera, CameraView};
 use crate::comp::Transform;
-use glm;
 use nalgebra::Unit;
 use specs::{Component, FlaggedStorage, Join, ReadExpect, ReadStorage, System, WriteStorage};
 

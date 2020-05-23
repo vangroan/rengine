@@ -8,7 +8,7 @@ use crate::colors::*;
 use crate::comp::{GlTexture, Transform};
 use crate::graphics::GraphicContext;
 use crate::render::Material;
-use crate::res::{DeviceDimensions, TextureAssets};
+use crate::res::TextureAssets;
 use nalgebra::Vector2;
 use specs::{Builder, Component, DenseVecStorage, Entity, EntityBuilder, World};
 

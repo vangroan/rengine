@@ -1,15 +1,12 @@
 use super::{create_gui_proj_matrix, layout, text, GuiDrawable, GuiMesh, GuiSettings};
-use crate::camera::{CameraProjection, CameraView};
+use crate::camera::CameraProjection;
 use crate::comp::Transform;
 use crate::draw2d::Canvas;
 use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, RenderTarget};
-use crate::graphics::GraphicContext;
 use crate::render::{ChannelPair, Material};
 use crate::res::{DeviceDimensions, ViewPort};
 use gfx_device::{CommandBuffer, Resources};
 use gfx_glyph::{GlyphBrush, VariedSection};
-use glutin::dpi::{LogicalSize, PhysicalSize};
-use nalgebra::{Matrix4, Vector3};
 use specs::{Join, ReadExpect, ReadStorage, System};
 
 pub struct DrawGuiSystem {

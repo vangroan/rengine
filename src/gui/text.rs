@@ -5,7 +5,7 @@ use crate::render::ChannelPair;
 use gfx_device::{CommandBuffer, Resources};
 use gfx_glyph::{FontId, SectionText, VariedSection};
 use specs::{Component, DenseVecStorage};
-use specs::{Join, Read, ReadStorage, World};
+use specs::{Join, ReadStorage, World};
 
 // ------- //
 // Systems //
