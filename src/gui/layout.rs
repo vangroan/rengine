@@ -7,6 +7,7 @@ use glutin::dpi::LogicalSize;
 use log::warn;
 use nalgebra::{Matrix4, Point2, Vector2, Vector3};
 use specs::{Component, DenseVecStorage, ReadExpect, ReadStorage, System, Write, WriteStorage};
+use std::fmt;
 
 // ------- //
 // Systems //
@@ -62,14 +63,19 @@ pub fn process_layout(
             (parent_measure.suggested_pos / 1000.0).to_homogeneous()
         );
 
+        let new_pos = match data.placements.get(entity) {
+            Some(placement) => parent_measure.suggested_pos + placement.offset(),
+            None => parent_measure.suggested_pos,
+        };
+
         if let Some(global_pos) = data.global_positions.get_mut(entity) {
-            global_pos.set_point(parent_measure.suggested_pos);
+            global_pos.set_point(new_pos);
         }
 
         // Convert logical pixel position to graphics position.
         // TODO: Pixel scale from GUI settings resource.
         // NOTE: the resulting vector will have a z component of 1.0
-        let mut render_position = (parent_measure.suggested_pos / 1000.0).to_homogeneous();
+        let mut render_position = (new_pos / 1000.0).to_homogeneous();
 
         // GUI y increases downwards, graphics y increases upwards.
         render_position.y *= -1.;
@@ -89,8 +95,11 @@ pub fn process_layout(
         while let Some(child_node_id) = walker.next(&data.gui_graph) {
             println!("child node id {:?}", child_node_id);
 
-            // Parent suggesting a new position for the child.
-            let mut pos = Point2::new(0., 0.);
+            // This node will suggest a position to its children.
+            //
+            // Position is in global space, so we start out by delegating
+            // the position of this node directly to its child.
+            let mut pos = parent_measure.suggested_pos;
 
             // Suggeted available space that the child may take up.
             let bounds = data.bounds.get(entity).unwrap().clone();
@@ -99,7 +108,6 @@ pub fn process_layout(
                 match pack.mode {
                     PackMode::Frame => {
                         // TODO: Offset from anchor
-                        pos = Point2::new(0., 0.);
                     }
                     PackMode::Horizontal => {
                         pos = Point2::new(acc_pack[0], 0.);
@@ -351,6 +359,12 @@ impl Default for Placement {
         Placement {
             offset: Vector2::new(0.0, 0.0),
         }
+    }
+}
+
+impl fmt::Display for Placement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Placement({}, {})", self.offset.x, self.offset.y)
     }
 }
 

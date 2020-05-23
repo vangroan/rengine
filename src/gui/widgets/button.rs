@@ -206,9 +206,12 @@ impl WidgetBuilder for ButtonBuilder {
 
         // Text
         if let ButtonType::Text(text) = button_type {
+            // Offset text to be vertically centered in button's frame.
+            let offset = Vector2::new(0., size[1] / 2.);
+
             let text_entity = world
                 .create_entity()
-                .with(Placement::new(0.0, 0.0))
+                .with(Placement::from_vector(offset))
                 .with(GlobalPosition::default())
                 .with(Transform::default())
                 .with(BoundsRect::new(size[0], size[1]))
