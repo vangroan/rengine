@@ -1,3 +1,6 @@
+#![allow(clippy::single_component_path_imports)]
+use gfx;
+
 pub type ColorFormat = gfx::format::Srgba8;
 pub type DepthFormat = gfx::format::DepthStencil;
 
