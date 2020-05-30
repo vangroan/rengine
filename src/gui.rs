@@ -24,16 +24,6 @@ pub use proj::*;
 pub use systems::*;
 pub use widget::*;
 
-/// General global settings for configuring the GUI.
-pub struct GuiSettings {
-    /// The width and height, in logical pixel size, of a 1 by 1 quad when
-    /// rendered to the window.
-    ///
-    /// Also important for transforming mouse coordinates from the screen
-    /// to 3D world coordinates.
-    pub pixel_scale: f32,
-}
-
 // TODO: Cleaning up Widgets when scene is stopped
 
 pub struct GuiGraph {

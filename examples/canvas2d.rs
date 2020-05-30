@@ -10,7 +10,8 @@ use rengine::gui::{self, widgets};
 use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, WidgetBuilder};
 use rengine::res::DeltaTime;
 use rengine::specs::{
-    Builder, Component, DenseVecStorage, Entity, Join, Read, ReadStorage, RunNow, WriteStorage,
+    Builder, Component, DenseVecStorage, Entity, Join, Read, ReadStorage, RunNow, WriteExpect,
+    WriteStorage,
 };
 use rengine::{Context, Scene, Trans};
 use std::error::Error;
@@ -66,6 +67,7 @@ impl Scene for Game {
         for i in 0..4 {
             let (btn_entity, _btn_id) = widgets::Button::text(&format!("Click Me {}", i))
                 .child_of(btn_grp_node_id)
+                .size(32., 32.)
                 .background_image("examples/ui.png")
                 .background_src_rect([0, 0], [32, 32])
                 .build(&mut ctx.world, &mut ctx.graphics);

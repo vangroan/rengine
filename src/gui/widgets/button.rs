@@ -1,7 +1,6 @@
 use super::super::text::TextBatch;
 use super::super::{
-    BoundsRect, GlobalPosition, GuiGraph, GuiMeshBuilder, GuiSettings, Pack, PackMode, Placement,
-    WidgetBuilder,
+    BoundsRect, GlobalPosition, GuiGraph, GuiMeshBuilder, Pack, PackMode, Placement, WidgetBuilder,
 };
 use crate::collections::ordered_dag::NodeId;
 use crate::colors::*;
@@ -40,7 +39,7 @@ pub fn create_text_button(
             GuiMeshBuilder::new()
                 .quad(
                     [0.0, 0.0],
-                    [0.1, 0.1], // logical size / 1000.0 for now
+                    [0.1, 0.1],
                     [WHITE, WHITE, WHITE, WHITE],
                     [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
                 )
@@ -153,8 +152,6 @@ impl WidgetBuilder for ButtonBuilder {
             background_src_rect,
         } = self;
 
-        let pixel_scale = world.read_resource::<GuiSettings>().pixel_scale;
-
         let texture = match background {
             Some(file_path) => GlTexture::from_bundle(
                 world
@@ -174,8 +171,6 @@ impl WidgetBuilder for ButtonBuilder {
             background_uv
         };
 
-        let graphics_size = Vector2::from(size) / pixel_scale;
-
         // Create Sprite
         let sprite_entity = world
             .create_entity()
@@ -190,12 +185,7 @@ impl WidgetBuilder for ButtonBuilder {
             .with(
                 // TODO: replace with 9-patch
                 GuiMeshBuilder::new()
-                    .quad(
-                        [0.0, 0.0],
-                        graphics_size.into(),
-                        [WHITE, WHITE, WHITE, WHITE],
-                        uvs,
-                    )
+                    .quad([0.0, 0.0], size, [WHITE, WHITE, WHITE, WHITE], uvs)
                     .build(graphics),
             )
             .build();

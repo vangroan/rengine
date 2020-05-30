@@ -28,10 +28,8 @@ impl<'a> System<'a> for GuiLayoutSystem {
                 .get_mut(data.gui_graph.root_entity())
                 .expect("GUI root entity has no bounds")
                 .set_size([width as f32, height as f32]);
-            // TODO: Pixel scale from a configurable resource
             let proj_matrix = create_gui_proj_matrix(
                 *data.device_dim.physical_size(),
-                1000.0,
                 data.device_dim.dpi_factor() as f32,
             );
 
@@ -56,11 +54,11 @@ pub fn process_layout(
     proj: Matrix4<f32>,
 ) {
     if let Some(entity) = data.gui_graph.get_entity(node_id) {
+        // let pixel_scale = data.gui_settings.pixel_scale;
+
         println!(
-            "{:?} suggested position {:?} {:?}",
-            entity,
-            parent_measure.suggested_pos,
-            (parent_measure.suggested_pos / 1000.0).to_homogeneous()
+            "{:?} suggested position {:?}",
+            entity, parent_measure.suggested_pos,
         );
 
         let new_pos = match data.placements.get(entity) {
@@ -73,9 +71,8 @@ pub fn process_layout(
         }
 
         // Convert logical pixel position to graphics position.
-        // TODO: Pixel scale from GUI settings resource.
         // NOTE: the resulting vector will have a z component of 1.0
-        let mut render_position = (new_pos / 1000.0).to_homogeneous();
+        let mut render_position = new_pos.to_homogeneous();
 
         // GUI y increases downwards, graphics y increases upwards.
         render_position.y *= -1.;

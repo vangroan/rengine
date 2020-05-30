@@ -1,4 +1,4 @@
-use super::{create_gui_proj_matrix, layout, text, GuiDrawable, GuiMesh, GuiSettings};
+use super::{create_gui_proj_matrix, layout, text, GuiDrawable, GuiMesh};
 use crate::camera::CameraProjection;
 use crate::comp::Transform;
 use crate::draw2d::Canvas;
@@ -26,7 +26,6 @@ pub struct DrawGuiSystemData<'a> {
     device_dim: ReadExpect<'a, DeviceDimensions>,
     materials: ReadStorage<'a, Material>,
     transforms: ReadStorage<'a, Transform>,
-    gui_settings: ReadExpect<'a, GuiSettings>,
     gui_meshes: ReadStorage<'a, GuiMesh>,
     gui_drawables: ReadStorage<'a, GuiDrawable>,
     global_positions: ReadStorage<'a, layout::GlobalPosition>,
@@ -63,11 +62,11 @@ impl<'a> System<'a> for DrawGuiSystem {
             device_dim,
             materials,
             transforms,
-            gui_settings,
             gui_meshes,
             gui_drawables,
             global_positions,
             text_batches,
+            ..
         } = data;
 
         let device_physical_size = *device_dim.physical_size();
@@ -77,18 +76,10 @@ impl<'a> System<'a> for DrawGuiSystem {
             device_physical_size.height as u16,
         ));
 
-        let proj_matrix =
-            create_gui_proj_matrix(device_physical_size, gui_settings.pixel_scale, dpi_factor);
+        let proj_matrix = create_gui_proj_matrix(device_physical_size, dpi_factor);
 
         match self.channel.recv_block() {
             Ok(mut encoder) => {
-                // for (drawable,) in (&drawables,).join() {
-                //     match drawable {
-                //         GuiDrawable::Text(_txt) => draw_txt(),
-                //         GuiDrawable::Rectangle(_rect) => { /* Draw to canvas */ }
-                //     }
-                // }
-
                 // Draw to screen
                 for (ref mesh, ref mat, ref trans) in (&gui_meshes, &materials, &transforms).join()
                 {
