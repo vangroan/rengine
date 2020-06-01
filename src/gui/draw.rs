@@ -1,4 +1,4 @@
-use super::{create_gui_proj_matrix, layout, text, GuiDrawable, GuiMesh};
+use super::{create_gui_proj_matrix, layout, text, GuiMesh};
 use crate::camera::CameraProjection;
 use crate::comp::Transform;
 use crate::draw2d::Canvas;
@@ -6,7 +6,7 @@ use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, Rend
 use crate::render::{ChannelPair, Material};
 use crate::res::{DeviceDimensions, ViewPort};
 use gfx_device::{CommandBuffer, Resources};
-use gfx_glyph::{GlyphBrush, VariedSection};
+use gfx_glyph::GlyphBrush;
 use specs::{Join, ReadExpect, ReadStorage, System};
 
 pub struct DrawGuiSystem {
@@ -15,7 +15,7 @@ pub struct DrawGuiSystem {
     pub(crate) render_target: RenderTarget<gfx_device::Resources>,
     pub(crate) depth_target: DepthTarget<gfx_device::Resources>,
     camera: CameraProjection,
-    glyph_brush: GlyphBrush<'static, gfx_device::Resources, gfx_device::Factory>,
+    glyph_brush: GlyphBrush<gfx_device::Resources, gfx_device::Factory>,
 }
 
 #[derive(SystemData)]
@@ -27,7 +27,6 @@ pub struct DrawGuiSystemData<'a> {
     materials: ReadStorage<'a, Material>,
     transforms: ReadStorage<'a, Transform>,
     gui_meshes: ReadStorage<'a, GuiMesh>,
-    gui_drawables: ReadStorage<'a, GuiDrawable>,
     global_positions: ReadStorage<'a, layout::GlobalPosition>,
     text_batches: ReadStorage<'a, text::TextBatch>,
 }
@@ -38,7 +37,7 @@ impl DrawGuiSystem {
         canvas: Canvas,
         render_target: RenderTarget<gfx_device::Resources>,
         depth_target: DepthTarget<gfx_device::Resources>,
-        glyph_brush: GlyphBrush<'static, gfx_device::Resources, gfx_device::Factory>,
+        glyph_brush: GlyphBrush<gfx_device::Resources, gfx_device::Factory>,
     ) -> Self {
         DrawGuiSystem {
             channel,
@@ -63,7 +62,6 @@ impl<'a> System<'a> for DrawGuiSystem {
             materials,
             transforms,
             gui_meshes,
-            gui_drawables,
             global_positions,
             text_batches,
             ..
@@ -116,27 +114,27 @@ impl<'a> System<'a> for DrawGuiSystem {
                     }
                 }
 
-                // Draw Text
-                {
-                    // Project text batches to a form that GlyphBrush can use
-                    let varied_sections: Vec<VariedSection> = (&text_batches, &global_positions)
-                        .join()
-                        .map(|(text_batch, pos)| {
-                            let mut section = text_batch.as_section();
-                            section.screen_position = pos.into();
-                            section
-                        })
-                        .collect();
+                // // Draw Text
+                // {
+                //     // Project text batches to a form that GlyphBrush can use
+                //     let varied_sections: Vec<_> = (&text_batches, &global_positions)
+                //         .join()
+                //         .map(|(text_batch, pos)| {
+                //             let mut section = text_batch.as_section(dpi_factor);
+                //             section.screen_position = pos.into();
+                //             section
+                //         })
+                //         .collect();
 
-                    for varied_section in varied_sections.into_iter() {
-                        self.glyph_brush.queue(varied_section);
-                    }
+                //     for varied_section in varied_sections.into_iter() {
+                //         self.glyph_brush.queue(varied_section);
+                //     }
 
-                    self.glyph_brush
-                        .use_queue()
-                        .draw(&mut encoder, &self.render_target)
-                        .expect("Failed drawing text queue");
-                }
+                //     self.glyph_brush
+                //         .use_queue()
+                //         .draw(&mut encoder, &self.render_target)
+                //         .expect("Failed drawing text queue");
+                // }
 
                 self.channel
                     .send_block(encoder)

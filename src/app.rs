@@ -8,13 +8,12 @@ use crate::draw2d::Canvas;
 use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
-use crate::gui::{self, widgets, DrawGuiSystem, GuiGraph};
+use crate::gui::{self, text, widgets, DrawGuiSystem, GuiGraph};
 use crate::modding::Mods;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
-use crate::text::{DrawTextSystem, TextBatch};
 use gfx::traits::FactoryExt;
 use gfx::Device;
 use gfx_glyph::{ab_glyph::FontArc, GlyphBrushBuilder};
@@ -86,12 +85,10 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<DollyCamera>();
         world.register::<SlideCamera>();
         world.register::<GlTexture>();
-        world.register::<TextBatch>();
 
         // GUI Components
         {
             world.add_resource(gui::HoveredWidget::default());
-            world.register::<gui::GuiDrawable>();
             world.register::<gui::GuiMesh>();
             world.register::<gui::BoundsRect>();
             world.register::<gui::Placement>();
@@ -227,15 +224,20 @@ impl<'a, 'b> App<'a, 'b> {
         );
 
         // Text Rendering
-        let mut text_renderer = DrawTextSystem::new(channel.clone());
+        let mut text_renderer = text::DrawTextSystem::new(
+            channel.clone(),
+            graphics.render_target.clone(),
+            graphics.depth_stencil.clone(),
+        );
 
         // Gui Rendering
+        let default_font = FontArc::try_from_slice(DEFAULT_FONT_DATA).unwrap();
         let mut gui_renderer = DrawGuiSystem::new(
             channel.clone(),
             Canvas::new(&mut graphics, physical_w as u16, physical_h as u16).unwrap(),
             graphics.render_target.clone(),
             graphics.depth_stencil.clone(),
-            GlyphBrushBuilder::using_font_bytes(DEFAULT_FONT_DATA).build(graphics.factory.clone()),
+            GlyphBrushBuilder::using_font(default_font).build(graphics.factory.clone()),
         );
 
         // Modding
@@ -317,6 +319,8 @@ impl<'a, 'b> App<'a, 'b> {
                         // Ensure no dangling shared references
                         renderer.render_target = graphics.render_target.clone();
                         renderer.depth_target = graphics.depth_stencil.clone();
+                        text_renderer.render_target = graphics.render_target.clone();
+                        text_renderer.depth_target = graphics.depth_stencil.clone();
                         gui_renderer.render_target = graphics.render_target.clone();
                         gui_renderer.depth_target = graphics.depth_stencil.clone();
 

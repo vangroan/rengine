@@ -6,7 +6,6 @@ pub use crate::collections::ordered_dag::NodeId;
 
 mod builder;
 mod draw;
-mod drawable;
 mod layout;
 mod mesh;
 mod proj;
@@ -17,7 +16,6 @@ pub mod widgets;
 
 pub use builder::*;
 pub use draw::*;
-pub use drawable::*;
 pub use layout::*;
 pub use mesh::*;
 pub use proj::*;
