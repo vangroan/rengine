@@ -22,7 +22,7 @@ pub struct GraphicContext {
     /// Text rendering library, kept in the graphics context
     /// because it's not thread-safe. It keeps a reference to
     /// the graphics factory.
-    pub(crate) glyph_brush: GlyphBrush<'static, Resources, Factory>,
+    pub(crate) glyph_brush: GlyphBrush<Resources, Factory>,
 }
 
 impl GraphicContext {

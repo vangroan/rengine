@@ -2,7 +2,7 @@ use crate::graphics::GraphicContext;
 use crate::render::ChannelPair;
 use crate::text::TextBatch;
 use gfx_device::{CommandBuffer, Resources};
-use gfx_glyph::VariedSection;
+use gfx_glyph::Section;
 use specs::{Join, ReadStorage, World};
 
 pub struct DrawTextSystem {
@@ -22,7 +22,7 @@ impl DrawTextSystem {
                 let (text_batches,): (ReadStorage<'_, TextBatch>,) = world.system_data();
 
                 // Project text batches to a form that GlyphBrush can use
-                let varied_sections: Vec<VariedSection> = text_batches
+                let varied_sections: Vec<Section> = text_batches
                     .join()
                     .map(|text_batch| text_batch.as_section())
                     .collect();

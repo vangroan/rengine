@@ -1,5 +1,5 @@
 use crate::colors::Color;
-use gfx_glyph::{FontId, SectionText, VariedSection};
+use gfx_glyph::{FontId, Section, Text};
 use specs::{Component, DenseVecStorage};
 
 #[derive(Component, Default)]
@@ -20,7 +20,7 @@ impl TextBatch {
         self.fragments.push(TextFragment {
             content: text.to_owned(),
             color: color.into(),
-            _font: FontId::default(),
+            font_id: FontId::default(),
         });
     }
 
@@ -43,21 +43,18 @@ impl TextBatch {
         self
     }
 
-    pub fn as_section(&self) -> VariedSection {
-        let sections: Vec<SectionText> = self
+    pub fn as_section(&self) -> Section {
+        let text: Vec<_> = self
             .fragments
             .iter()
-            .map(|fragment| SectionText {
-                text: &fragment.content,
-                color: fragment.color,
-                ..SectionText::default()
+            .map(|fragment| {
+                Text::new(&fragment.content)
+                    .with_color(fragment.color)
+                    .with_font_id(fragment.font_id)
             })
             .collect();
 
-        VariedSection {
-            text: sections,
-            ..VariedSection::default()
-        }
+        Section::default().with_text(text)
     }
 }
 
@@ -69,5 +66,5 @@ pub struct TextFragment {
     color: Color,
 
     /// Handle to font stored in glyph brush
-    _font: FontId,
+    font_id: FontId,
 }

@@ -16,7 +16,7 @@ use crate::sys::DrawSystem;
 use crate::text::{DrawTextSystem, TextBatch};
 use gfx::traits::FactoryExt;
 use gfx::Device;
-use gfx_glyph::GlyphBrushBuilder;
+use gfx_glyph::{ab_glyph::FontArc, GlyphBrushBuilder};
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
 use log::{error, trace};
 use specs::{Builder, Dispatcher, DispatcherBuilder, RunNow, World};
@@ -460,8 +460,8 @@ impl AppBuilder {
             )?;
 
         // Text Rendering
-        let glyph_brush =
-            GlyphBrushBuilder::using_font_bytes(DEFAULT_FONT_DATA).build(factory.clone());
+        let default_font = FontArc::try_from_slice(DEFAULT_FONT_DATA).unwrap();
+        let glyph_brush = GlyphBrushBuilder::using_font(default_font).build(factory.clone());
 
         // Graphics Context
         let graphics = GraphicContext {
