@@ -1,4 +1,4 @@
-use super::{create_gui_proj_matrix, layout, text, GuiMesh};
+use super::{create_gui_proj_matrix, GuiMesh};
 use crate::camera::CameraProjection;
 use crate::comp::Transform;
 use crate::draw2d::Canvas;
@@ -6,16 +6,14 @@ use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, Rend
 use crate::render::{ChannelPair, Material};
 use crate::res::{DeviceDimensions, ViewPort};
 use gfx_device::{CommandBuffer, Resources};
-use gfx_glyph::GlyphBrush;
 use specs::{Join, ReadExpect, ReadStorage, System};
 
 pub struct DrawGuiSystem {
     channel: ChannelPair<Resources, CommandBuffer>,
-    canvas: Canvas,
+    _canvas: Canvas,
     pub(crate) render_target: RenderTarget<gfx_device::Resources>,
     pub(crate) depth_target: DepthTarget<gfx_device::Resources>,
     camera: CameraProjection,
-    glyph_brush: GlyphBrush<gfx_device::Resources, gfx_device::Factory>,
 }
 
 #[derive(SystemData)]
@@ -27,8 +25,6 @@ pub struct DrawGuiSystemData<'a> {
     materials: ReadStorage<'a, Material>,
     transforms: ReadStorage<'a, Transform>,
     gui_meshes: ReadStorage<'a, GuiMesh>,
-    global_positions: ReadStorage<'a, layout::GlobalPosition>,
-    text_batches: ReadStorage<'a, text::TextBatch>,
 }
 
 impl DrawGuiSystem {
@@ -37,15 +33,13 @@ impl DrawGuiSystem {
         canvas: Canvas,
         render_target: RenderTarget<gfx_device::Resources>,
         depth_target: DepthTarget<gfx_device::Resources>,
-        glyph_brush: GlyphBrush<gfx_device::Resources, gfx_device::Factory>,
     ) -> Self {
         DrawGuiSystem {
             channel,
-            canvas,
+            _canvas: canvas,
             render_target,
             depth_target,
             camera: CameraProjection::default(),
-            glyph_brush,
         }
     }
 }
@@ -56,14 +50,11 @@ impl<'a> System<'a> for DrawGuiSystem {
     fn run(&mut self, data: Self::SystemData) {
         let DrawGuiSystemData {
             basic_pipe_bundle,
-            gizmo_pipe_bundle,
             view_port,
             device_dim,
             materials,
             transforms,
             gui_meshes,
-            global_positions,
-            text_batches,
             ..
         } = data;
 
@@ -113,28 +104,6 @@ impl<'a> System<'a> for DrawGuiSystem {
                         _ => unimplemented!(),
                     }
                 }
-
-                // // Draw Text
-                // {
-                //     // Project text batches to a form that GlyphBrush can use
-                //     let varied_sections: Vec<_> = (&text_batches, &global_positions)
-                //         .join()
-                //         .map(|(text_batch, pos)| {
-                //             let mut section = text_batch.as_section(dpi_factor);
-                //             section.screen_position = pos.into();
-                //             section
-                //         })
-                //         .collect();
-
-                //     for varied_section in varied_sections.into_iter() {
-                //         self.glyph_brush.queue(varied_section);
-                //     }
-
-                //     self.glyph_brush
-                //         .use_queue()
-                //         .draw(&mut encoder, &self.render_target)
-                //         .expect("Failed drawing text queue");
-                // }
 
                 self.channel
                     .send_block(encoder)

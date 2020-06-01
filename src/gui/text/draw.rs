@@ -1,17 +1,17 @@
 use super::super::layout;
 use super::TextBatch;
 use crate::gfx_types::{DepthTarget, RenderTarget};
-use crate::graphics::GraphicContext;
 use crate::render::ChannelPair;
 use crate::res::DeviceDimensions;
 use gfx_device::{CommandBuffer, Resources};
-use gfx_glyph::Section;
-use specs::{Join, ReadExpect, ReadStorage, System, World};
+use gfx_glyph::{GlyphBrush, Section};
+use specs::{Join, ReadExpect, ReadStorage, System};
 
 pub struct DrawTextSystem {
     channel: ChannelPair<Resources, CommandBuffer>,
     pub(crate) render_target: RenderTarget<gfx_device::Resources>,
     pub(crate) depth_target: DepthTarget<gfx_device::Resources>,
+    glyph_brush: GlyphBrush<gfx_device::Resources, gfx_device::Factory>,
 }
 
 #[derive(SystemData)]
@@ -26,11 +26,13 @@ impl DrawTextSystem {
         channel: ChannelPair<Resources, CommandBuffer>,
         render_target: RenderTarget<gfx_device::Resources>,
         depth_target: DepthTarget<gfx_device::Resources>,
+        glyph_brush: GlyphBrush<gfx_device::Resources, gfx_device::Factory>,
     ) -> Self {
         DrawTextSystem {
             channel,
             render_target,
             depth_target,
+            glyph_brush,
         }
     }
 }
@@ -38,30 +40,34 @@ impl DrawTextSystem {
 impl<'a> System<'a> for DrawTextSystem {
     type SystemData = DrawTextSystemData<'a>;
 
-    fn run(&mut self, data: Self::SystemData) {}
-}
+    fn run(&mut self, data: Self::SystemData) {
+        let DrawTextSystemData {
+            device_dim,
+            global_positions,
+            text_batches,
+        } = data;
 
-impl DrawTextSystem {
-    pub fn render(&mut self, world: &mut World, graphics: &mut GraphicContext) {
-        let dpi_factor = world.read_resource::<DeviceDimensions>().dpi_factor() as f32;
+        let dpi_factor = device_dim.dpi_factor() as f32;
+
         match self.channel.recv_block() {
             Ok(mut encoder) => {
-                let (text_batches,): (ReadStorage<'_, TextBatch>,) = world.system_data();
-
                 // Project text batches to a form that GlyphBrush can use
-                let sections: Vec<Section> = text_batches
+                let sections: Vec<Section> = (&text_batches, &global_positions)
                     .join()
-                    .map(|text_batch| text_batch.as_section(dpi_factor))
+                    .map(|(text_batch, pos)| {
+                        let mut section = text_batch.as_section(dpi_factor);
+                        section.screen_position = pos.into();
+                        section
+                    })
                     .collect();
 
                 for section in sections.into_iter() {
-                    graphics.glyph_brush.queue(section);
+                    self.glyph_brush.queue(section);
                 }
 
-                graphics
-                    .glyph_brush
+                self.glyph_brush
                     .use_queue()
-                    .draw(&mut encoder, &graphics.render_target)
+                    .draw(&mut encoder, &self.render_target)
                     .expect("Failed drawing text queue");
 
                 self.channel

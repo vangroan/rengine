@@ -217,6 +217,7 @@ impl WidgetBuilder for ButtonBuilder {
     }
 }
 
+#[allow(dead_code)]
 enum ButtonType {
     Text(String),
     Image(GlTexture),

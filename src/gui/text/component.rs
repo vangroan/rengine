@@ -56,6 +56,7 @@ impl TextBatch {
                     .with_color(fragment.color)
                     .with_scale(fragment.scale * dpi_factor)
                     .with_font_id(fragment.font_id)
+                    .with_z(1.0)
             })
             .collect();
 

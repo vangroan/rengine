@@ -224,20 +224,20 @@ impl<'a, 'b> App<'a, 'b> {
         );
 
         // Text Rendering
+        let default_font = FontArc::try_from_slice(DEFAULT_FONT_DATA).unwrap();
         let mut text_renderer = text::DrawTextSystem::new(
             channel.clone(),
             graphics.render_target.clone(),
             graphics.depth_stencil.clone(),
+            GlyphBrushBuilder::using_font(default_font).build(graphics.factory.clone()),
         );
 
         // Gui Rendering
-        let default_font = FontArc::try_from_slice(DEFAULT_FONT_DATA).unwrap();
         let mut gui_renderer = DrawGuiSystem::new(
             channel.clone(),
             Canvas::new(&mut graphics, physical_w as u16, physical_h as u16).unwrap(),
             graphics.render_target.clone(),
             graphics.depth_stencil.clone(),
-            GlyphBrushBuilder::using_font(default_font).build(graphics.factory.clone()),
         );
 
         // Modding
@@ -367,7 +367,7 @@ impl<'a, 'b> App<'a, 'b> {
             renderer.run_now(&world.res);
 
             // Render Text
-            text_renderer.render(&mut world, &mut graphics);
+            text_renderer.run_now(&world.res);
 
             // Render Gui
             gui_renderer.run_now(&world.res);
