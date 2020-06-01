@@ -1,6 +1,6 @@
 [package]
 name = "rengine"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Willem Victor <wimpievictor@gmail.com>"]
 edition = "2018"
 description = "Game engine/framework that aggregates several existing libraries"
@@ -16,7 +16,7 @@ gfx_core = "0.9.1"
 gfx_device_gl = "0.16.1"
 gfx_window_glutin = "0.31.0"
 glutin = "0.21.0"
-gfx_glyph = "0.15.0"
+gfx_glyph = "0.17.0"
 image = "0.21.1"
 log = "0.4"
 nalgebra = "0.18.0"
