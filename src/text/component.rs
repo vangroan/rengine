@@ -1,4 +1,4 @@
-use crate::colors::Color;
+use crate::colors::{self, Color};
 use gfx_glyph::{FontId, Section, Text};
 use specs::{Component, DenseVecStorage};
 
@@ -20,8 +20,12 @@ impl TextBatch {
         self.fragments.push(TextFragment {
             content: text.to_owned(),
             color: color.into(),
-            font_id: FontId::default(),
+            ..TextFragment::default()
         });
+    }
+
+    pub fn add_fragment(&mut self, fragment: TextFragment) {
+        self.fragments.push(fragment);
     }
 
     /// Clears all existing text fragments and replaces
@@ -43,13 +47,14 @@ impl TextBatch {
         self
     }
 
-    pub fn as_section(&self) -> Section {
+    pub fn as_section(&self, dpi_factor: f32) -> Section {
         let text: Vec<_> = self
             .fragments
             .iter()
             .map(|fragment| {
                 Text::new(&fragment.content)
                     .with_color(fragment.color)
+                    .with_scale(fragment.scale * dpi_factor)
                     .with_font_id(fragment.font_id)
             })
             .collect();
@@ -65,6 +70,20 @@ pub struct TextFragment {
     /// Text color to be rendered
     color: Color,
 
+    /// Text logical size
+    scale: f32,
+
     /// Handle to font stored in glyph brush
     font_id: FontId,
+}
+
+impl Default for TextFragment {
+    fn default() -> Self {
+        TextFragment {
+            content: "".to_owned(),
+            color: colors::WHITE,
+            scale: 16.0,
+            font_id: FontId::default(),
+        }
+    }
 }
