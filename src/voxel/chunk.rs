@@ -376,7 +376,7 @@ where
 
         if self.in_bounds(voxel_coord.clone()) {
             // Convert to local space
-            let local_coord = voxel_coord - self.voxel_offset;
+            let local_coord = voxel_coord - &self.voxel_offset;
             let index = self.data_index(&local_coord);
 
             self.data.get(index).map(|el| &el.1)
@@ -408,7 +408,7 @@ where
 
         if self.in_bounds(voxel_coord.clone()) {
             // Convert to local space
-            let local_coord = voxel_coord - self.voxel_offset;
+            let local_coord = voxel_coord - &self.voxel_offset;
             let index = self.data_index(&local_coord);
 
             self.data.get_mut(index).map(|el| &mut el.1)
@@ -424,7 +424,7 @@ where
         let voxel_coord: VoxelCoord = coord.into();
 
         // Convert to local space
-        let local_coord = voxel_coord - self.voxel_offset;
+        let local_coord = voxel_coord.clone() - &self.voxel_offset;
         let center_index = self.data_index(&local_coord);
         let occupied = data.occupied();
 
@@ -450,7 +450,7 @@ where
 
                     // Set the neighbour's mask according to whether the center
                     // is occupied.
-                    let neigh_coord = local_coord + [x, y, z].into();
+                    let neigh_coord = local_coord.clone() + [x, y, z].into();
                     let index = self.data_index(&neigh_coord);
                     if let Some(voxel_bundle) = self.data.get_mut(index) {
                         // Prepare a mask from the perspective of the neighbour.
@@ -480,7 +480,7 @@ where
         let voxel_coord: VoxelCoord = coord.into();
 
         if self.in_bounds(voxel_coord.clone()) {
-            let local_coord = voxel_coord - self.voxel_offset;
+            let local_coord = voxel_coord - &self.voxel_offset;
             let index = self.data_index(&local_coord);
 
             self.data.get(index).map(|el| el.0)
