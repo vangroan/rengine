@@ -1,4 +1,3 @@
-extern crate chrono;
 extern crate daggy;
 #[macro_use]
 extern crate error_chain;
@@ -40,10 +39,8 @@ mod gfx_types;
 mod graphics;
 pub mod gui;
 pub mod intern;
-pub mod metrics;
 pub mod modding;
 pub mod noise;
-pub mod number;
 pub mod option;
 pub mod render;
 pub mod res;
