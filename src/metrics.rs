@@ -107,7 +107,7 @@ impl MetricHub {
                                 .lock()
                                 .expect("Metric worker mutex poisoned");
                             let timeseries = ts_map
-                                .entry(msg.key())
+                                .entry(msg.key)
                                 .or_insert_with(|| {
                                     TimeSeries::new(settings.aggregate_interval, settings.data_point_count)
                                 });
@@ -116,7 +116,7 @@ impl MetricHub {
                                 .measurements
                                 .entry(msg.slot(timeseries.interval)
                                           .expect("divide by zero"))
-                                .or_insert_with(|| vec![])
+                                .or_insert_with(Vec::new)
                                 .push(msg.into());
                         }
                     }
@@ -262,6 +262,20 @@ pub enum MetricAggregate {
     P99,
 }
 
+/// Metric for measuring the time a block of code takes to execute.
+///
+/// Must be explicitly stopped to record measurement.
+///
+/// ```
+/// # use rengine::metrics::{MetricHub, MetricSettings, MetricAggregate};
+/// # let metric_hub = MetricHub::new(MetricSettings::default());
+/// const EXAMPLE_METRIC: u16 = 1;
+/// let mut timer = metric_hub.timer(EXAMPLE_METRIC, MetricAggregate::Maximum);
+/// // Do work...
+/// timer.stop();
+///
+/// assert!(timer.stopped());
+/// ```
 pub struct TimerMetric {
     sender: Sender<MetricMessage>,
     metric_id: u16,
@@ -279,13 +293,12 @@ impl TimerMetric {
     pub fn stop(&mut self) {
         if !self.stopped {
             // println!("Stop timer");
-            let msg = MetricMessage::TimeMeasurement {
-                key: MetricKey {
-                    metric_id: self.metric_id,
-                    aggregate: self.aggregate,
-                },
-                duration: self.start_at.elapsed(),
+            let msg = MetricMessage {
+                key: MetricKey::new(self.metric_id, self.aggregate),
                 datetime: Local::now(),
+                kind: MetricMessageKind::TimeMeasurement {
+                    duration: self.start_at.elapsed(),
+                },
             };
 
             if let Err(err) = self.sender.send(msg) {
@@ -302,39 +315,43 @@ impl Drop for TimerMetric {
     }
 }
 
+/// Identifier for a metric.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct MetricKey {
     metric_id: u16,
     aggregate: MetricAggregate,
 }
 
+impl MetricKey {
+    fn new(metric_id: u16, aggregate: MetricAggregate) -> Self {
+        MetricKey {
+            metric_id,
+            aggregate,
+        }
+    }
+}
+
 /// Message for the metric hub to communicate with the worker thread.
-#[allow(dead_code)]
-enum MetricMessage {
-    TimeMeasurement {
-        key: MetricKey,
-        duration: Duration,
-        datetime: DateTime<Local>,
-    },
+struct MetricMessage {
+    /// Metric that this messsage is meant for.
+    key: MetricKey,
+    /// When this metric was measured.
+    datetime: DateTime<Local>,
+    /// Type of measurement.
+    kind: MetricMessageKind,
 }
 
 impl MetricMessage {
-    #[inline]
-    fn key(&self) -> MetricKey {
-        match self {
-            MetricMessage::TimeMeasurement { key, .. } => *key,
-        }
-    }
-
     /// Calculate the slot this message belongs to.
     #[inline]
     fn slot(&self, interval: Duration) -> Option<i64> {
-        let datetime = match self {
-            MetricMessage::TimeMeasurement { datetime, .. } => *datetime,
-        };
-
-        datetime_to_slot(&datetime, &interval)
+        datetime_to_slot(&self.datetime, &interval)
     }
+}
+
+enum MetricMessageKind {
+    TimeMeasurement { duration: Duration },
+    UIntMeasurement { value: u32 },
 }
 
 fn datetime_to_slot<Tz: TimeZone>(datetime: &DateTime<Tz>, interval: &Duration) -> Option<i64> {
@@ -377,14 +394,13 @@ struct RawMeasurement {
 
 impl From<MetricMessage> for RawMeasurement {
     fn from(m: MetricMessage) -> Self {
-        match m {
-            MetricMessage::TimeMeasurement {
-                duration, datetime, ..
-            } => RawMeasurement {
+        match m.kind {
+            MetricMessageKind::TimeMeasurement { duration, .. } => RawMeasurement {
                 // Duration as float milliseconds
                 value: (duration.as_nanos() as f64) / 1_000_000.0,
-                timestamp: datetime.timestamp(),
+                timestamp: m.datetime.timestamp(),
             },
+            _ => unimplemented!(),
         }
     }
 }
