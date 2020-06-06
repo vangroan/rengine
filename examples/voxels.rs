@@ -11,6 +11,7 @@ use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
+use rengine::gui::text::TextBatch;
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
@@ -20,7 +21,6 @@ use rengine::specs::{
     Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteExpect, WriteStorage,
 };
 use rengine::sprite::{Billboard, BillboardSystem};
-use rengine::text::TextBatch;
 use rengine::util::FpsCounter;
 use rengine::voxel::{
     raycast_from_camera, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
@@ -319,20 +319,7 @@ impl Scene for Game {
         }
 
         // FPS Counter
-        self.fps_counter_entity = Some(
-            ctx.world
-                .create_entity()
-                .with(TextBatch::new().with("FPS: 0", WHITE))
-                .build(),
-        );
-
-        // TODO: Text in GUI graph
-        // let _fps_counter_widget_id = ctx
-        //     .world
-        //     .create_widget(self.fps_counter_entity.unwrap())
-        //     .build()
-        //     .unwrap();
-
+        self.fps_counter_entity = Some(rengine::util::create_fps_counter_widget(&mut ctx.world));
         self.entities.push(self.fps_counter_entity.unwrap());
 
         // Load Mod Meta

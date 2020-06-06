@@ -59,3 +59,32 @@ impl fmt::Display for FpsCounter {
         write!(f, "FPS({})", self.fps())
     }
 }
+
+// ---------- //
+// Gui Widget //
+// ---------- //
+
+use crate::colors;
+use crate::comp::Transform;
+use crate::gui;
+use specs::{Builder, Entity, World};
+
+/// Helper to create a basic FPS counter text output.
+///
+/// The text will be added to the root widget.
+pub fn create_fps_counter_widget(world: &mut World) -> Entity {
+    let entity = world
+        .create_entity()
+        .with(gui::Placement::new(0.0, 0.0))
+        .with(gui::GlobalPosition::default())
+        .with(gui::BoundsRect::new(32.0, 32.0)) // TODO: Proper bounds based on behaviour of glyph_brush
+        .with(gui::text::TextBatch::default().with("FPS: 0", colors::WHITE))
+        .with(Transform::default())
+        .build();
+
+    let _node_id = world
+        .write_resource::<gui::GuiGraph>()
+        .insert_entity(entity, None);
+
+    entity
+}

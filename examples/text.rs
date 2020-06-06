@@ -1,8 +1,8 @@
 extern crate rengine;
 
 use rengine::colors::{BLACK, WHITE};
+use rengine::gui::text::TextBatch;
 use rengine::specs::{Builder, Entity};
-use rengine::text::TextBatch;
 use rengine::{AppBuilder, Context, Scene, Trans};
 
 struct Game {
