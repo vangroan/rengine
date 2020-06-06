@@ -12,6 +12,7 @@ use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
+use rengine::metrics::{builtin_metrics::*, DataPoint, MetricAggregate, MetricHub};
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
@@ -349,7 +350,7 @@ impl Scene for Game {
         let cmds =
             ctx.world.exec(
                 |mut mods: WriteExpect<Mods>| match mods.scene_hook(SceneHook::Start) {
-                    Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
+                    Ok(out_cmds) => out_cmds.unwrap_or_else(Vec::new),
                     Err(e) => {
                         println!("{:?}", e);
                         vec![]
@@ -366,7 +367,7 @@ impl Scene for Game {
         let cmds =
             ctx.world.exec(
                 |mut mods: WriteExpect<Mods>| match mods.scene_hook(SceneHook::Stop) {
-                    Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
+                    Ok(out_cmds) => out_cmds.unwrap_or_else(Vec::new),
                     Err(e) => {
                         println!("{:?}", e);
                         vec![]
@@ -399,6 +400,7 @@ impl Scene for Game {
         use glutin::ElementState;
         use glutin::Event::*;
         use glutin::MouseButton;
+        use glutin::VirtualKeyCode;
         use glutin::WindowEvent::*;
 
         if let WindowEvent { event, .. } = ev {
@@ -420,6 +422,67 @@ impl Scene for Game {
                         if state == &ElementState::Released {
                             self.added = false;
                         }
+                    }
+                }
+                KeyboardInput { input, .. } => {
+                    if input.virtual_keycode == Some(VirtualKeyCode::F5)
+                        && input.state == ElementState::Released
+                    {
+                        ctx.world.exec(|metrics: Read<'_, MetricHub>| {
+                            let length = 64;
+                            let mut timeseries = vec![DataPoint::default(); length];
+
+                            let now_seconds = chrono::Local::now().timestamp();
+
+                            // -------------------------------------------------
+                            println!("Render Time Taken");
+                            metrics.make_time_series(
+                                GRAPHICS_RENDER,
+                                MetricAggregate::Maximum,
+                                &mut timeseries,
+                                0,
+                                length,
+                            );
+                            let mut data_points: Vec<(i64, f64)> = timeseries
+                                .iter()
+                                .map(|dp| {
+                                    let delta_seconds = now_seconds - dp.datetime.timestamp();
+                                    (delta_seconds, dp.value)
+                                })
+                                .collect();
+                            data_points.sort_by(|a, b| a.0.cmp(&b.0));
+
+                            for dp in &data_points {
+                                println!("{}: {}ms", dp.0, dp.1);
+                            }
+
+                            // Reset for next metric
+                            for e in &mut timeseries {
+                                *e = Default::default();
+                            }
+
+                            // -------------------------------------------------
+                            println!("Draw Call Count");
+                            metrics.make_time_series(
+                                GRAPHICS_DRAW_CALLS,
+                                MetricAggregate::Sum,
+                                &mut timeseries,
+                                0,
+                                length,
+                            );
+                            let mut data_points: Vec<(i64, f64)> = timeseries
+                                .iter()
+                                .map(|dp| {
+                                    let delta_seconds = now_seconds - dp.datetime.timestamp();
+                                    (delta_seconds, dp.value)
+                                })
+                                .collect();
+                            data_points.sort_by(|a, b| a.0.cmp(&b.0));
+
+                            for dp in &data_points {
+                                println!("{}: {}", dp.0, dp.1);
+                            }
+                        });
                     }
                 }
                 _ => {}
@@ -472,14 +535,14 @@ impl Scene for Game {
                     let occupied = chunk_map
                         .chunk_entity(chunk_coord)
                         .and_then(|e| chunks.get(e))
-                        .and_then(|c| c.get(raycast_info.voxel_coord().clone()))
+                        .and_then(|c| c.get(*raycast_info.voxel_coord()))
                         .map(|d| d.occupied())
                         .unwrap_or(false);
 
                     // Carve out a voxel in path of ray
                     if occupied {
                         chunk_ctrl.lazy_update(
-                            raycast_info.voxel_coord().clone(),
+                            *raycast_info.voxel_coord(),
                             TileVoxel {
                                 tile_id: EMPTY_TILE,
                             },
@@ -524,7 +587,7 @@ impl Scene for Game {
                         // Stop
                         break 'add;
                     } else {
-                        last_voxel = Some(raycast_info.voxel_coord().clone());
+                        last_voxel = Some(*raycast_info.voxel_coord());
                     }
                 }
             }
