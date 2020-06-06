@@ -150,6 +150,15 @@ impl MetricHub {
         }
     }
 
+    pub fn counter(&self, metric_id: u16, aggregate: MetricAggregate) -> CounterMetric {
+        CounterMetric {
+            sender: self.message_sender.clone(),
+            metric_id,
+            aggregate,
+            value: 0,
+        }
+    }
+
     /// Builds a time series, containing aggregated datapoints.
     pub fn make_time_series(
         &self,
@@ -264,12 +273,17 @@ pub enum MetricAggregate {
 
 /// Metric for measuring the time a block of code takes to execute.
 ///
-/// Must be explicitly stopped to record measurement.
+/// Must be explicitly stopped to record the measurement and send it to
+/// the drain.
+///
+/// # Examples
 ///
 /// ```
-/// # use rengine::metrics::{MetricHub, MetricSettings, MetricAggregate};
-/// # let metric_hub = MetricHub::new(MetricSettings::default());
+/// use rengine::metrics::{MetricHub, MetricSettings, MetricAggregate};
+///
+/// let metric_hub = MetricHub::new(MetricSettings::default());
 /// const EXAMPLE_METRIC: u16 = 1;
+///
 /// let mut timer = metric_hub.timer(EXAMPLE_METRIC, MetricAggregate::Maximum);
 /// // Do work...
 /// timer.stop();
@@ -312,6 +326,69 @@ impl TimerMetric {
 impl Drop for TimerMetric {
     fn drop(&mut self) {
         self.stop();
+    }
+}
+
+/// Metric for counting values.
+///
+/// The measurement is sent to the drain when dropped.
+///
+/// # Examples
+///
+/// ```
+/// use rengine::metrics::{MetricHub, MetricSettings, MetricAggregate};
+///
+/// let metric_hub = MetricHub::new(MetricSettings::default());
+///
+/// const EXAMPLE_METRIC: u16 = 1;
+/// let mut counter = metric_hub.counter(EXAMPLE_METRIC, MetricAggregate::Average);
+/// counter.set(10);
+/// counter.incr(5);
+/// counter.decr(2);
+///
+/// assert_eq!(13, counter.value());
+/// drop(counter);
+/// ```
+pub struct CounterMetric {
+    sender: Sender<MetricMessage>,
+    metric_id: u16,
+    aggregate: MetricAggregate,
+    value: u32,
+}
+
+impl CounterMetric {
+    #[inline]
+    pub fn incr(&mut self, value: u32) {
+        self.value += value;
+    }
+
+    #[inline]
+    pub fn decr(&mut self, value: u32) {
+        self.value -= value;
+    }
+
+    #[inline]
+    pub fn set(&mut self, value: u32) {
+        self.value = value;
+    }
+
+    #[inline]
+    pub fn value(&self) -> u32 {
+        self.value
+    }
+}
+
+impl Drop for CounterMetric {
+    fn drop(&mut self) {
+        let msg = MetricMessage {
+            key: MetricKey::new(self.metric_id, self.aggregate),
+            datetime: Local::now(),
+            kind: MetricMessageKind::UIntMeasurement { value: self.value },
+        };
+
+        if let Err(err) = self.sender.send(msg) {
+            warn!("Timer failed to record metric: {}", err);
+        }
     }
 }
 
