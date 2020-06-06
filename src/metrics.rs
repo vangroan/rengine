@@ -234,6 +234,12 @@ fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries, i
                             .into_inner()
                     })
                     .sum(),
+                // TODO:
+                //   - Minimum
+                //   - Average
+                //   - Count
+                //   - P95
+                //   - P99
                 _ => unimplemented!(),
             };
 
