@@ -47,6 +47,8 @@ pub mod builtin_metrics {
     pub const SCENE_UPDATE: u16 = 1000;
     /// Time taken sending the graphics encoder to gfx.
     pub const GRAPHICS_RENDER: u16 = 2000;
+    /// Number of calls to encoder draw function.
+    pub const GRAPHICS_DRAW_CALLS: u16 = 2010;
 }
 
 /// Central hub for recording and aggregating metrics.
@@ -214,22 +216,31 @@ fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries, i
         }
         // Important: remove element to cleanup memory.
         if let Some(measurements) = timeseries.measurements.remove(&slot) {
-            match aggregate {
-                MetricAggregate::Maximum => {
-                    let max_value = measurements
-                        .into_iter()
-                        .map(|raw| NonNan::new(raw.value).expect("Metric value was nan"))
-                        .max();
-                    let naive = NaiveDateTime::from_timestamp(slot, 0);
-                    let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+            let naive = NaiveDateTime::from_timestamp(slot, 0);
+            let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
-                    timeseries.data_points.push_back(DataPoint {
-                        datetime: datetime.into(),
-                        value: max_value.unwrap().into_inner(),
-                    });
-                }
-                _ => warn!("Aggregate {:?} unimplemented", aggregate),
-            }
+            let value: f64 = match aggregate {
+                MetricAggregate::Maximum => measurements
+                    .into_iter()
+                    .map(|raw| NonNan::new(raw.value).expect("Metric value was NaN"))
+                    .max()
+                    .unwrap()
+                    .into_inner(),
+                MetricAggregate::Sum => measurements
+                    .into_iter()
+                    .map(|raw| {
+                        NonNan::new(raw.value)
+                            .expect("Metric value was NaN")
+                            .into_inner()
+                    })
+                    .sum(),
+                _ => unimplemented!(),
+            };
+
+            timeseries.data_points.push_back(DataPoint {
+                datetime: datetime.into(),
+                value,
+            });
         }
     }
 
@@ -472,12 +483,15 @@ struct RawMeasurement {
 impl From<MetricMessage> for RawMeasurement {
     fn from(m: MetricMessage) -> Self {
         match m.kind {
-            MetricMessageKind::TimeMeasurement { duration, .. } => RawMeasurement {
+            MetricMessageKind::TimeMeasurement { duration } => RawMeasurement {
                 // Duration as float milliseconds
                 value: (duration.as_nanos() as f64) / 1_000_000.0,
                 timestamp: m.datetime.timestamp(),
             },
-            _ => unimplemented!(),
+            MetricMessageKind::UIntMeasurement { value } => RawMeasurement {
+                value: value.into(),
+                timestamp: m.datetime.timestamp(),
+            },
         }
     }
 }
