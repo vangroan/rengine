@@ -350,7 +350,7 @@ impl Scene for Game {
         let cmds =
             ctx.world.exec(
                 |mut mods: WriteExpect<Mods>| match mods.scene_hook(SceneHook::Start) {
-                    Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
+                    Ok(out_cmds) => out_cmds.unwrap_or_else(Vec::new),
                     Err(e) => {
                         println!("{:?}", e);
                         vec![]
@@ -367,7 +367,7 @@ impl Scene for Game {
         let cmds =
             ctx.world.exec(
                 |mut mods: WriteExpect<Mods>| match mods.scene_hook(SceneHook::Stop) {
-                    Ok(out_cmds) => out_cmds.unwrap_or_else(|| vec![]),
+                    Ok(out_cmds) => out_cmds.unwrap_or_else(Vec::new),
                     Err(e) => {
                         println!("{:?}", e);
                         vec![]
@@ -505,14 +505,14 @@ impl Scene for Game {
                     let occupied = chunk_map
                         .chunk_entity(chunk_coord)
                         .and_then(|e| chunks.get(e))
-                        .and_then(|c| c.get(raycast_info.voxel_coord().clone()))
+                        .and_then(|c| c.get(*raycast_info.voxel_coord()))
                         .map(|d| d.occupied())
                         .unwrap_or(false);
 
                     // Carve out a voxel in path of ray
                     if occupied {
                         chunk_ctrl.lazy_update(
-                            raycast_info.voxel_coord().clone(),
+                            *raycast_info.voxel_coord(),
                             TileVoxel {
                                 tile_id: EMPTY_TILE,
                             },
