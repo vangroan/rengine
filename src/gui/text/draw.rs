@@ -18,6 +18,7 @@ pub struct DrawTextSystem {
 pub struct DrawTextSystemData<'a> {
     device_dim: ReadExpect<'a, DeviceDimensions>,
     global_positions: ReadStorage<'a, layout::GlobalPosition>,
+    bounds_rects: ReadStorage<'a, layout::BoundsRect>,
     text_batches: ReadStorage<'a, TextBatch>,
 }
 
@@ -44,6 +45,7 @@ impl<'a> System<'a> for DrawTextSystem {
         let DrawTextSystemData {
             device_dim,
             global_positions,
+            bounds_rects,
             text_batches,
         } = data;
 
@@ -52,10 +54,10 @@ impl<'a> System<'a> for DrawTextSystem {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
                 // Project text batches to a form that GlyphBrush can use
-                let sections: Vec<Section> = (&text_batches, &global_positions)
+                let sections: Vec<Section> = (&text_batches, &global_positions, &bounds_rects)
                     .join()
-                    .map(|(text_batch, pos)| {
-                        let mut section = text_batch.as_section(dpi_factor);
+                    .map(|(text_batch, pos, bounds)| {
+                        let mut section = text_batch.as_section(dpi_factor, (*bounds).into());
                         section.screen_position = pos.into();
                         section
                     })

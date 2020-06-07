@@ -1,4 +1,4 @@
-use super::super::text::TextBatch;
+use super::super::text::{TextAlignHorizontal, TextAlignVertical, TextBatch};
 use super::super::{
     BoundsRect, GlobalPosition, GuiGraph, GuiMeshBuilder, Pack, PackMode, Placement, WidgetBuilder,
 };
@@ -196,16 +196,20 @@ impl WidgetBuilder for ButtonBuilder {
 
         // Text
         if let ButtonType::Text(text) = button_type {
-            // Offset text to be vertically centered in button's frame.
-            let offset = Vector2::new(0., size[1] / 2.);
+            // Text (center aligned) center is the button center.
+            let center = Vector2::from(size) / 2.0;
 
             let text_entity = world
                 .create_entity()
-                .with(Placement::from_vector(offset))
+                .with(Placement::from_vector(center))
                 .with(GlobalPosition::default())
                 .with(Transform::default())
                 .with(BoundsRect::new(size[0], size[1]))
-                .with(TextBatch::default().with(&text, WHITE))
+                .with(
+                    TextBatch::default()
+                        .with(&text, WHITE)
+                        .with_align(TextAlignVertical::Center, TextAlignHorizontal::Center),
+                )
                 .build();
 
             let _text_node_id = world

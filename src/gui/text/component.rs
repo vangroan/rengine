@@ -1,11 +1,12 @@
 use crate::colors::{self, Color};
-use gfx_glyph::{FontId, Section, Text};
+use gfx_glyph::{FontId, Layout, Section, Text};
 use specs::{Component, DenseVecStorage};
 
 #[derive(Component, Default)]
 #[storage(DenseVecStorage)]
 pub struct TextBatch {
     fragments: Vec<TextFragment>,
+    layout: LayoutSettings,
 }
 
 impl TextBatch {
@@ -24,8 +25,15 @@ impl TextBatch {
         });
     }
 
+    #[inline]
     pub fn add_fragment(&mut self, fragment: TextFragment) {
         self.fragments.push(fragment);
+    }
+
+    #[inline]
+    pub fn set_align(&mut self, align_v: TextAlignVertical, align_h: TextAlignHorizontal) {
+        self.layout.align_v = align_v;
+        self.layout.align_h = align_h;
     }
 
     /// Clears all existing text fragments and replaces
@@ -47,8 +55,13 @@ impl TextBatch {
         self
     }
 
-    pub fn as_section(&self, dpi_factor: f32) -> Section {
-        let text: Vec<_> = self
+    pub fn with_align(mut self, align_v: TextAlignVertical, align_h: TextAlignHorizontal) -> Self {
+        self.set_align(align_v, align_h);
+        self
+    }
+
+    pub fn as_section(&self, dpi_factor: f32, bounds: [f32; 2]) -> Section {
+        let texts: Vec<_> = self
             .fragments
             .iter()
             .map(|fragment| {
@@ -56,12 +69,55 @@ impl TextBatch {
                     .with_color(fragment.color)
                     .with_scale(fragment.scale * dpi_factor)
                     .with_font_id(fragment.font_id)
-                    .with_z(1.0)
+                    .with_z(0.0)
             })
             .collect();
 
-        Section::default().with_text(text)
+        let mut section = Section::default();
+        for text in texts {
+            section = section.add_text(text);
+        }
+        section.bounds = (bounds[0], bounds[1]);
+        section.layout = Layout::default_wrap()
+            .h_align(match self.layout.align_h {
+                TextAlignHorizontal::Left => gfx_glyph::HorizontalAlign::Left,
+                TextAlignHorizontal::Center => gfx_glyph::HorizontalAlign::Center,
+                TextAlignHorizontal::Right => gfx_glyph::HorizontalAlign::Right,
+            })
+            .v_align(match self.layout.align_v {
+                TextAlignVertical::Top => gfx_glyph::VerticalAlign::Top,
+                TextAlignVertical::Center => gfx_glyph::VerticalAlign::Center,
+                TextAlignVertical::Bottom => gfx_glyph::VerticalAlign::Bottom,
+            });
+
+        section
     }
+}
+
+pub struct LayoutSettings {
+    pub align_v: TextAlignVertical,
+    pub align_h: TextAlignHorizontal,
+}
+
+impl Default for LayoutSettings {
+    fn default() -> Self {
+        LayoutSettings {
+            align_v: TextAlignVertical::Center,
+            align_h: TextAlignHorizontal::Center,
+        }
+    }
+}
+
+pub enum TextAlignVertical {
+    Top,
+    Center,
+    Bottom,
+}
+
+pub enum TextAlignHorizontal {
+    Left,
+    Center,
+    Right,
 }
 
 pub struct TextFragment {
