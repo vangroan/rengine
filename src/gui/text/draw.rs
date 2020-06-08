@@ -69,6 +69,7 @@ impl<'a> System<'a> for DrawTextSystem {
 
                 self.glyph_brush
                     .use_queue()
+                    .depth_target(&self.depth_target)
                     .draw(&mut encoder, &self.render_target)
                     .expect("Failed drawing text queue");
 
