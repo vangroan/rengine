@@ -1,3 +1,4 @@
+//! Graph with sortable edges.
 //!
 //! # Note
 //!
@@ -14,13 +15,53 @@ pub mod prelude {
     pub use super::{OrderedDag, Walker};
 }
 
+/// A value that can be inserted into the graph as a node.
+///
+/// Automatically implemented for all Copy types.
+///
+/// Because of limitations in stable Rust, values must implement
+/// Copy. Use the feature `nightly-features` along with nightly
+/// toolchain to disable this limitation.
+///
+/// ```toml
+/// [dependencies]
+/// rengine = { version = "*", features = ["nightly-features"] }
+/// ```
+#[cfg(not(feature = "nightly-features"))]
+pub trait Slottable: Copy {}
+
+/// A value that can be inserted into the graph as a node.
+///
+/// Automatically implemented for all Copy types.
+///
+/// Because of limitations in stable Rust, values must implement
+/// Copy. Use the feature `nightly-features` along with nightly
+/// toolchain to disable this limitation.
+///
+/// ```toml
+/// [dependencies]
+/// rengine = { version = "*", features = ["nightly-features"] }
+/// ```
+#[cfg(feature = "nightly-features")]
+pub trait Slottable {}
+
+#[cfg(not(feature = "nightly-features"))]
+impl<T: Copy> Slottable for T {}
+
+#[cfg(feature = "nightly-features")]
+impl<T> Slottable for T {}
+
 /// Directed acyclic graph, where node children are kept sorted.
-pub struct OrderedDag<N, E: Ord> {
+pub struct OrderedDag<N: Slottable, E: Ord> {
     nodes: SlotMap<NodeId, Node<N, Edge<E>>>,
 }
 
+/// Graph containing nodes connected by edges.
+/// 
+/// Edges are ordered and can be sorted for iteration.
 impl<N, E> OrderedDag<N, E>
 where
+    N: Slottable,
     E: Ord,
 {
     pub fn new() -> Self {
@@ -295,7 +336,7 @@ where
     fn check_cycle(&self, start_node_id: NodeId) -> Option<NodeId> {
         let mut state: HashMap<NodeId, VisitColor> = HashMap::new();
 
-        fn dfs_visit<N, E: Ord>(
+        fn dfs_visit<N: Slottable, E: Ord>(
             g: &OrderedDag<N, E>,
             u: NodeId,
             s: &mut HashMap<NodeId, VisitColor>,
@@ -358,6 +399,7 @@ where
 
 impl<N, E> OrderedDag<N, E>
 where
+    N: Slottable,
     E: Ord,
 {
     /// Traverse the graph in pre-order.
@@ -415,7 +457,8 @@ where
 
 impl<N, E> Default for OrderedDag<N, E>
 where
-    E: Ord + Default,
+    N: Slottable,
+    E: Ord,
 {
     fn default() -> Self {
         OrderedDag::new()
@@ -423,7 +466,8 @@ where
 }
 
 /// Wrapper for node data.
-struct Node<N, E: Ord> {
+#[derive(Copy, Clone)]
+struct Node<N: Slottable, E: Ord> {
     value: N,
     edges: Vec<E>,
 }
@@ -479,7 +523,7 @@ new_key_type! { pub struct NodeId; }
 // -------------------- //
 
 pub trait Walker {
-    type Node;
+    type Node: Slottable;
     type Edge: Ord;
 
     fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId>;
@@ -498,13 +542,14 @@ pub trait Walker {
     }
 }
 
-pub struct WalkerIter<'a, N, E: Ord, W: Walker<Node = N, Edge = E>> {
+pub struct WalkerIter<'a, N: Slottable, E: Ord, W: Walker<Node = N, Edge = E>> {
     walker: W,
     graph: &'a OrderedDag<N, E>,
 }
 
 impl<'a, N, E, W> Iterator for WalkerIter<'a, N, E, W>
 where
+    N: Slottable,
     E: Ord,
     W: Walker<Node = N, Edge = E>,
 {
@@ -526,6 +571,7 @@ pub struct PreOrderWalk<N, E> {
 
 impl<N, E> Walker for PreOrderWalk<N, E>
 where
+    N: Slottable,
     E: Ord,
 {
     type Node = N;
