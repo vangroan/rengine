@@ -332,6 +332,25 @@ impl Scene for Game {
             }
         });
 
+        // Buttons
+        use rengine::gui::{widgets, GuiGraph, WidgetBuilder};
+        let btn_group_id = widgets::create_hbox(&mut ctx.world);
+        let btn_grp_node_id = ctx
+            .world
+            .write_resource::<GuiGraph>()
+            .insert_entity(btn_group_id, None);
+        self.entities.push(btn_group_id);
+
+        for i in 0..4 {
+            let (btn_entity, _btn_id) = widgets::Button::text(&format!("Click Me {}", i))
+                .child_of(btn_grp_node_id)
+                .size(64., 64.)
+                .background_image("examples/ui.png")
+                .background_src_rect([0, 0], [32, 32])
+                .build(&mut ctx.world, &mut ctx.graphics);
+            self.entities.push(btn_entity);
+        }
+
         // Execute mod start.
         //
         // In a real game, the mod load, init and start can happen
@@ -390,6 +409,8 @@ impl Scene for Game {
         use glutin::Event::*;
         use glutin::MouseButton;
         use glutin::WindowEvent::*;
+
+        rengine::gui::GuiLayoutSystem.run_now(&ctx.world.res);
 
         if let WindowEvent { event, .. } = ev {
             match event {

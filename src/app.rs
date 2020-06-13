@@ -94,6 +94,7 @@ impl<'a, 'b> App<'a, 'b> {
             world.register::<gui::Placement>();
             world.register::<gui::Pack>();
             world.register::<gui::GlobalPosition>();
+            world.register::<gui::ZDepth>();
             world.register::<gui::text::TextBatch>();
             world.register::<widgets::Button>();
             world.register::<widgets::Container>();
@@ -211,6 +212,39 @@ impl<'a, 'b> App<'a, 'b> {
             world.add_resource(PipelineBundle::new(gizmo_pso, gizmo_shader));
         }
 
+        // GUI PSO
+        {
+            let gui_shader = graphics
+                .factory
+                .link_program(
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gui_150.glslv"
+                    )),
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gui_150.glslf"
+                    )),
+                )
+                .unwrap();
+
+            // GUI PSO
+            let pso = graphics
+                .factory
+                .create_pipeline_from_program(
+                    &gui_shader,
+                    gfx::Primitive::TriangleList,
+                    // TODO: Currently we're drawing quads backwards
+                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    gui_pipe::new(),
+                )
+                .unwrap();
+
+            // Bundle program and pipeline state object together to avoid
+            // lifetime issues with world resources borrowing each other.
+            world.add_resource(PipelineBundle::new(pso, gui_shader));
+        }
+
         // Encoder
         let mut channel = ChannelPair::new();
         channel.send_block(graphics.create_encoder())?;
@@ -229,7 +263,9 @@ impl<'a, 'b> App<'a, 'b> {
             channel.clone(),
             graphics.render_target.clone(),
             graphics.depth_stencil.clone(),
-            GlyphBrushBuilder::using_font(default_font).build(graphics.factory.clone()),
+            GlyphBrushBuilder::using_font(default_font)
+                .depth_test(gfx::preset::depth::LESS_EQUAL_WRITE)
+                .build(graphics.factory.clone()),
         );
 
         // Gui Rendering
@@ -366,11 +402,11 @@ impl<'a, 'b> App<'a, 'b> {
             // Render Components
             renderer.run_now(&world.res);
 
-            // Render Text
-            text_renderer.run_now(&world.res);
-
             // Render Gui
             gui_renderer.run_now(&world.res);
+
+            // Render Text
+            text_renderer.run_now(&world.res);
 
             // Commit Render
             {

@@ -109,6 +109,20 @@ impl Canvas {
     }
 
     #[inline]
+    pub fn depth_target(
+        &self,
+    ) -> handle::DepthStencilView<gfx_device::Resources, gfx_types::DepthFormat> {
+        self.depth_target.clone()
+    }
+
+    #[inline]
+    pub fn depth_texture(
+        &self,
+    ) -> handle::Texture<Resources, <gfx_types::DepthFormat as Formatted>::Surface> {
+        self.depth_texture.clone()
+    }
+
+    #[inline]
     pub fn start_draw<'a>(
         &'a mut self,
         encoder: &'a mut gfx_types::GraphicsEncoder,

@@ -7,11 +7,11 @@ use rengine::camera::CameraView;
 use rengine::comp::{MeshBuilder, Transform};
 use rengine::draw2d::Canvas;
 use rengine::gui::{self, widgets};
-use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, WidgetBuilder};
+use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, GuiSortSystem, WidgetBuilder};
 use rengine::res::DeltaTime;
 use rengine::specs::{
-    Builder, Component, DenseVecStorage, Entity, Join, Read, ReadStorage, RunNow, WriteExpect,
-    WriteStorage,
+    Builder, Component, DenseVecStorage, Entity, Join, Read, ReadStorage, RunNow, World,
+    WriteExpect, WriteStorage,
 };
 use rengine::{Context, Scene, Trans};
 use std::error::Error;
@@ -57,26 +57,61 @@ impl Scene for Game {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         println!("Game on start");
 
-        let btn_group_id = widgets::create_hbox(&mut ctx.world);
-        let btn_grp_node_id = ctx
-            .world
-            .write_resource::<GuiGraph>()
-            .insert_entity(btn_group_id, None);
-        self.entities.push(btn_group_id);
+        let (group_id, group_node_id) = widgets::Container::vbox()
+            .with_margin([16.0, 16.0])
+            .build(&mut ctx.world, &mut ctx.graphics);
+        self.entities.push(group_id);
+        let rows = 3;
 
-        for i in 0..4 {
-            let (btn_entity, _btn_id) = widgets::Button::text(&format!("Click Me {}", i))
-                .child_of(btn_grp_node_id)
-                .size(32., 32.)
-                .background_image("examples/ui.png")
-                .background_src_rect([0, 0], [32, 32])
+        for r in 1..rows + 1 {
+            // Row Button Group
+            let (row_btn_group_id, row_btn_grp_node_id) = widgets::Container::hbox()
+                .child_of(group_node_id)
+                .with_margin([8.0, 8.0])
                 .build(&mut ctx.world, &mut ctx.graphics);
-            ctx.world
-                .write_storage::<Counter>()
-                .insert(btn_entity, Counter(0))
-                .unwrap();
-            self.entities.push(btn_entity);
+            self.entities.push(row_btn_group_id);
+
+            // Buttons
+            for i in 1..5 {
+                let (btn_entity, _btn_id) = widgets::Button::text(format!("btn {}", r + i * rows))
+                    .child_of(row_btn_grp_node_id)
+                    .size(64., 64.)
+                    .background_image("examples/ui.png")
+                    .background_src_rect([0, 0], [32, 32])
+                    .build(&mut ctx.world, &mut ctx.graphics);
+                ctx.world
+                    .write_storage::<Counter>()
+                    .insert(btn_entity, Counter(0))
+                    .unwrap();
+                self.entities.push(btn_entity);
+            }
         }
+
+        let _entity = ctx
+            .world
+            .create_entity()
+            .with(gui::GlobalPosition::new(100.0, 100.0))
+            .with(gui::BoundsRect::new(100.0, 100.0))
+            .with(
+                gui::text::TextBatch::default()
+                    .with_z(-1.)
+                    .with("###############", rengine::colors::RED),
+            )
+            .with(Transform::default())
+            .build();
+
+        let _entity = ctx
+            .world
+            .create_entity()
+            .with(gui::GlobalPosition::new(100.0, 100.0))
+            .with(gui::BoundsRect::new(100.0, 100.0))
+            .with(
+                gui::text::TextBatch::default()
+                    .with_z(0.0)
+                    .with("XXXXXXXXXXXXXXX", rengine::colors::GREEN),
+            )
+            .with(Transform::default())
+            .build();
 
         println!("entitites {:?}", self.entities);
         ctx.world.read_resource::<GuiGraph>().debug_print();
@@ -110,6 +145,7 @@ impl Scene for Game {
         );
 
         GuiMouseMoveSystem.run_now(&ctx.world.res);
+        GuiSortSystem.run_now(&ctx.world.res);
         GuiLayoutSystem.run_now(&ctx.world.res);
 
         None

@@ -1,9 +1,9 @@
 use super::{create_gui_proj_matrix, GuiMesh};
 use crate::camera::CameraProjection;
-use crate::comp::Transform;
+use crate::comp::{GlTexture, Transform};
 use crate::draw2d::Canvas;
-use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, RenderTarget};
-use crate::render::{ChannelPair, Material};
+use crate::gfx_types::{gui_pipe, DepthTarget, PipelineBundle, RenderTarget};
+use crate::render::ChannelPair;
 use crate::res::{DeviceDimensions, ViewPort};
 use gfx_device::{CommandBuffer, Resources};
 use specs::{Join, ReadExpect, ReadStorage, System};
@@ -18,11 +18,10 @@ pub struct DrawGuiSystem {
 
 #[derive(SystemData)]
 pub struct DrawGuiSystemData<'a> {
-    basic_pipe_bundle: ReadExpect<'a, PipelineBundle<pipe::Meta>>,
-    gizmo_pipe_bundle: ReadExpect<'a, PipelineBundle<gizmo_pipe::Meta>>,
+    basic_pipe_bundle: ReadExpect<'a, PipelineBundle<gui_pipe::Meta>>,
     view_port: ReadExpect<'a, ViewPort>,
     device_dim: ReadExpect<'a, DeviceDimensions>,
-    materials: ReadStorage<'a, Material>,
+    textures: ReadStorage<'a, GlTexture>,
     transforms: ReadStorage<'a, Transform>,
     gui_meshes: ReadStorage<'a, GuiMesh>,
 }
@@ -52,7 +51,7 @@ impl<'a> System<'a> for DrawGuiSystem {
             basic_pipe_bundle,
             view_port,
             device_dim,
-            materials,
+            textures,
             transforms,
             gui_meshes,
             ..
@@ -70,39 +69,20 @@ impl<'a> System<'a> for DrawGuiSystem {
         match self.channel.recv_block() {
             Ok(mut encoder) => {
                 // Draw to screen
-                for (ref mesh, ref mat, ref trans) in (&gui_meshes, &materials, &transforms).join()
-                {
-                    match mat {
-                        Material::Basic { texture } => {
-                            // Convert to pipeline transform type
-                            let trans = gfx_types::Transform {
-                                transform: trans.matrix().into(),
-                            };
+                for (ref mesh, ref tex, ref trans) in (&gui_meshes, &textures, &transforms).join() {
+                    // Prepare data
+                    let data = gui_pipe::Data {
+                        vbuf: mesh.vbuf.clone(),
+                        sampler: (tex.bundle.view.clone(), tex.bundle.sampler.clone()),
+                        model: trans.matrix().into(),
+                        proj: proj_matrix.into(),
+                        // The rectangle to allow rendering within
+                        scissor: view_port.rect,
+                        render_target: self.render_target.clone(),
+                        depth_target: self.depth_target.clone(),
+                    };
 
-                            // Send transform to graphics card
-                            encoder
-                                .update_buffer(&mesh.transbuf, &[trans], 0)
-                                .expect("Failed to update buffer");
-                            // Prepare data
-                            let data = pipe::Data {
-                                vbuf: mesh.vbuf.clone(),
-                                sampler: (
-                                    texture.bundle.view.clone(),
-                                    texture.bundle.sampler.clone(),
-                                ),
-                                transforms: mesh.transbuf.clone(),
-                                view: glm::Mat4x4::identity().into(),
-                                proj: proj_matrix.into(),
-                                // The rectangle to allow rendering within
-                                scissor: view_port.rect,
-                                render_target: self.render_target.clone(),
-                                depth_target: self.depth_target.clone(),
-                            };
-
-                            encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
-                        }
-                        _ => unimplemented!(),
-                    }
+                    encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
                 }
 
                 self.channel

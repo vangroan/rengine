@@ -55,20 +55,22 @@ impl GuiMeshBuilder {
         let [w, h] = size;
         let index = self.next_index();
 
+        // GUI Mesh is ordered differently from regular mesh. UVs are applied in
+        // reverse order.
         self.vertices
-            .push(vertex([pos.x, pos.y - h], uvs[0], colors[0]));
+            .push(vertex([pos.x, pos.y], uvs[3], colors[0]));
         self.vertices
-            .push(vertex([pos.x + w, pos.y - h], uvs[1], colors[1]));
+            .push(vertex([pos.x + w, pos.y], uvs[2], colors[1]));
         self.vertices
-            .push(vertex([pos.x + w, pos.y], uvs[2], colors[2]));
+            .push(vertex([pos.x + w, pos.y + h], uvs[1], colors[2]));
         self.vertices
-            .push(vertex([pos.x, pos.y], uvs[3], colors[3]));
+            .push(vertex([pos.x, pos.y + h], uvs[0], colors[3]));
 
-        // triangle 1
-        self.indices.extend(&[index, index + 1, index + 2]);
-
-        // triangle 2
-        self.indices.extend(&[index, index + 2, index + 3]);
+        // GUI elements have their y-axis inverted in the shader. Because of
+        // backface culling, the winding is clockwise instead of the usual
+        // anti-clockwise.
+        self.indices.extend(&[index, index + 2, index + 1]);
+        self.indices.extend(&[index, index + 3, index + 2]);
 
         self
     }

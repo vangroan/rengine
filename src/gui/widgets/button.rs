@@ -1,6 +1,7 @@
 use super::super::text::{TextAlignHorizontal, TextAlignVertical, TextBatch};
 use super::super::{
     BoundsRect, GlobalPosition, GuiGraph, GuiMeshBuilder, Pack, PackMode, Placement, WidgetBuilder,
+    ZDepth,
 };
 use crate::collections::ordered_dag::NodeId;
 use crate::colors::*;
@@ -9,7 +10,8 @@ use crate::graphics::GraphicContext;
 use crate::render::Material;
 use crate::res::TextureAssets;
 use nalgebra::Vector2;
-use specs::{Builder, Component, DenseVecStorage, Entity, EntityBuilder, World};
+use specs::prelude::*;
+use std::string::ToString;
 
 pub fn create_text_button(
     world: &mut World,
@@ -89,10 +91,13 @@ impl Button {
             )
     }
 
-    pub fn text(text: &str) -> ButtonBuilder {
+    pub fn text<S>(text: S) -> ButtonBuilder
+    where
+        S: ToString,
+    {
         ButtonBuilder {
             parent: None,
-            button_type: ButtonType::Text(text.to_owned()),
+            button_type: ButtonType::Text(text.to_string()),
             size: [100.0, 100.0],
             background: None,
             background_uv: [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
@@ -178,10 +183,12 @@ impl WidgetBuilder for ButtonBuilder {
             .with(Pack::new(PackMode::Frame))
             .with(Placement::new(0.0, 0.0))
             .with(GlobalPosition::new(0., 0.))
+            .with(ZDepth::default())
             // logical size
             .with(Transform::default())
             .with(BoundsRect::new(size[0], size[1]))
-            .with(Material::Basic { texture })
+            // .with(Material::Basic { texture })
+            .with(texture)
             .with(
                 // TODO: replace with 9-patch
                 GuiMeshBuilder::new()
@@ -198,6 +205,7 @@ impl WidgetBuilder for ButtonBuilder {
         if let ButtonType::Text(text) = button_type {
             // Text (center aligned) center is the button center.
             let center = Vector2::from(size) / 2.0;
+            // let center = Vector2::from(size) / 1.5;
 
             let text_entity = world
                 .create_entity()
@@ -208,6 +216,7 @@ impl WidgetBuilder for ButtonBuilder {
                 .with(
                     TextBatch::default()
                         .with(&text, WHITE)
+                        .with_z(0.0)
                         .with_align(TextAlignVertical::Center, TextAlignHorizontal::Center),
                 )
                 .build();

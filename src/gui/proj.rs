@@ -18,7 +18,7 @@
 //! ```ignore
 //!
 //! ```
-use glutin::dpi::PhysicalSize;
+use glutin::dpi::{LogicalSize, PhysicalSize};
 use nalgebra::{Matrix4, Vector3};
 
 /// Create the view matrix of the GUI.
@@ -41,19 +41,25 @@ where
     // The normalised device coordinates (-1 to 1) is 2 wide and high
     let normalised_device_width = 2.0;
     let scale_factor = normalised_device_width * dpi_factor;
-    let (w, h) = (
+
+    // z-axis is for depth and sorting
+    let nearz = -65535.;
+    let farz = 65535.;
+
+    let (w, h, d) = (
         device_w as f32 / scale_factor,
         device_h as f32 / scale_factor,
+        (farz - nearz) / scale_factor,
     );
 
     let mut m = Matrix4::identity();
 
     // Scale by negating stretch caused by window
-    let (sx, sy) = (1.0 / w, 1.0 / h);
-    m.prepend_nonuniform_scaling_mut(&Vector3::new(sx, sy, 0.0));
+    let (sx, sy, sz) = (1.0 / w, 1.0 / h, 1.0 / d);
+    m.prepend_nonuniform_scaling_mut(&Vector3::new(sx, sy, sz));
 
     // Translate so origin is in bottom left of window
-    m.prepend_translation_mut(&Vector3::new(-w, h, 0.0));
+    m.prepend_translation_mut(&Vector3::new(-w, -h, 0.0));
 
     m
 }

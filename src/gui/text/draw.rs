@@ -5,6 +5,8 @@ use crate::render::ChannelPair;
 use crate::res::DeviceDimensions;
 use gfx_device::{CommandBuffer, Resources};
 use gfx_glyph::{GlyphBrush, Section};
+use glutin::dpi::LogicalSize;
+use nalgebra as na;
 use specs::{Join, ReadExpect, ReadStorage, System};
 
 pub struct DrawTextSystem {
@@ -50,6 +52,10 @@ impl<'a> System<'a> for DrawTextSystem {
         } = data;
 
         let dpi_factor = device_dim.dpi_factor() as f32;
+        // z-axis is for depth and sorting
+        let nearz = -65535.;
+        let farz = 65535.;
+        let transform = create_text_matrix(*device_dim.logical_size(), nearz, farz);
 
         match self.channel.recv_block() {
             Ok(mut encoder) => {
@@ -70,6 +76,7 @@ impl<'a> System<'a> for DrawTextSystem {
                 self.glyph_brush
                     .use_queue()
                     .depth_target(&self.depth_target)
+                    .transform(transform)
                     .draw(&mut encoder, &self.render_target)
                     .expect("Failed drawing text queue");
 
@@ -80,4 +87,18 @@ impl<'a> System<'a> for DrawTextSystem {
             Err(err) => eprintln!("{}", err),
         }
     }
+}
+
+pub fn create_text_matrix<S>(device_size: S, nearz: f32, farz: f32) -> [[f32; 4]; 4]
+where
+    S: Into<LogicalSize>,
+{
+    let s = device_size.into();
+    let (w, h) = (s.width as f32, s.height as f32);
+    [
+        [2. / w, 0.0, 0.0, 0.0],
+        [0.0, 2. / h, 0.0, 0.0],
+        [0.0, 0.0, 2. / (farz - nearz), 0.0],
+        [-1.0, -1.0, 0.0, 1.0],
+    ]
 }

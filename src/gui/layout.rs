@@ -1,12 +1,12 @@
 //! Layout engine.
-use super::{create_gui_proj_matrix, GuiGraph};
+use super::{create_gui_proj_matrix, text, GuiGraph};
 use crate::collections::ordered_dag::prelude::*;
 use crate::comp::Transform;
 use crate::res::DeviceDimensions;
 use glutin::dpi::LogicalSize;
 use log::warn;
 use nalgebra::{Matrix4, Point2, Vector2, Vector3};
-use specs::{Component, DenseVecStorage, ReadExpect, ReadStorage, System, Write, WriteStorage};
+use specs::prelude::*;
 use std::fmt;
 
 // ------- //
@@ -57,8 +57,8 @@ pub fn process_layout(
         // let pixel_scale = data.gui_settings.pixel_scale;
 
         println!(
-            "{:?} suggested position {:?}",
-            entity, parent_measure.suggested_pos,
+            "{:?} suggested position [{}, {}]",
+            entity, parent_measure.suggested_pos.x, parent_measure.suggested_pos.y,
         );
 
         let new_pos = match data.placements.get(entity) {
@@ -73,9 +73,11 @@ pub fn process_layout(
         // Convert logical pixel position to graphics position.
         // NOTE: the resulting vector will have a z component of 1.0
         let mut render_position = new_pos.to_homogeneous();
+        render_position.z = data.zdepths.get(entity).cloned().unwrap_or_default().into();
+        println!("{:?} render position {:?}", entity, render_position);
 
         // GUI y increases downwards, graphics y increases upwards.
-        render_position.y *= -1.;
+        // render_position.y *= -1.0;
 
         // Transform's position is subordinate to the layout engine.
         data.transforms
@@ -96,10 +98,10 @@ pub fn process_layout(
             //
             // Position is in global space, so we start out by delegating
             // the position of this node directly to its child.
-            let mut pos = parent_measure.suggested_pos;
+            let mut pos = new_pos;
 
             // Suggeted available space that the child may take up.
-            let bounds = data.bounds.get(entity).unwrap().clone();
+            let bounds = *data.bounds.get(entity).unwrap();
 
             if let Some(pack) = data.packs.get(entity) {
                 match pack.mode {
@@ -107,7 +109,7 @@ pub fn process_layout(
                         // TODO: Offset from anchor
                     }
                     PackMode::Horizontal => {
-                        pos = Point2::new(acc_pack[0], 0.);
+                        pos.x = acc_pack[0];
 
                         // Add bounds of current child to accumulator so the
                         // next child can be positioned by it.
@@ -119,7 +121,7 @@ pub fn process_layout(
                                 .unwrap_or_default();
                     }
                     PackMode::Vertical => {
-                        pos = Point2::new(0., acc_pack[1]);
+                        pos.y += acc_pack[1];
 
                         // Add bounds of current child to accumulator so the
                         // next child can be positioned by it.
@@ -156,6 +158,7 @@ pub struct LayoutData<'a> {
     bounds: WriteStorage<'a, BoundsRect>,
     placements: ReadStorage<'a, Placement>,
     global_positions: WriteStorage<'a, GlobalPosition>,
+    zdepths: ReadStorage<'a, ZDepth>,
     packs: ReadStorage<'a, Pack>,
     transforms: WriteStorage<'a, Transform>,
 }
@@ -169,6 +172,65 @@ pub struct ParentMeasurements {
     /// A global world position the parent has calculated that child can
     /// optionally use to position itself.
     suggested_pos: Point2<f32>,
+}
+
+pub struct GuiSortSystem;
+
+impl<'a> System<'a> for GuiSortSystem {
+    type SystemData = SortData<'a>;
+
+    fn run(&mut self, data: Self::SystemData) {
+        let root_id = data.gui_graph.root_id();
+        sort_widgets(data, root_id);
+    }
+}
+
+pub fn sort_widgets(data: SortData, node_id: NodeId) {
+    let SortData {
+        gui_graph,
+        mut zdepths,
+        mut texts,
+    } = data;
+    let mut walker = gui_graph.walk_dfs_pre_order(node_id);
+    let mut i = 0.0;
+    // println!("----- sort -----");
+    // let physical_size = glutin::dpi::PhysicalSize::new(640.0, 480.0);
+    // let logical_size = glutin::dpi::LogicalSize::new(640.0, 480.0);
+    // let dpi_factor = 1.0;
+    // let nearz = -65535.0;
+    // let farz = 65535.0;
+    // let gui_matrix = crate::gui::proj::create_gui_proj_matrix(physical_size, dpi_factor);
+    // let text_matrix = nalgebra::Matrix4::from(crate::gui::text::create_text_matrix(
+    //     logical_size,
+    //     nearz,
+    //     farz,
+    // ));
+
+    while let Some(next_id) = walker.next(&gui_graph) {
+        if let Some(entity) = gui_graph.get_entity(next_id) {
+            if let Some(zdepth) = zdepths.get_mut(entity) {
+                zdepth.set(i);
+
+                // let point = gui_matrix.transform_point(&nalgebra::Point3::new(0.0, 0.0, i as f32));
+                // println!("z_depth {} ({}, {}, {})", zdepth, point.x, point.y, point.z);
+            }
+
+            if let Some(text) = texts.get_mut(entity) {
+                text.set_z_depth(i);
+                // let point = text_matrix.transform_point(&nalgebra::Point3::new(0.0, 0.0, i as f32));
+                // println!("text z_depth {} ({}, {}, {})", i, point.x, point.y, point.z);
+            }
+            i -= 1.0;
+        }
+    }
+}
+
+#[derive(SystemData)]
+pub struct SortData<'a> {
+    gui_graph: ReadExpect<'a, GuiGraph>,
+    zdepths: WriteStorage<'a, ZDepth>,
+    /// Text has its own z-depth
+    texts: WriteStorage<'a, text::TextBatch>,
 }
 
 // --------- //
@@ -283,6 +345,35 @@ impl Into<(f32, f32)> for &GlobalPosition {
     }
 }
 
+#[derive(Component, Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
+pub struct ZDepth(f32);
+
+impl ZDepth {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn set(&mut self, z_depth: f32) {
+        self.0 = z_depth;
+    }
+
+    pub fn inner(&self) -> f32 {
+        self.0
+    }
+}
+
+impl Into<f32> for ZDepth {
+    fn into(self) -> f32 {
+        self.0
+    }
+}
+
+impl fmt::Display for ZDepth {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
 /// Represents a relative position within a View.
 ///
 /// To support different sized Windows and Screens, a Placement
@@ -366,7 +457,7 @@ impl fmt::Display for Placement {
 }
 
 /// Axis-aligned bounding box in logical pixel size.
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Copy)]
 #[storage(DenseVecStorage)]
 pub struct BoundsRect {
     pub(crate) width: f32,
@@ -420,5 +511,11 @@ impl BoundsRect {
     {
         let p = point.into();
         p.x >= 0.0 && p.y >= 0.0 && p.x <= self.width && p.y <= self.height
+    }
+}
+
+impl Into<[f32; 2]> for BoundsRect {
+    fn into(self) -> [f32; 2] {
+        [self.width, self.height]
     }
 }

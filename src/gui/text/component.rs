@@ -7,6 +7,7 @@ use specs::{Component, DenseVecStorage};
 pub struct TextBatch {
     fragments: Vec<TextFragment>,
     layout: LayoutSettings,
+    pub z: f32,
 }
 
 impl TextBatch {
@@ -36,6 +37,11 @@ impl TextBatch {
         self.layout.align_h = align_h;
     }
 
+    #[inline]
+    pub fn set_z_depth(&mut self, z_depth: f32) {
+        self.z = z_depth;
+    }
+
     /// Clears all existing text fragments and replaces
     /// them with the given text string.
     pub fn replace<C>(&mut self, text: &str, color: C)
@@ -55,6 +61,11 @@ impl TextBatch {
         self
     }
 
+    pub fn with_z(mut self, z: f32) -> Self {
+        self.z = z;
+        self
+    }
+
     pub fn with_align(mut self, align_v: TextAlignVertical, align_h: TextAlignHorizontal) -> Self {
         self.set_align(align_v, align_h);
         self
@@ -69,7 +80,7 @@ impl TextBatch {
                     .with_color(fragment.color)
                     .with_scale(fragment.scale * dpi_factor)
                     .with_font_id(fragment.font_id)
-                    .with_z(0.0)
+                    .with_z(self.z)
             })
             .collect();
 
