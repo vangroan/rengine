@@ -77,8 +77,15 @@ pub fn create_fps_counter_widget(world: &mut World) -> Entity {
         .create_entity()
         .with(gui::Placement::new(0.0, 0.0))
         .with(gui::GlobalPosition::default())
-        .with(gui::BoundsRect::new(32.0, 32.0)) // TODO: Proper bounds based on behaviour of glyph_brush
-        .with(gui::text::TextBatch::default().with("FPS: 0", colors::WHITE))
+        .with(gui::BoundsRect::new(f32::INFINITY, f32::INFINITY))
+        .with(
+            gui::text::TextBatch::default()
+                .with("FPS: 0", colors::WHITE)
+                .with_align(
+                    gui::text::TextAlignVertical::Top,
+                    gui::text::TextAlignHorizontal::Left,
+                ),
+        )
         .with(Transform::default())
         .build();
 
