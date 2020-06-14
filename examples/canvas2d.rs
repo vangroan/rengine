@@ -62,8 +62,9 @@ impl Scene for Game {
             .build(&mut ctx.world, &mut ctx.graphics);
         self.entities.push(group_id);
         let rows = 3;
+        let columns = 5;
 
-        for r in 1..rows + 1 {
+        for r in 0..rows {
             // Row Button Group
             let (row_btn_group_id, row_btn_grp_node_id) = widgets::Container::hbox()
                 .child_of(group_node_id)
@@ -72,13 +73,14 @@ impl Scene for Game {
             self.entities.push(row_btn_group_id);
 
             // Buttons
-            for i in 1..5 {
-                let (btn_entity, _btn_id) = widgets::Button::text(format!("btn {}", r + i * rows))
-                    .child_of(row_btn_grp_node_id)
-                    .size(64., 64.)
-                    .background_image("examples/ui.png")
-                    .background_src_rect([0, 0], [32, 32])
-                    .build(&mut ctx.world, &mut ctx.graphics);
+            for c in 0..columns {
+                let (btn_entity, _btn_id) =
+                    widgets::Button::text(format!("btn {}", c + 1 + r * columns))
+                        .child_of(row_btn_grp_node_id)
+                        .size(64., 64.)
+                        .background_image("examples/ui.png")
+                        .background_src_rect([0, 0], [32, 32])
+                        .build(&mut ctx.world, &mut ctx.graphics);
                 ctx.world
                     .write_storage::<Counter>()
                     .insert(btn_entity, Counter(0))
