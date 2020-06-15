@@ -1,7 +1,8 @@
 use super::super::{
-    layout, BoundsRect, GlobalPosition, GuiGraph, NodeId, Placement, WidgetBuilder, ZDepth,
+    layout, next_widget_tag, BoundsRect, GlobalPosition, GuiGraph, NodeId, Placement,
+    WidgetBuilder, ZDepth,
 };
-use crate::comp::Transform;
+use crate::comp::{Tag, Transform};
 use crate::graphics::GraphicContext;
 use specs::prelude::*;
 
@@ -41,6 +42,7 @@ impl Container {
     pub fn vbox() -> ContainerBuilder {
         ContainerBuilder {
             parent_id: None,
+            tag: None,
             pack_mode: layout::PackMode::Vertical,
             margin: [0.0, 0.0],
         }
@@ -49,6 +51,7 @@ impl Container {
     pub fn hbox() -> ContainerBuilder {
         ContainerBuilder {
             parent_id: None,
+            tag: None,
             pack_mode: layout::PackMode::Horizontal,
             margin: [0.0, 0.0],
         }
@@ -57,6 +60,7 @@ impl Container {
 
 pub struct ContainerBuilder {
     parent_id: Option<NodeId>,
+    tag: Option<Tag>,
     pack_mode: layout::PackMode,
     margin: [f32; 2],
 }
@@ -64,6 +68,14 @@ pub struct ContainerBuilder {
 impl ContainerBuilder {
     pub fn child_of(mut self, parent_id: NodeId) -> Self {
         self.parent_id = Some(parent_id);
+        self
+    }
+
+    pub fn with_tag<S>(mut self, name: S) -> Self
+    where
+        S: ToString,
+    {
+        self.tag = Some(Tag::new(name));
         self
     }
 
@@ -77,6 +89,7 @@ impl WidgetBuilder for ContainerBuilder {
     fn build(self, world: &mut World, _graphics: &mut GraphicContext) -> (Entity, NodeId) {
         let ContainerBuilder {
             parent_id,
+            tag,
             pack_mode,
             margin,
         } = self;
@@ -87,6 +100,7 @@ impl WidgetBuilder for ContainerBuilder {
         let entity_id = world
             .create_entity()
             .with(Container)
+            .with(tag.unwrap_or_else(next_widget_tag))
             .with(Placement::zero())
             .with(pack)
             .with(GlobalPosition::new(0., 0.))

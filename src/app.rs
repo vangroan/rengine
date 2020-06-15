@@ -3,7 +3,7 @@ use crate::camera::{
     GridCamera, OrbitalCamera, SlideCamera,
 };
 use crate::colors;
-use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Transform};
+use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Tag, Transform};
 use crate::draw2d::Canvas;
 use crate::errors::*;
 use crate::gfx_types::*;
@@ -85,6 +85,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<DollyCamera>();
         world.register::<SlideCamera>();
         world.register::<GlTexture>();
+        world.register::<Tag>();
 
         // GUI Components
         {
@@ -94,6 +95,7 @@ impl<'a, 'b> App<'a, 'b> {
             world.register::<gui::Placement>();
             world.register::<gui::Pack>();
             world.register::<gui::GlobalPosition>();
+            world.register::<gui::Clickable>();
             world.register::<gui::ZDepth>();
             world.register::<gui::text::TextBatch>();
             world.register::<widgets::Button>();

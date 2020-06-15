@@ -1,28 +1,26 @@
-use daggy::NodeIndex;
+use crate::comp::Tag;
+use std::sync::RwLock;
 
-pub type WidgetIndexType = u32;
+lazy_static! {
+    static ref WIDGET_COUNTER: RwLock<WidgetCounter> = RwLock::new(WidgetCounter::default());
+}
 
-/// Identifier for a Widget.
-///
-/// Wraps the graph node index, and acts as
-/// a reference back to a node.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WidgetId(NodeIndex<WidgetIndexType>);
+#[derive(Debug, Default)]
+struct WidgetCounter(u128);
 
-impl WidgetId {
-    pub(crate) fn node_index(&self) -> NodeIndex<WidgetIndexType> {
+impl WidgetCounter {
+    fn incr(&mut self) {
+        self.0 += 1;
+    }
+
+    fn inner(&self) -> u128 {
         self.0
     }
 }
 
-impl From<WidgetIndexType> for WidgetId {
-    fn from(index: WidgetIndexType) -> Self {
-        WidgetId(index.into())
-    }
-}
-
-impl From<NodeIndex<WidgetIndexType>> for WidgetId {
-    fn from(node_index: NodeIndex<WidgetIndexType>) -> Self {
-        WidgetId(node_index)
-    }
+/// Creates a new name tag for a widget.
+pub fn next_widget_tag() -> Tag {
+    let mut counter = WIDGET_COUNTER.write().unwrap();
+    counter.incr();
+    Tag::new(format!("Widget {}", counter.inner()))
 }

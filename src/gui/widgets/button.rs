@@ -1,11 +1,11 @@
 use super::super::text::{TextAlignHorizontal, TextAlignVertical, TextBatch};
 use super::super::{
-    BoundsRect, GlobalPosition, GuiGraph, GuiMeshBuilder, Pack, PackMode, Placement, WidgetBuilder,
-    ZDepth,
+    next_widget_tag, BoundsRect, Clickable, GlobalPosition, GuiGraph, GuiMeshBuilder, Pack,
+    PackMode, Placement, WidgetBuilder, ZDepth,
 };
 use crate::collections::ordered_dag::NodeId;
 use crate::colors::*;
-use crate::comp::{GlTexture, Transform};
+use crate::comp::{GlTexture, Tag, Transform};
 use crate::graphics::GraphicContext;
 use crate::render::Material;
 use crate::res::TextureAssets;
@@ -97,6 +97,7 @@ impl Button {
     {
         ButtonBuilder {
             parent: None,
+            tag: None,
             button_type: ButtonType::Text(text.to_string()),
             size: [100.0, 100.0],
             background: None,
@@ -109,6 +110,7 @@ impl Button {
 #[must_use = "Call .build() on widget builder."]
 pub struct ButtonBuilder {
     parent: Option<NodeId>,
+    tag: Option<Tag>,
     button_type: ButtonType,
     size: [f32; 2],
     background: Option<String>,
@@ -119,6 +121,14 @@ pub struct ButtonBuilder {
 impl ButtonBuilder {
     pub fn child_of(mut self, parent: NodeId) -> Self {
         self.parent = Some(parent);
+        self
+    }
+
+    pub fn tag<S>(mut self, name: S) -> Self
+    where
+        S: ToString,
+    {
+        self.tag = Some(Tag::new(name));
         self
     }
 
@@ -150,6 +160,7 @@ impl WidgetBuilder for ButtonBuilder {
     fn build(self, world: &mut World, graphics: &mut GraphicContext) -> (Entity, NodeId) {
         let ButtonBuilder {
             parent,
+            tag,
             button_type,
             size,
             background,
@@ -179,6 +190,7 @@ impl WidgetBuilder for ButtonBuilder {
         // Create Sprite
         let sprite_entity = world
             .create_entity()
+            .with(tag.unwrap_or_else(next_widget_tag))
             .with(Button)
             .with(Pack::new(PackMode::Frame))
             .with(Placement::new(0.0, 0.0))
@@ -187,6 +199,7 @@ impl WidgetBuilder for ButtonBuilder {
             // logical size
             .with(Transform::default())
             .with(BoundsRect::new(size[0], size[1]))
+            .with(Clickable)
             // .with(Material::Basic { texture })
             .with(texture)
             .with(
@@ -209,6 +222,7 @@ impl WidgetBuilder for ButtonBuilder {
 
             let text_entity = world
                 .create_entity()
+                .with(next_widget_tag())
                 .with(Placement::from_vector(center))
                 .with(GlobalPosition::default())
                 .with(Transform::default())

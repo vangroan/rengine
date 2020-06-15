@@ -74,13 +74,14 @@ impl Scene for Game {
 
             // Buttons
             for c in 0..columns {
-                let (btn_entity, _btn_id) =
-                    widgets::Button::text(format!("btn {}", c + 1 + r * columns))
-                        .child_of(row_btn_grp_node_id)
-                        .size(64., 64.)
-                        .background_image("examples/ui.png")
-                        .background_src_rect([0, 0], [32, 32])
-                        .build(&mut ctx.world, &mut ctx.graphics);
+                let id = c + 1 + r * columns;
+                let (btn_entity, _btn_id) = widgets::Button::text(format!("btn {}", id))
+                    .child_of(row_btn_grp_node_id)
+                    .size(64., 64.)
+                    .background_image("examples/ui.png")
+                    .background_src_rect([0, 0], [32, 32])
+                    .tag(format!("Button {}", id))
+                    .build(&mut ctx.world, &mut ctx.graphics);
                 ctx.world
                     .write_storage::<Counter>()
                     .insert(btn_entity, Counter(0))

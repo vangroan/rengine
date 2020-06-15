@@ -8,6 +8,8 @@ extern crate gfx_device_gl as gfx_device;
 extern crate gfx_glyph;
 extern crate gfx_window_glutin as gfx_glutin;
 pub extern crate glutin;
+#[macro_use]
+extern crate lazy_static;
 extern crate log;
 pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
