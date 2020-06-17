@@ -6,7 +6,10 @@ use rengine;
 use rengine::camera::CameraView;
 use rengine::comp::{MeshBuilder, Transform};
 use rengine::draw2d::Canvas;
-use rengine::gui::{self, widgets, GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, GuiSortSystem, WidgetBuilder, WidgetEvents, WidgetEvent};
+use rengine::gui::{
+    self, widgets, GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, GuiSortSystem, WidgetBuilder,
+    WidgetEvent, WidgetEvents,
+};
 use rengine::res::DeltaTime;
 use rengine::specs::prelude::*;
 use rengine::{Context, Scene, Trans};
@@ -43,7 +46,9 @@ struct Game {
 
 impl Game {
     fn new(ctx: &mut Context<'_>) -> Game {
-        let reader_id = ctx.world.exec(|mut widget_events: Write<'_, WidgetEvents>| { widget_events.register_reader() });
+        let reader_id = ctx
+            .world
+            .exec(|mut widget_events: Write<'_, WidgetEvents>| widget_events.register_reader());
 
         Game {
             canvas: Canvas::new(&mut ctx.graphics, 640, 480).unwrap(),
