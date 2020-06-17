@@ -1,4 +1,4 @@
-use super::{BoundsRect, GlobalPosition, GuiGraph, HoveredWidget};
+use super::{BoundsRect, GlobalPosition, GuiGraph, HoveredWidget, NodeId};
 use crate::comp::Tag;
 use glutin::{Event, WindowEvent};
 use shrev::EventChannel;
@@ -25,65 +25,37 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
             if let Event::WindowEvent { event, .. } = ev {
                 match event {
                     WindowEvent::CursorMoved { position, .. } => {
-                        let (mouse_x, mouse_y) = (position.x as f32, position.y as f32);
-                        // let (world_x, world_y) = (mouse_x / 1000.0, -mouse_y / 1000.0);
-                        let mut walker = gui_graph.walk_dfs_post_order(gui_graph.root_id());
-                        let mut found = false;
-
                         // TODO: Unfocus and hover out when cursor leaves window
-                        // TODO: This graph walk will be the same for all mouse events. Refactor into function.
-                        while let Some(node_id) = walker.next(&gui_graph) {
-                            if let Some(entity) = gui_graph.get_entity(node_id) {
-                                let maybe_components = (
-                                    bounds_rects.get(entity),
-                                    global_positions.get(entity),
-                                    clickables.get(entity),
-                                );
-                                if let (Some(bounds), Some(global_pos), Some(_)) = maybe_components
-                                {
-                                    // Bounds are in the widget's local space.
-                                    let global_point = global_pos.point();
-                                    let local_point =
-                                        [mouse_x - global_point.x, mouse_y - global_point.y];
-                                    if bounds.intersect_point(local_point) {
-                                        // println!(
-                                        //     "intersect ({}, {}) ({}, {}) {:?}",
-                                        //     mouse_x, mouse_y, world_x, world_y, entity
-                                        // );
-                                        if hovered.entity() != Some(entity) {
-                                            let name: &str = tags
-                                                .get(entity)
-                                                .map(|tag| tag.as_ref())
-                                                .unwrap_or("");
-                                            println!(
-                                                "hover over {:?} {:?} '{}'",
-                                                entity, node_id, name
-                                            );
-                                            hovered.set(entity, node_id);
-                                            gui_events.single_write(WidgetEvent {
-                                                entity,
-                                                node_id,
-                                                kind: WidgetEventKind::HoverOver,
-                                                window_event: event.clone(),
-                                            });
-                                        }
-                                        found = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
 
-                        if !found {
-                            if let Some((e, n)) = hovered.clear() {
-                                println!("hover out {:?} {:?}", e, n);
+                        if let Some((entity, node_id)) = find_widget(
+                            FindWidgetData {
+                                gui_graph: &gui_graph,
+                                global_positions: &global_positions,
+                                bounds_rects: &bounds_rects,
+                                clickables: &clickables,
+                            },
+                            [position.x as f32, position.y as f32],
+                        ) {
+                            if hovered.entity() != Some(entity) {
+                                let name: &str =
+                                    tags.get(entity).map(|tag| tag.as_ref()).unwrap_or("");
+                                println!("hover over {:?} {:?} '{}'", entity, node_id, name);
+                                hovered.set(entity, node_id);
                                 gui_events.single_write(WidgetEvent {
-                                    entity: e,
-                                    node_id: n,
-                                    kind: WidgetEventKind::HoverOut,
+                                    entity,
+                                    node_id,
+                                    kind: WidgetEventKind::HoverOver,
                                     window_event: event.clone(),
                                 });
                             }
+                        } else if let Some((entity, node_id)) = hovered.clear() {
+                            println!("hover out {:?} {:?}", entity, node_id);
+                            gui_events.single_write(WidgetEvent {
+                                entity,
+                                node_id,
+                                kind: WidgetEventKind::HoverOut,
+                                window_event: event.clone(),
+                            });
                         }
                     }
                     WindowEvent::MouseInput { .. } => {
@@ -113,6 +85,45 @@ pub struct GuiMouseData<'a> {
     bounds_rects: ReadStorage<'a, BoundsRect>,
     global_positions: ReadStorage<'a, GlobalPosition>,
     tags: ReadStorage<'a, Tag>,
+}
+
+#[derive(SystemData)]
+struct FindWidgetData<'run, 'res: 'run> {
+    gui_graph: &'run ReadExpect<'res, GuiGraph>,
+    global_positions: &'run ReadStorage<'res, GlobalPosition>,
+    bounds_rects: &'run ReadStorage<'res, BoundsRect>,
+    clickables: &'run ReadStorage<'res, Clickable>,
+}
+
+fn find_widget(data: FindWidgetData, mouse_position: [f32; 2]) -> Option<(Entity, NodeId)> {
+    let FindWidgetData {
+        gui_graph,
+        global_positions,
+        bounds_rects,
+        clickables,
+    } = data;
+    let [mouse_x, mouse_y] = mouse_position;
+
+    let mut walker = gui_graph.walk_dfs_post_order(gui_graph.root_id());
+    while let Some(node_id) = walker.next(&gui_graph) {
+        if let Some(entity) = gui_graph.get_entity(node_id) {
+            let maybe_components = (
+                bounds_rects.get(entity),
+                global_positions.get(entity),
+                clickables.get(entity),
+            );
+
+            if let (Some(bounds), Some(global_pos), Some(_)) = maybe_components {
+                // Bounds are in the widget's local space.
+                let global_point = global_pos.point();
+                let local_point = [mouse_x - global_point.x, mouse_y - global_point.y];
+                if bounds.intersect_point(local_point) {
+                    return Some((entity, node_id));
+                }
+            }
+        }
+    }
+    None
 }
 
 // ---------- //
