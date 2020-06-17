@@ -64,6 +64,7 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
                                                 entity,
                                                 node_id,
                                                 kind: WidgetEventKind::HoverOver,
+                                                window_event: event.clone(),
                                             });
                                         }
                                         found = true;
@@ -80,7 +81,7 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
                                     entity: e,
                                     node_id: n,
                                     kind: WidgetEventKind::HoverOut,
-                                    // window_event: ...
+                                    window_event: event.clone(),
                                 });
                             }
                         }
@@ -136,8 +137,8 @@ pub struct WidgetEvent {
     node_id: crate::gui::NodeId,
     /// GUI event kind.
     kind: WidgetEventKind,
-    // Window event that caused this GUI event.
-    // window_event: glutin::WindowEvent,
+    /// Window event that caused this GUI event.
+    window_event: glutin::WindowEvent,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
