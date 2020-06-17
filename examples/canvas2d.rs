@@ -6,13 +6,9 @@ use rengine;
 use rengine::camera::CameraView;
 use rengine::comp::{MeshBuilder, Transform};
 use rengine::draw2d::Canvas;
-use rengine::gui::{self, widgets};
-use rengine::gui::{GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, GuiSortSystem, WidgetBuilder};
+use rengine::gui::{self, widgets, GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, GuiSortSystem, WidgetBuilder, WidgetEvents, WidgetEvent};
 use rengine::res::DeltaTime;
-use rengine::specs::{
-    Builder, Component, DenseVecStorage, Entity, Join, Read, ReadStorage, RunNow, World,
-    WriteExpect, WriteStorage,
-};
+use rengine::specs::prelude::*;
 use rengine::{Context, Scene, Trans};
 use std::error::Error;
 
@@ -42,13 +38,17 @@ impl Scene for Intro {
 struct Game {
     canvas: Canvas,
     entities: Vec<Entity>,
+    widget_event_reader: shrev::ReaderId<WidgetEvent>,
 }
 
 impl Game {
     fn new(ctx: &mut Context<'_>) -> Game {
+        let reader_id = ctx.world.exec(|mut widget_events: Write<'_, WidgetEvents>| { widget_events.register_reader() });
+
         Game {
             canvas: Canvas::new(&mut ctx.graphics, 640, 480).unwrap(),
             entities: vec![],
+            widget_event_reader: reader_id,
         }
     }
 }
@@ -150,6 +150,12 @@ impl Scene for Game {
         GuiMouseMoveSystem.run_now(&ctx.world.res);
         GuiSortSystem.run_now(&ctx.world.res);
         GuiLayoutSystem.run_now(&ctx.world.res);
+
+        ctx.world.exec(|widget_events: Read<'_, WidgetEvents>| {
+            for ev in widget_events.read(&mut self.widget_event_reader) {
+                println!("Game::on_update {:?}", ev);
+            }
+        });
 
         None
     }
