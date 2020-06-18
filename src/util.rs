@@ -77,7 +77,10 @@ pub fn create_fps_counter_widget(world: &mut World) -> Entity {
         .create_entity()
         .with(gui::Placement::new(0.0, 0.0))
         .with(gui::GlobalPosition::default())
-        .with(gui::BoundsRect::new(f32::INFINITY, f32::INFINITY))
+        .with(gui::BoundsRect::new(
+            ::std::f32::INFINITY,
+            ::std::f32::INFINITY,
+        ))
         .with(
             gui::text::TextBatch::default()
                 .with("FPS: 0", colors::WHITE)
