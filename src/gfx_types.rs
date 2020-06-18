@@ -1,3 +1,4 @@
+#![allow(clippy::single_component_path_imports)]
 use gfx;
 
 pub type ColorFormat = gfx::format::Srgba8;
@@ -62,8 +63,9 @@ gfx_defines! {
         // Enables the scissor test
         scissor: gfx::Scissor = (),
 
-        // This makes the BlendMode part of the pipeline, which is fine for the simple case
-        out: gfx::RenderTarget<ColorFormat> = "Target0",
+        render_target: gfx::RenderTarget<ColorFormat> = "Target0",
+
+        depth_target: gfx::DepthTarget<DepthFormat> = gfx::preset::depth::LESS_EQUAL_WRITE,
     }
 
     pipeline line_pipe {
@@ -83,6 +85,28 @@ gfx_defines! {
 
         // This makes the BlendMode part of the pipeline, which is fine for the simple case
         out: gfx::RenderTarget<ColorFormat> = "Target0",
+    }
+
+    pipeline gui_pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+
+        // Simple texture sampler
+        sampler: gfx::TextureSampler<[f32; 4]> = "t_Sampler",
+
+        // Model Transform Matrix
+        model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
+
+        // Projection
+        proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",
+
+        // Enables the scissor test
+        scissor: gfx::Scissor = (),
+
+        // This makes the BlendMode part of the pipeline, which is fine for the simple case
+        render_target: gfx::BlendTarget<ColorFormat> = ("Target0", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
+
+        depth_target: gfx::DepthTarget<DepthFormat> =
+            gfx::preset::depth::LESS_EQUAL_WRITE,
     }
 }
 

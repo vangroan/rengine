@@ -1,9 +1,8 @@
 extern crate rengine;
 
 use rengine::colors::{BLACK, WHITE};
-use rengine::gui::GuiBuilder;
+use rengine::gui::text::TextBatch;
 use rengine::specs::{Builder, Entity};
-use rengine::text::TextBatch;
 use rengine::{AppBuilder, Context, Scene, Trans};
 
 struct Game {
@@ -23,8 +22,6 @@ impl Scene for Game {
             .create_entity()
             .with(TextBatch::new().with("Hello, World", WHITE))
             .build();
-
-        let _widget_id = ctx.world.create_widget(entity).build().unwrap();
 
         self.entities.push(entity);
 

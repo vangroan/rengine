@@ -3,18 +3,18 @@ use crate::camera::{
     GridCamera, OrbitalCamera, SlideCamera,
 };
 use crate::colors;
-use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Transform};
+use crate::comp::{GlTexture, Mesh, MeshCommandBuffer, MeshUpkeepSystem, Tag, Transform};
+use crate::draw2d::Canvas;
 use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
-use crate::gui::GuiGraph;
+use crate::gui::{self, text, widgets, DrawGuiSystem, GuiGraph};
 use crate::metrics::MetricHub;
 use crate::modding::Mods;
-use crate::render::{ChannelPair, GizmoDrawSystem, GizmoPipelineBundle};
+use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
-use crate::text::{DrawTextSystem, TextBatch};
 use gfx::traits::FactoryExt;
 use gfx::Device;
 use gfx_glyph::{ab_glyph::FontArc, GlyphBrushBuilder};
@@ -76,6 +76,8 @@ impl<'a, 'b> App<'a, 'b> {
         // Engine Components
         world.register::<Mesh>();
         world.register::<Transform>();
+        world.register::<Material>();
+        world.register::<Gizmo>();
         world.register::<CameraView>();
         world.register::<CameraProjection>();
         world.register::<FocusTarget>();
@@ -84,7 +86,24 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<DollyCamera>();
         world.register::<SlideCamera>();
         world.register::<GlTexture>();
-        world.register::<TextBatch>();
+        world.register::<Tag>();
+
+        // GUI Components
+        {
+            world.add_resource(gui::HoveredWidget::default());
+            world.add_resource(gui::PressedWidget::default());
+            world.add_resource(gui::WidgetEvents::new());
+            world.register::<gui::GuiMesh>();
+            world.register::<gui::BoundsRect>();
+            world.register::<gui::Placement>();
+            world.register::<gui::Pack>();
+            world.register::<gui::GlobalPosition>();
+            world.register::<gui::Clickable>();
+            world.register::<gui::ZDepth>();
+            world.register::<gui::text::TextBatch>();
+            world.register::<widgets::Button>();
+            world.register::<widgets::Container>();
+        }
 
         // Statistics Metrics
         world.add_resource(MetricHub::default());
@@ -93,8 +112,10 @@ impl<'a, 'b> App<'a, 'b> {
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
 
         // GUI
-        let root_entity = world.create_entity().build();
-        world.add_resource(GuiGraph::with_root(root_entity));
+        let root_entity = widgets::create_container(&mut world, gui::PackMode::Frame);
+        let gui_graph = GuiGraph::with_root(root_entity);
+        world.add_resource(gui::LayoutDirty::with_node_id(gui_graph.root_id())); // Initial layout pass
+        world.add_resource(gui_graph);
 
         // Graphics Commands to allow allocating resources
         // from systems to draw thread.
@@ -122,7 +143,7 @@ impl<'a, 'b> App<'a, 'b> {
         // Default Camera
         let camera_entity = world
             .create_entity()
-            .with(Transform::new().with_position([0., 0., -2.]))
+            .with(Transform::new().with_position([0., 0., 2.]))
             .with(CameraProjection::with_device_size((
                 logical_w as u16,
                 logical_h as u16,
@@ -135,35 +156,38 @@ impl<'a, 'b> App<'a, 'b> {
         // TODO: message passing to notify systems of events
         let mut camera_resize_system = CameraResizeSystem::new();
 
-        // Shader program
-        let shader_program = graphics
-            .factory
-            .link_program(
-                include_bytes!(concat!(
-                    env!("CARGO_MANIFEST_DIR"),
-                    "/src/shaders/basic_150.glslv"
-                )),
-                include_bytes!(concat!(
-                    env!("CARGO_MANIFEST_DIR"),
-                    "/src/shaders/basic_150.glslf"
-                )),
-            )
-            .unwrap();
+        // Basic render PSO
+        {
+            // Shader program
+            let shader_program = graphics
+                .factory
+                .link_program(
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/basic_150.glslv"
+                    )),
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/basic_150.glslf"
+                    )),
+                )
+                .unwrap();
 
-        // Pipeline State Object
-        let pso = graphics
-            .factory
-            .create_pipeline_from_program(
-                &shader_program,
-                gfx::Primitive::TriangleList,
-                gfx::state::Rasterizer::new_fill().with_cull_back(),
-                pipe::new(),
-            )
-            .unwrap();
+            // Pipeline State Object
+            let pso = graphics
+                .factory
+                .create_pipeline_from_program(
+                    &shader_program,
+                    gfx::Primitive::TriangleList,
+                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    pipe::new(),
+                )
+                .unwrap();
 
-        // Bundle program and pipeline state object together to avoid
-        // lifetime issues with world resources borrowing each other.
-        world.add_resource(PipelineBundle::new(pso, shader_program));
+            // Bundle program and pipeline state object together to avoid
+            // lifetime issues with world resources borrowing each other.
+            world.add_resource(PipelineBundle::new(pso, shader_program));
+        }
 
         // Gizmo Wireframe PSO
         {
@@ -181,17 +205,52 @@ impl<'a, 'b> App<'a, 'b> {
                 )
                 .unwrap();
 
+            let mut fillmode = gfx::state::Rasterizer::new_fill();
+            fillmode.method = gfx::state::RasterMethod::Line(1); // Render lines
             let gizmo_pso = graphics
                 .factory
                 .create_pipeline_from_program(
                     &gizmo_shader,
                     gfx::Primitive::TriangleList,
-                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    fillmode,
                     gizmo_pipe::new(),
                 )
                 .unwrap();
 
-            world.add_resource(GizmoPipelineBundle::new(gizmo_pso, gizmo_shader));
+            world.add_resource(PipelineBundle::new(gizmo_pso, gizmo_shader));
+        }
+
+        // GUI PSO
+        {
+            let gui_shader = graphics
+                .factory
+                .link_program(
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gui_150.glslv"
+                    )),
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gui_150.glslf"
+                    )),
+                )
+                .unwrap();
+
+            // GUI PSO
+            let pso = graphics
+                .factory
+                .create_pipeline_from_program(
+                    &gui_shader,
+                    gfx::Primitive::TriangleList,
+                    // TODO: Currently we're drawing quads backwards
+                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    gui_pipe::new(),
+                )
+                .unwrap();
+
+            // Bundle program and pipeline state object together to avoid
+            // lifetime issues with world resources borrowing each other.
+            world.add_resource(PipelineBundle::new(pso, gui_shader));
         }
 
         // Encoder
@@ -205,11 +264,25 @@ impl<'a, 'b> App<'a, 'b> {
             graphics.render_target.clone(),
             graphics.depth_stencil.clone(),
         );
-        let mut _gizmo_renderer =
-            GizmoDrawSystem::new(channel.clone(), graphics.render_target.clone());
 
         // Text Rendering
-        let mut text_renderer = DrawTextSystem::new(channel.clone());
+        let default_font = FontArc::try_from_slice(DEFAULT_FONT_DATA).unwrap();
+        let mut text_renderer = text::DrawTextSystem::new(
+            channel.clone(),
+            graphics.render_target.clone(),
+            graphics.depth_stencil.clone(),
+            GlyphBrushBuilder::using_font(default_font)
+                .depth_test(gfx::preset::depth::LESS_EQUAL_WRITE)
+                .build(graphics.factory.clone()),
+        );
+
+        // Gui Rendering
+        let mut gui_renderer = DrawGuiSystem::new(
+            channel.clone(),
+            Canvas::new(&mut graphics, physical_w as u16, physical_h as u16).unwrap(),
+            graphics.render_target.clone(),
+            graphics.depth_stencil.clone(),
+        );
 
         // Modding
         if let Some((lib_name, mod_path)) = mods {
@@ -279,6 +352,7 @@ impl<'a, 'b> App<'a, 'b> {
                         // Coordinates use physical size
                         let dpi_factor = graphics.window.window().get_hidpi_factor();
                         let physical_size = logical_size.to_physical(dpi_factor);
+                        // println!("dpi_factor={} {:?} {:?}", dpi_factor, physical_size, logical_size);
 
                         // Required by some platforms
                         graphics.window.resize(physical_size);
@@ -289,6 +363,10 @@ impl<'a, 'b> App<'a, 'b> {
                         // Ensure no dangling shared references
                         renderer.render_target = graphics.render_target.clone();
                         renderer.depth_target = graphics.depth_stencil.clone();
+                        text_renderer.render_target = graphics.render_target.clone();
+                        text_renderer.depth_target = graphics.depth_stencil.clone();
+                        gui_renderer.render_target = graphics.render_target.clone();
+                        gui_renderer.depth_target = graphics.depth_stencil.clone();
 
                         // Update view port/scissor rectangle for rendering systems
                         let (win_w, win_h): (u32, u32) = physical_size.into();
@@ -332,8 +410,11 @@ impl<'a, 'b> App<'a, 'b> {
             // Render Components
             renderer.run_now(&world.res);
 
+            // Render Gui
+            gui_renderer.run_now(&world.res);
+
             // Render Text
-            text_renderer.render(&mut world, &mut graphics);
+            text_renderer.run_now(&world.res);
 
             // Commit Render
             {
@@ -355,10 +436,10 @@ impl<'a, 'b> App<'a, 'b> {
             });
 
             // Cooperatively give up CPU time
-            // ::std::thread::yield_now();
+            ::std::thread::yield_now();
 
             // TODO: Remove sleep; call update and render on separate timers
-            ::std::thread::sleep(::std::time::Duration::from_millis(1));
+            // ::std::thread::sleep(::std::time::Duration::from_millis(1));
         }
 
         Ok(())

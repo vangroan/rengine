@@ -1,6 +1,5 @@
 extern crate rengine;
 
-use crate::rengine::gui::GuiBuilder;
 use log::trace;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
@@ -12,16 +11,17 @@ use rengine::colors::WHITE;
 use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
+use rengine::gui::text::TextBatch;
 use rengine::metrics::{builtin_metrics::*, DataPoint, MetricAggregate, MetricHub};
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
+use rengine::render::{Gizmo, Material};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
 use rengine::specs::{
     Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteExpect, WriteStorage,
 };
 use rengine::sprite::{Billboard, BillboardSystem};
-use rengine::text::TextBatch;
 use rengine::util::FpsCounter;
 use rengine::voxel::{
     raycast_from_camera, voxel_to_chunk, ChunkControl, ChunkCoord, ChunkMapping, ChunkUpkeepSystem,
@@ -72,7 +72,8 @@ fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Enti
     // Note: Mesh is generated later
     let entity = world
         .create_entity()
-        .with(tex)
+        .with(Material::Basic { texture: tex })
+        .with(Gizmo)
         .with(TileVoxelChunk::new(chunk_id.clone()))
         .with(Transform::new().with_position([
             chunk_id.i as f32 * CHUNK_DIM8 as f32,
@@ -96,7 +97,8 @@ fn create_sprite<V: Into<glm::Vec3>>(
 ) -> Entity {
     world
         .create_entity()
-        .with(tex)
+        .with(Material::Basic { texture: tex })
+        .with(Gizmo)
         .with(Billboard)
         .with(
             MeshBuilder::new()
@@ -318,19 +320,7 @@ impl Scene for Game {
         }
 
         // FPS Counter
-        self.fps_counter_entity = Some(
-            ctx.world
-                .create_entity()
-                .with(TextBatch::new().with("FPS: 0", WHITE))
-                .build(),
-        );
-
-        let _fps_counter_widget_id = ctx
-            .world
-            .create_widget(self.fps_counter_entity.unwrap())
-            .build()
-            .unwrap();
-
+        self.fps_counter_entity = Some(rengine::util::create_fps_counter_widget(&mut ctx.world));
         self.entities.push(self.fps_counter_entity.unwrap());
 
         // Load Mod Meta
@@ -342,6 +332,24 @@ impl Scene for Game {
                 println!("{:?}", e);
             }
         });
+
+        // Buttons
+        {
+            use rengine::gui::{widgets, WidgetBuilder};
+            let (btn_group_entity, btn_group_node_id) = widgets::Container::vbox()
+                .with_margin([8.0, 8.0])
+                .with_placement([0.0, 16.0])
+                .build(&mut ctx.world, &mut ctx.graphics);
+            self.entities.push(btn_group_entity);
+
+            let (btn_entity, _btn_id) = widgets::Button::text("Brush")
+                .child_of(btn_group_node_id)
+                .size(64., 64.)
+                .background_image("examples/ui.png")
+                .background_src_rect([0, 0], [32, 32])
+                .build(&mut ctx.world, &mut ctx.graphics);
+            self.entities.push(btn_entity);
+        }
 
         // Execute mod start.
         //
@@ -402,6 +410,8 @@ impl Scene for Game {
         use glutin::MouseButton;
         use glutin::VirtualKeyCode;
         use glutin::WindowEvent::*;
+
+        rengine::gui::GuiLayoutSystem.run_now(&ctx.world.res);
 
         if let WindowEvent { event, .. } = ev {
             match event {
@@ -572,7 +582,7 @@ impl Scene for Game {
                     let occupied = chunk_map
                         .chunk_entity(chunk_coord)
                         .and_then(|e| chunks.get(e))
-                        .and_then(|c| c.get(raycast_info.voxel_coord().clone()))
+                        .and_then(|c| c.get(*raycast_info.voxel_coord()))
                         .map(|d| d.occupied())
                         .unwrap_or(false);
 

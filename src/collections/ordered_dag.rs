@@ -11,7 +11,7 @@ use std::iter::Iterator;
 use std::marker::PhantomData;
 
 pub mod prelude {
-    pub use super::{OrderedDag, Walker};
+    pub use super::{NodeId, OrderedDag, Walker};
 }
 
 /// Directed acyclic graph, where node children are kept sorted.
@@ -246,6 +246,23 @@ where
         self.nodes.len()
     }
 
+    /// Returns true if the graph is empty.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    ///
+    /// let mut graph: OrderedDag<i64, i64> = OrderedDag::new();
+    ///
+    /// assert!(graph.is_empty());
+    /// graph.insert(1);
+    /// assert!(!graph.is_empty());
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.nodes.is_empty()
+    }
+
     /// Sorts the edges of all nodes.
     ///
     /// ```
@@ -323,11 +340,11 @@ where
             let c = s.entry(u).or_insert(VisitColor::Black);
             *c = VisitColor::Black;
 
-            return None;
+            None
         }
 
         state.insert(start_node_id, VisitColor::Grey);
-        return dfs_visit(self, start_node_id, &mut state);
+        dfs_visit(self, start_node_id, &mut state)
     }
 
     /// Builds a string representation of the whole graph.
@@ -339,7 +356,7 @@ where
         let mut sb = String::new();
 
         for (node_id, node) in self.nodes.iter() {
-            if node.edges.len() == 0 {
+            if node.edges.is_empty() {
                 sb.push_str(&format!("{:?} ->\n", node_id));
             } else if node.edges.len() == 1 {
                 let child_id = node.edges.iter().next().unwrap().child;
@@ -360,7 +377,7 @@ impl<N, E> OrderedDag<N, E>
 where
     E: Ord,
 {
-    /// Traverse the graph in pre-order.
+    /// Traverse the graph depth-first in pre-order.
     ///
     /// If the graph does not contain the given node id, the walker
     /// will do nothing.
@@ -408,6 +425,103 @@ where
             } else {
                 vec![]
             },
+            _marker: PhantomData,
+        }
+    }
+
+    /// Traverse the graph depth-first in post-order.
+    ///
+    /// If the graph does not contain the given node id, the walker
+    /// will do nothing.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    /// use rengine::collections::ordered_dag::Walker;
+    ///
+    /// //       a
+    /// //      / \
+    /// //     /   \
+    /// //    b     c
+    /// //   / \
+    /// //  /   \
+    /// // d     e
+    /// //
+    /// // post_order = d, e, b, c, a
+    ///
+    /// let mut graph: OrderedDag<&'static str, i64> = OrderedDag::new();
+    /// let node_1 = graph.insert("a");
+    /// let node_2 = graph.insert("b");
+    /// let node_3 = graph.insert("c");
+    /// let node_4 = graph.insert("d");
+    /// let node_5 = graph.insert("e");
+    /// graph.set_edge(node_1, node_2, 0);
+    /// graph.set_edge(node_1, node_3, 0);
+    /// graph.set_edge(node_2, node_4, 0);
+    /// graph.set_edge(node_2, node_5, 0);
+    ///
+    /// let mut walker = graph.walk_post_order(node_1);
+    /// let mut result = String::new();
+    ///
+    /// while let Some(node_id) = walker.next(&graph) {
+    ///     result.push_str(graph.node(node_id).unwrap());
+    /// }
+    ///
+    /// assert_eq!(result.as_str(), "debca");
+    /// ```
+    pub fn walk_post_order(&self, start_node: NodeId) -> PostOrderWalk<N, E> {
+        PostOrderWalk {
+            stack: if self.nodes.contains_key(start_node) {
+                vec![start_node]
+            } else {
+                vec![]
+            },
+            out: vec![],
+            _marker: PhantomData,
+        }
+    }
+
+    /// Walk the immediate children of the given node.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rengine::collections::OrderedDag;
+    /// use rengine::collections::ordered_dag::Walker;
+    ///
+    /// //       a
+    /// //      / \
+    /// //     /   \
+    /// //    b     c
+    /// //   / \
+    /// //  /   \
+    /// // d     e
+    ///
+    /// let mut graph: OrderedDag<&'static str, i64> = OrderedDag::new();
+    /// let node_1 = graph.insert("a");
+    /// let node_2 = graph.insert("b");
+    /// let node_3 = graph.insert("c");
+    /// let node_4 = graph.insert("d");
+    /// let node_5 = graph.insert("e");
+    /// graph.set_edge(node_1, node_2, 0);
+    /// graph.set_edge(node_1, node_3, 0);
+    /// graph.set_edge(node_2, node_4, 0);
+    /// graph.set_edge(node_2, node_5, 0);
+    ///
+    /// let mut walker = graph.walk_children(node_1);
+    /// let mut result = String::new();
+    ///
+    /// while let Some(node_id) = walker.next(&graph) {
+    ///     result.push_str(graph.node(node_id).unwrap());
+    /// }
+    ///
+    /// assert_eq!(result.as_str(), "bc");
+    /// ```
+    pub fn walk_children(&self, node_id: NodeId) -> ChildrenWalk<N, E> {
+        ChildrenWalk {
+            node_id,
+            cursor: 0,
             _marker: PhantomData,
         }
     }
@@ -546,6 +660,64 @@ where
             }
 
             Some(node_id)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct PostOrderWalk<N, E> {
+    stack: Vec<NodeId>,
+    out: Vec<NodeId>,
+    _marker: PhantomData<(N, E)>,
+}
+
+impl<N, E> Walker for PostOrderWalk<N, E>
+where
+    E: Ord,
+{
+    type Node = N;
+    type Edge = E;
+    fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId> {
+        while let Some(node_id) = self.stack.pop() {
+            self.out.push(node_id);
+            let iter = graph
+                .nodes
+                .get(node_id)
+                .unwrap()
+                .edges
+                .iter()
+                .map(|e| e.child);
+
+            for child_id in iter {
+                self.stack.push(child_id);
+            }
+        }
+
+        self.out.pop()
+    }
+}
+
+pub struct ChildrenWalk<N, E> {
+    node_id: NodeId,
+    cursor: usize,
+    _marker: PhantomData<(N, E)>,
+}
+
+impl<N, E> Walker for ChildrenWalk<N, E>
+where
+    E: Ord,
+{
+    type Node = N;
+    type Edge = E;
+    fn next(&mut self, graph: &OrderedDag<Self::Node, Self::Edge>) -> Option<NodeId> {
+        if let Some(edge) = graph
+            .nodes
+            .get(self.node_id)
+            .and_then(|n| n.edges.get(self.cursor))
+        {
+            self.cursor += 1;
+            Some(edge.child)
         } else {
             None
         }

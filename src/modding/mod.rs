@@ -12,7 +12,6 @@ use std::fs::{canonicalize, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::thread;
-use toml;
 use walkdir::{DirEntry, WalkDir};
 // use std::clone::Clone;
 

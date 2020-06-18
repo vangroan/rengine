@@ -28,14 +28,17 @@ impl DeviceDimensions {
         }
     }
 
+    #[inline]
     pub fn dpi_factor(&self) -> f64 {
         self.dpi_factor
     }
 
+    #[inline]
     pub fn physical_size(&self) -> &PhysicalSize {
         &self.physical_size
     }
 
+    #[inline]
     pub fn logical_size(&self) -> &LogicalSize {
         &self.logical_size
     }
