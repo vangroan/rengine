@@ -4,7 +4,7 @@ extern crate specs_derive;
 use rengine::camera::CameraView;
 use rengine::comp::Transform;
 use rengine::gui::{
-    self, widgets, GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, GuiSortSystem, WidgetBuilder,
+    widgets, GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, GuiSortSystem, WidgetBuilder,
     WidgetEvent, WidgetEvents,
 };
 use rengine::res::DeltaTime;
@@ -112,12 +112,12 @@ impl Scene for Game {
 
     fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         ctx.world.exec(
-            |(_cam, mut trans, dt): (
+            |(_cam, mut trans, _dt): (
                 ReadStorage<'_, CameraView>,
                 WriteStorage<'_, Transform>,
                 Read<'_, DeltaTime>,
             )| {
-                for trans in (&mut trans).join() {
+                for _trans in (&mut trans).join() {
                     // trans.translate([0.0, 0.0, -10.0 * dt.as_secs_float()]);
                 }
             },
