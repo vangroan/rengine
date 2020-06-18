@@ -90,6 +90,7 @@ impl<'a, 'b> App<'a, 'b> {
         // GUI Components
         {
             world.add_resource(gui::HoveredWidget::default());
+            world.add_resource(gui::PressedWidget::default());
             world.add_resource(gui::WidgetEvents::new());
             world.register::<gui::GuiMesh>();
             world.register::<gui::BoundsRect>();

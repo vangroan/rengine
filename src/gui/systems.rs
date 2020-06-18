@@ -1,10 +1,21 @@
 use super::{BoundsRect, GlobalPosition, GuiGraph, HoveredWidget, NodeId};
 use crate::comp::Tag;
-use glutin::{Event, WindowEvent};
+use glutin::{ElementState, Event, WindowEvent};
 use shrev::EventChannel;
 use specs::prelude::*;
 
-pub struct GuiMouseMoveSystem;
+pub struct GuiMouseMoveSystem {
+    /// Last known mouse cursor position on main window, in screen coordinates.
+    mouse_pos: [f32; 2],
+}
+
+impl GuiMouseMoveSystem {
+    pub fn new() -> Self {
+        GuiMouseMoveSystem {
+            mouse_pos: [0.0, 0.0],
+        }
+    }
+}
 
 impl<'a> System<'a> for GuiMouseMoveSystem {
     type SystemData = GuiMouseData<'a>;
@@ -15,6 +26,7 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
             mut gui_events,
             gui_graph,
             mut hovered,
+            mut pressed,
             clickables,
             bounds_rects,
             global_positions,
@@ -26,6 +38,7 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
                 match event {
                     WindowEvent::CursorMoved { position, .. } => {
                         // TODO: Unfocus and hover out when cursor leaves window
+                        self.mouse_pos = [position.x as f32, position.y as f32];
 
                         if let Some((entity, node_id)) = find_widget(
                             FindWidgetData {
@@ -34,7 +47,7 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
                                 bounds_rects: &bounds_rects,
                                 clickables: &clickables,
                             },
-                            [position.x as f32, position.y as f32],
+                            self.mouse_pos,
                         ) {
                             if hovered.entity() != Some(entity) {
                                 let name: &str =
@@ -58,9 +71,41 @@ impl<'a> System<'a> for GuiMouseMoveSystem {
                             });
                         }
                     }
-                    WindowEvent::MouseInput { .. } => {
+                    WindowEvent::MouseInput { state, .. } => {
                         // TODO: Focus on click
-                        // TODO: Emit GUI event on click
+                        if let Some((entity, node_id)) = find_widget(
+                            FindWidgetData {
+                                gui_graph: &gui_graph,
+                                global_positions: &global_positions,
+                                bounds_rects: &bounds_rects,
+                                clickables: &clickables,
+                            },
+                            self.mouse_pos,
+                        ) {
+                            match state {
+                                ElementState::Pressed => {
+                                    pressed.set(entity, node_id);
+                                    gui_events.single_write(WidgetEvent {
+                                        entity,
+                                        node_id,
+                                        kind: WidgetEventKind::Pressed,
+                                        window_event: event.clone(),
+                                    });
+                                }
+                                ElementState::Released => {
+                                    // Only a widget that has been pressed will receive a release event
+                                    if pressed.entity() == Some(entity) {
+                                        gui_events.single_write(WidgetEvent {
+                                            entity,
+                                            node_id,
+                                            kind: WidgetEventKind::Released,
+                                            window_event: event.clone(),
+                                        });
+                                    }
+                                    pressed.clear();
+                                }
+                            }
+                        }
                     }
                     WindowEvent::MouseWheel { .. } => {
                         // TODO: Emit GUI event on mouse wheel
@@ -81,6 +126,7 @@ pub struct GuiMouseData<'a> {
     gui_events: Write<'a, EventChannel<WidgetEvent>>,
     gui_graph: ReadExpect<'a, GuiGraph>,
     hovered: Write<'a, HoveredWidget>,
+    pressed: Write<'a, PressedWidget>,
     clickables: ReadStorage<'a, Clickable>,
     bounds_rects: ReadStorage<'a, BoundsRect>,
     global_positions: ReadStorage<'a, GlobalPosition>,
@@ -124,6 +170,41 @@ fn find_widget(data: FindWidgetData, mouse_position: [f32; 2]) -> Option<(Entity
         }
     }
     None
+}
+
+// --------- //
+// Resources //
+// --------- //
+
+/// Widget that received a pressed event, and should be the receiver of the next release event.
+#[derive(Debug, Default)]
+pub struct PressedWidget(Option<(Entity, NodeId)>);
+
+impl PressedWidget {
+    #[inline]
+    pub fn entity(&self) -> Option<Entity> {
+        self.0.map(|(e, _)| e)
+    }
+
+    #[inline]
+    pub fn node_id(&self) -> Option<NodeId> {
+        self.0.map(|(_, n)| n)
+    }
+
+    #[inline]
+    pub fn set(&mut self, entity: Entity, node_id: NodeId) {
+        self.0 = Some((entity, node_id))
+    }
+
+    #[inline]
+    pub fn has_widget(&self) -> bool {
+        self.0.is_some()
+    }
+
+    #[inline]
+    pub fn clear(&mut self) -> Option<(Entity, NodeId)> {
+        self.0.take()
+    }
 }
 
 // ---------- //

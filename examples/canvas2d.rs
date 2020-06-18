@@ -42,6 +42,7 @@ struct Game {
     canvas: Canvas,
     entities: Vec<Entity>,
     widget_event_reader: shrev::ReaderId<WidgetEvent>,
+    gui_mouse_sys: GuiMouseMoveSystem,
 }
 
 impl Game {
@@ -54,6 +55,7 @@ impl Game {
             canvas: Canvas::new(&mut ctx.graphics, 640, 480).unwrap(),
             entities: vec![],
             widget_event_reader: reader_id,
+            gui_mouse_sys: GuiMouseMoveSystem::new(),
         }
     }
 }
@@ -152,7 +154,7 @@ impl Scene for Game {
             },
         );
 
-        GuiMouseMoveSystem.run_now(&ctx.world.res);
+        self.gui_mouse_sys.run_now(&ctx.world.res);
         GuiSortSystem.run_now(&ctx.world.res);
         GuiLayoutSystem.run_now(&ctx.world.res);
 
