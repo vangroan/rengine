@@ -87,7 +87,8 @@ impl GuiGraph {
     }
 
     pub fn debug_print(&self) {
-        println!("{}", self.graph.string());
+        pretty_print_gui(&self.graph, self.root_id, 0, false);
+        // println!("{}", self.graph.string());
     }
 }
 
@@ -149,5 +150,42 @@ impl HoveredWidget {
     #[inline]
     pub fn clear(&mut self) -> Option<(Entity, NodeId)> {
         self.0.take()
+    }
+}
+
+fn pretty_print_gui(graph: &OrderedDag<Entity, Child>, node_id: NodeId, level: i32, last: bool) {
+    let mut indent = String::new();
+
+    // First node and first level of children will have no pipes prepended.
+    let pipe_count = i32::max(level - 2, 0);
+    for _ in 0..pipe_count {
+        indent.push('│');
+    }
+
+    // if level == 0 {
+    //     // indent.push('┌');
+    // } else if level == 1 {
+    //     indent.push('├');
+    // } else {
+    //     indent.push_str("|├");
+    // }
+    if last {
+        indent.push_str("└");
+    } else {
+        indent.push_str("├");
+    }
+
+    // for _ in 0..level {
+    //     indent.push_str("─");
+    // }
+
+    println!("{}{:?}", indent, node_id);
+
+    let mut walker = graph.walk_children(node_id);
+    let mut cursor = 0;
+    let count = graph.out_edge_len(node_id).unwrap();
+    while let Some(child_id) = walker.next(&graph) {
+        pretty_print_gui(graph, child_id, level + 1, cursor == count - 1);
+        cursor += 1;
     }
 }

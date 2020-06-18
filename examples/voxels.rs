@@ -333,17 +333,16 @@ impl Scene for Game {
         });
 
         // Buttons
-        use rengine::gui::{widgets, GuiGraph, WidgetBuilder};
-        let btn_group_id = widgets::create_hbox(&mut ctx.world);
-        let btn_grp_node_id = ctx
-            .world
-            .write_resource::<GuiGraph>()
-            .insert_entity(btn_group_id, None);
-        self.entities.push(btn_group_id);
+        {
+            use rengine::gui::{widgets, WidgetBuilder};
+            let (btn_group_entity, btn_group_node_id) = widgets::Container::vbox()
+                .with_margin([8.0, 8.0])
+                .with_placement([0.0, 16.0])
+                .build(&mut ctx.world, &mut ctx.graphics);
+            self.entities.push(btn_group_entity);
 
-        for i in 0..4 {
-            let (btn_entity, _btn_id) = widgets::Button::text(&format!("Click Me {}", i))
-                .child_of(btn_grp_node_id)
+            let (btn_entity, _btn_id) = widgets::Button::text("Brush")
+                .child_of(btn_group_node_id)
                 .size(64., 64.)
                 .background_image("examples/ui.png")
                 .background_src_rect([0, 0], [32, 32])

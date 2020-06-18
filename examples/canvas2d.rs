@@ -1,11 +1,8 @@
 #[macro_use]
 extern crate specs_derive;
 
-use log::trace;
-use rengine;
 use rengine::camera::CameraView;
-use rengine::comp::{MeshBuilder, Transform};
-use rengine::draw2d::Canvas;
+use rengine::comp::Transform;
 use rengine::gui::{
     self, widgets, GuiGraph, GuiLayoutSystem, GuiMouseMoveSystem, GuiSortSystem, WidgetBuilder,
     WidgetEvent, WidgetEvents,
@@ -39,7 +36,6 @@ impl Scene for Intro {
 }
 
 struct Game {
-    canvas: Canvas,
     entities: Vec<Entity>,
     widget_event_reader: shrev::ReaderId<WidgetEvent>,
     gui_mouse_sys: GuiMouseMoveSystem,
@@ -52,7 +48,6 @@ impl Game {
             .exec(|mut widget_events: Write<'_, WidgetEvents>| widget_events.register_reader());
 
         Game {
-            canvas: Canvas::new(&mut ctx.graphics, 640, 480).unwrap(),
             entities: vec![],
             widget_event_reader: reader_id,
             gui_mouse_sys: GuiMouseMoveSystem::new(),
@@ -96,32 +91,6 @@ impl Scene for Game {
                 self.entities.push(btn_entity);
             }
         }
-
-        let _entity = ctx
-            .world
-            .create_entity()
-            .with(gui::GlobalPosition::new(100.0, 100.0))
-            .with(gui::BoundsRect::new(100.0, 100.0))
-            .with(
-                gui::text::TextBatch::default()
-                    .with_z(-1.)
-                    .with("###############", rengine::colors::RED),
-            )
-            .with(Transform::default())
-            .build();
-
-        let _entity = ctx
-            .world
-            .create_entity()
-            .with(gui::GlobalPosition::new(100.0, 100.0))
-            .with(gui::BoundsRect::new(100.0, 100.0))
-            .with(
-                gui::text::TextBatch::default()
-                    .with_z(0.0)
-                    .with("XXXXXXXXXXXXXXX", rengine::colors::GREEN),
-            )
-            .with(Transform::default())
-            .build();
 
         println!("entitites {:?}", self.entities);
         ctx.world.read_resource::<GuiGraph>().debug_print();

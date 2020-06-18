@@ -108,7 +108,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
 
         // GUI
-        let root_entity = widgets::create_frame(&mut world);
+        let root_entity = widgets::create_container(&mut world, gui::PackMode::Frame);
         let gui_graph = GuiGraph::with_root(root_entity);
         world.add_resource(gui::LayoutDirty::with_node_id(gui_graph.root_id())); // Initial layout pass
         world.add_resource(gui_graph);

@@ -6,18 +6,9 @@ use crate::comp::{Tag, Transform};
 use crate::graphics::GraphicContext;
 use specs::prelude::*;
 
-pub fn create_frame(world: &mut World) -> Entity {
-    create_container(world, layout::PackMode::Frame)
-}
-
-pub fn create_vbox(world: &mut World) -> Entity {
-    create_container(world, layout::PackMode::Vertical)
-}
-
-pub fn create_hbox(world: &mut World) -> Entity {
-    create_container(world, layout::PackMode::Horizontal)
-}
-
+/// Creates a container widget without inserting it into a GUI graph.
+///
+/// Useful for creating the initial root widget.
 pub fn create_container(world: &mut World, pack_mode: layout::PackMode) -> Entity {
     let mut pack = layout::Pack::new(pack_mode);
     pack.margin = [10.0, 10.0];
@@ -25,12 +16,13 @@ pub fn create_container(world: &mut World, pack_mode: layout::PackMode) -> Entit
     world
         .create_entity()
         .with(Container)
+        .with(next_widget_tag())
         .with(Placement::zero())
         .with(pack)
         .with(GlobalPosition::new(0., 0.))
         .with(ZDepth::default())
-        .with(Transform::default().with_position([0.0, 0.0, 0.0]))
-        .with(BoundsRect::new(100.0, 100.0))
+        .with(Transform::default())
+        .with(BoundsRect::new(::std::f32::INFINITY, ::std::f32::INFINITY))
         .build()
 }
 
@@ -39,21 +31,24 @@ pub fn create_container(world: &mut World, pack_mode: layout::PackMode) -> Entit
 pub struct Container;
 
 impl Container {
+    pub fn frame() -> ContainerBuilder {
+        ContainerBuilder {
+            pack_mode: layout::PackMode::Frame,
+            ..ContainerBuilder::default()
+        }
+    }
+
     pub fn vbox() -> ContainerBuilder {
         ContainerBuilder {
-            parent_id: None,
-            tag: None,
             pack_mode: layout::PackMode::Vertical,
-            margin: [0.0, 0.0],
+            ..ContainerBuilder::default()
         }
     }
 
     pub fn hbox() -> ContainerBuilder {
         ContainerBuilder {
-            parent_id: None,
-            tag: None,
             pack_mode: layout::PackMode::Horizontal,
-            margin: [0.0, 0.0],
+            ..ContainerBuilder::default()
         }
     }
 }
@@ -61,8 +56,23 @@ impl Container {
 pub struct ContainerBuilder {
     parent_id: Option<NodeId>,
     tag: Option<Tag>,
+    placement: layout::Placement,
     pack_mode: layout::PackMode,
     margin: [f32; 2],
+    size: [f32; 2],
+}
+
+impl Default for ContainerBuilder {
+    fn default() -> Self {
+        ContainerBuilder {
+            parent_id: None,
+            tag: None,
+            placement: layout::Placement::zero(),
+            pack_mode: layout::PackMode::Frame,
+            margin: [0.0, 0.0],
+            size: [::std::f32::INFINITY, ::std::f32::INFINITY],
+        }
+    }
 }
 
 impl ContainerBuilder {
@@ -79,8 +89,18 @@ impl ContainerBuilder {
         self
     }
 
+    pub fn with_placement(mut self, offset: [f32; 2]) -> Self {
+        self.placement = layout::Placement::new(offset[0], offset[1]);
+        self
+    }
+
     pub fn with_margin(mut self, margin: [f32; 2]) -> Self {
         self.margin = margin;
+        self
+    }
+
+    pub fn with_size(mut self, size: [f32; 2]) -> Self {
+        self.size = size;
         self
     }
 }
@@ -90,8 +110,10 @@ impl WidgetBuilder for ContainerBuilder {
         let ContainerBuilder {
             parent_id,
             tag,
+            placement,
             pack_mode,
             margin,
+            size,
         } = self;
 
         let mut pack = layout::Pack::new(pack_mode);
@@ -101,12 +123,12 @@ impl WidgetBuilder for ContainerBuilder {
             .create_entity()
             .with(Container)
             .with(tag.unwrap_or_else(next_widget_tag))
-            .with(Placement::zero())
+            .with(placement)
             .with(pack)
             .with(GlobalPosition::new(0., 0.))
             .with(ZDepth::default())
             .with(Transform::default())
-            .with(BoundsRect::new(100.0, 64.0))
+            .with(BoundsRect::new(size[0], size[1]))
             .build();
 
         let node_id = world
