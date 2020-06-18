@@ -72,6 +72,7 @@ impl TextBatch {
     }
 
     pub fn as_section(&self, dpi_factor: f32, bounds: [f32; 2]) -> Section {
+        // TODO: Specify either LogicalSize or PhysicalSize for bounds
         let texts: Vec<_> = self
             .fragments
             .iter()
@@ -88,7 +89,8 @@ impl TextBatch {
         for text in texts {
             section = section.add_text(text);
         }
-        section.bounds = (bounds[0], bounds[1]);
+        // TODO: Rather accept physical size
+        section.bounds = (bounds[0] * dpi_factor, bounds[1] * dpi_factor);
         section.layout = Layout::default_wrap()
             .h_align(match self.layout.align_h {
                 TextAlignHorizontal::Left => gfx_glyph::HorizontalAlign::Left,

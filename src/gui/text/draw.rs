@@ -5,8 +5,7 @@ use crate::render::ChannelPair;
 use crate::res::DeviceDimensions;
 use gfx_device::{CommandBuffer, Resources};
 use gfx_glyph::{GlyphBrush, Section};
-use glutin::dpi::LogicalSize;
-use nalgebra as na;
+use glutin::dpi::PhysicalSize;
 use specs::{Join, ReadExpect, ReadStorage, System};
 
 pub struct DrawTextSystem {
@@ -55,7 +54,7 @@ impl<'a> System<'a> for DrawTextSystem {
         // z-axis is for depth and sorting
         let nearz = -65535.;
         let farz = 65535.;
-        let transform = create_text_matrix(*device_dim.logical_size(), nearz, farz);
+        let transform = create_text_matrix(*device_dim.physical_size(), nearz, farz);
 
         match self.channel.recv_block() {
             Ok(mut encoder) => {
@@ -64,7 +63,9 @@ impl<'a> System<'a> for DrawTextSystem {
                     .join()
                     .map(|(text_batch, pos, bounds)| {
                         let mut section = text_batch.as_section(dpi_factor, (*bounds).into());
-                        section.screen_position = pos.into();
+                        // TODO: Change to physical pixel position
+                        let new_pos = pos.point() * dpi_factor;
+                        section.screen_position = (new_pos.x, new_pos.y);
                         section
                     })
                     .collect();
@@ -91,7 +92,7 @@ impl<'a> System<'a> for DrawTextSystem {
 
 pub fn create_text_matrix<S>(device_size: S, nearz: f32, farz: f32) -> [[f32; 4]; 4]
 where
-    S: Into<LogicalSize>,
+    S: Into<PhysicalSize>,
 {
     let s = device_size.into();
     let (w, h) = (s.width as f32, s.height as f32);
