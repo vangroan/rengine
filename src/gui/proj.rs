@@ -49,7 +49,7 @@ where
     let (w, h, d) = (
         device_w as f32 / scale_factor,
         device_h as f32 / scale_factor,
-        (farz - nearz) / scale_factor,
+        (farz - nearz),
     );
 
     let mut m = Matrix4::identity();
