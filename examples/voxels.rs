@@ -12,6 +12,7 @@ use rengine::comp::{GlTexture, MeshBuilder, Transform};
 use rengine::glm;
 use rengine::glutin::dpi::PhysicalPosition;
 use rengine::gui::text::TextBatch;
+use rengine::metrics::{builtin_metrics::*, DataPoint, MetricAggregate, MetricHub};
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
@@ -407,6 +408,7 @@ impl Scene for Game {
         use glutin::ElementState;
         use glutin::Event::*;
         use glutin::MouseButton;
+        use glutin::VirtualKeyCode;
         use glutin::WindowEvent::*;
 
         rengine::gui::GuiLayoutSystem.run_now(&ctx.world.res);
@@ -430,6 +432,67 @@ impl Scene for Game {
                         if state == &ElementState::Released {
                             self.added = false;
                         }
+                    }
+                }
+                KeyboardInput { input, .. } => {
+                    if input.virtual_keycode == Some(VirtualKeyCode::F5)
+                        && input.state == ElementState::Released
+                    {
+                        ctx.world.exec(|metrics: Read<'_, MetricHub>| {
+                            let length = 64;
+                            let mut timeseries = vec![DataPoint::default(); length];
+
+                            let now_seconds = chrono::Local::now().timestamp();
+
+                            // -------------------------------------------------
+                            println!("Render Time Taken");
+                            metrics.make_time_series(
+                                GRAPHICS_RENDER,
+                                MetricAggregate::Maximum,
+                                &mut timeseries,
+                                0,
+                                length,
+                            );
+                            let mut data_points: Vec<(i64, f64)> = timeseries
+                                .iter()
+                                .map(|dp| {
+                                    let delta_seconds = now_seconds - dp.datetime.timestamp();
+                                    (delta_seconds, dp.value)
+                                })
+                                .collect();
+                            data_points.sort_by(|a, b| a.0.cmp(&b.0));
+
+                            for dp in &data_points {
+                                println!("{}: {}ms", dp.0, dp.1);
+                            }
+
+                            // Reset for next metric
+                            for e in &mut timeseries {
+                                *e = Default::default();
+                            }
+
+                            // -------------------------------------------------
+                            println!("Draw Call Count");
+                            metrics.make_time_series(
+                                GRAPHICS_DRAW_CALLS,
+                                MetricAggregate::Sum,
+                                &mut timeseries,
+                                0,
+                                length,
+                            );
+                            let mut data_points: Vec<(i64, f64)> = timeseries
+                                .iter()
+                                .map(|dp| {
+                                    let delta_seconds = now_seconds - dp.datetime.timestamp();
+                                    (delta_seconds, dp.value)
+                                })
+                                .collect();
+                            data_points.sort_by(|a, b| a.0.cmp(&b.0));
+
+                            for dp in &data_points {
+                                println!("{}: {}", dp.0, dp.1);
+                            }
+                        });
                     }
                 }
                 _ => {}

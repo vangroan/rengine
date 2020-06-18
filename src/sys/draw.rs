@@ -1,6 +1,7 @@
 use crate::camera::{ActiveCamera, CameraProjection, CameraView};
 use crate::comp::{GlTexture, Mesh, Transform};
 use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, RenderTarget};
+use crate::metrics::{builtin_metrics::*, MetricAggregate, MetricHub};
 use crate::option::lift2;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::ViewPort;
@@ -15,6 +16,7 @@ pub struct DrawSystem {
 
 #[derive(SystemData)]
 pub struct DrawSystemData<'a> {
+    metrics: Read<'a, MetricHub>,
     basic_pipe_bundle: ReadExpect<'a, PipelineBundle<pipe::Meta>>,
     gizmo_pipe_bundle: ReadExpect<'a, PipelineBundle<gizmo_pipe::Meta>>,
     view_port: ReadExpect<'a, ViewPort>,
@@ -73,6 +75,7 @@ impl<'a> System<'a> for DrawSystem {
 
     fn run(&mut self, data: Self::SystemData) {
         let DrawSystemData {
+            metrics,
             basic_pipe_bundle,
             gizmo_pipe_bundle,
             view_port,
@@ -87,6 +90,10 @@ impl<'a> System<'a> for DrawSystem {
         } = data;
         match self.channel.recv_block() {
             Ok(mut encoder) => {
+                let mut render_timer = metrics.timer(GRAPHICS_RENDER, MetricAggregate::Maximum);
+                let mut _draw_call_counter =
+                    metrics.counter(GRAPHICS_DRAW_CALLS, MetricAggregate::Sum);
+
                 // Without a camera, we draw according to the default OpenGL behaviour
                 let (proj_matrix, view_matrix) = active_camera
                     .camera_entity()
@@ -97,33 +104,6 @@ impl<'a> System<'a> for DrawSystem {
                         (proj.perspective(), view.view_matrix())
                     })
                     .unwrap_or((Matrix4::identity(), Matrix4::identity()));
-
-                // for (ref mesh, ref tex, ref trans) in (&meshes, &textures, &transforms).join() {
-                //     // Convert to pipeline transform type
-                //     let trans = gfx_types::Transform {
-                //         transform: trans.matrix().into(),
-                //     };
-
-                //     // Send transform to graphics card
-                //     encoder
-                //         .update_buffer(&mesh.transbuf, &[trans], 0)
-                //         .expect("Failed to update buffer");
-
-                //     // Prepare data
-                //     let data = pipe::Data {
-                //         vbuf: mesh.vbuf.clone(),
-                //         sampler: (tex.bundle.view.clone(), tex.bundle.sampler.clone()),
-                //         transforms: mesh.transbuf.clone(),
-                //         view: view_matrix.into(),
-                //         proj: proj_matrix.into(),
-                //         // The rectangle to allow rendering within
-                //         scissor: view_port.rect,
-                //         render_target: self.render_target.clone(),
-                //         depth_target: self.depth_target.clone(),
-                //     };
-
-                //     encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
-                // }
 
                 for (ref mesh, ref mat, ref trans) in (&meshes, &materials, &transforms).join() {
                     // Choose pipeline based on material
@@ -157,36 +137,12 @@ impl<'a> System<'a> for DrawSystem {
 
                             encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
                         }
-                        Material::Gizmo => {
-                            self.draw_gizmo(
-                                &mut encoder,
-                                &*gizmo_pipe_bundle,
-                                mesh,
-                                trans,
-                                view_matrix,
-                                proj_matrix,
-                                &*view_port,
-                            );
-                            // Prepare data
-                            // let data = gizmo_pipe::Data {
-                            //     vbuf: mesh.vbuf.clone(),
-                            //     model: trans.matrix().into(),
-                            //     view: view_matrix.into(),
-                            //     proj: proj_matrix.into(),
-                            //     // The rectangle to allow rendering within
-                            //     scissor: view_port.rect,
-                            //     render_target: self.render_target.clone(),
-                            //     depth_target: self.depth_target.clone(),
-                            // };
-
-                            // encoder.draw(&mesh.slice, &gizmo_pipe_bundle.pso, &data);
-                        }
                         _ => unimplemented!(),
                     }
                 }
 
                 // Second pass for drawing debug gizmos
-                for (ref mesh, ref mat, ref trans, ref _gizmo) in
+                for (ref mesh, ref _mat, ref trans, ref _gizmo) in
                     (&meshes, &materials, &transforms, &gizmos).join()
                 {
                     self.draw_gizmo(
@@ -203,6 +159,8 @@ impl<'a> System<'a> for DrawSystem {
                 if let Err(err) = self.channel.send_block(encoder) {
                     eprintln!("{}", err);
                 }
+
+                render_timer.stop();
             }
             Err(err) => eprintln!("{}", err),
         }

@@ -229,7 +229,7 @@ mod test {
         );
         assert_eq!(
             VoxelCoord::new(1, 2, 3),
-            &VoxelCoord::new(0, 1, 2) + &VoxelCoord::new(1, 1, 1),
+            VoxelCoord::new(0, 1, 2) + VoxelCoord::new(1, 1, 1),
             "Adding volel coordinate by reference failed"
         );
     }

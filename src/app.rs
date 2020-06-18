@@ -9,6 +9,7 @@ use crate::errors::*;
 use crate::gfx_types::*;
 use crate::graphics::GraphicContext;
 use crate::gui::{self, text, widgets, DrawGuiSystem, GuiGraph};
+use crate::metrics::MetricHub;
 use crate::modding::Mods;
 use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
@@ -103,6 +104,9 @@ impl<'a, 'b> App<'a, 'b> {
             world.register::<widgets::Button>();
             world.register::<widgets::Container>();
         }
+
+        // Statistics Metrics
+        world.add_resource(MetricHub::default());
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
