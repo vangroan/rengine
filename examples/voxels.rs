@@ -18,9 +18,7 @@ use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::render::{Gizmo, Material};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
-use rengine::specs::{
-    Builder, Entity, Read, ReadStorage, RunNow, World, Write, WriteExpect, WriteStorage,
-};
+use rengine::specs::prelude::*;
 use rengine::sprite::{Billboard, BillboardSystem};
 use rengine::util::FpsCounter;
 use rengine::voxel::{
@@ -145,8 +143,6 @@ fn handle_script_commands(_world: &World, cmds: &[u32]) {
 }
 
 pub struct Game {
-    fps_counter: FpsCounter,
-    fps_counter_entity: Option<Entity>,
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
     billboard_sys: BillboardSystem,
     orbital_sys: OrbitalCameraControlSystem,
@@ -165,8 +161,6 @@ pub struct Game {
 impl Game {
     fn new() -> Self {
         Game {
-            fps_counter: FpsCounter::new(),
-            fps_counter_entity: None,
             chunk_upkeep_sys: None,
             billboard_sys: BillboardSystem,
             orbital_sys: OrbitalCameraControlSystem::new(),
@@ -320,8 +314,8 @@ impl Scene for Game {
         }
 
         // FPS Counter
-        self.fps_counter_entity = Some(rengine::util::create_fps_counter_widget(&mut ctx.world));
-        self.entities.push(self.fps_counter_entity.unwrap());
+        self.entities
+            .push(rengine::util::create_fps_counter_widget(&mut ctx.world));
 
         // Load Mod Meta
         ctx.world.exec(|mut mods: WriteExpect<Mods>| {
@@ -504,14 +498,14 @@ impl Scene for Game {
 
     fn on_update(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         ctx.world.exec(
-            |(dt, mut text_batches): (Read<DeltaTime>, WriteStorage<'_, TextBatch>)| {
-                self.fps_counter.add(dt.duration());
-
-                if let Some(text_batch) = self
-                    .fps_counter_entity
-                    .and_then(|e| text_batches.get_mut(e))
-                {
-                    text_batch.replace(&format!("FPS: {:.2}", self.fps_counter.fps()), WHITE)
+            |(dt, mut text_batches, mut fps_counters): (
+                Read<DeltaTime>,
+                WriteStorage<'_, TextBatch>,
+                WriteStorage<'_, FpsCounter>,
+            )| {
+                for (text, counter) in (&mut text_batches, &mut fps_counters).join() {
+                    counter.add(dt.duration());
+                    text.replace(&format!("FPS: {:.2}", counter.fps()), WHITE);
                 }
             },
         );
