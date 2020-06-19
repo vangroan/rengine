@@ -75,6 +75,7 @@ use specs::{Builder, Entity, World};
 pub fn create_fps_counter_widget(world: &mut World) -> Entity {
     let entity = world
         .create_entity()
+        .with(FpsCounter::new())
         .with(gui::Placement::new(0.0, 0.0))
         .with(gui::GlobalPosition::default())
         .with(gui::BoundsRect::new(

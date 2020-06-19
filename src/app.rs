@@ -15,12 +15,15 @@ use crate::render::{ChannelPair, Gizmo, Material};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
+use crate::util;
+
 use gfx::traits::FactoryExt;
 use gfx::Device;
 use gfx_glyph::{ab_glyph::FontArc, GlyphBrushBuilder};
 use glutin::{Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, WindowBuilder};
 use log::{error, trace};
-use specs::{Builder, Dispatcher, DispatcherBuilder, RunNow, World};
+use specs::prelude::*;
+
 use std::path::Path;
 use std::time::Instant;
 
@@ -87,6 +90,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<SlideCamera>();
         world.register::<GlTexture>();
         world.register::<Tag>();
+        world.register::<util::FpsCounter>();
 
         // GUI Components
         {
