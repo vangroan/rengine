@@ -51,6 +51,7 @@ pub mod option;
 pub mod render;
 pub mod res;
 mod scene;
+pub mod scripting;
 pub mod sprite;
 pub mod sync;
 pub mod sys;
