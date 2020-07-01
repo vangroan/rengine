@@ -8,7 +8,7 @@ use std::{
 };
 use walkdir::{DirEntry, WalkDir};
 
-use log::{max_level, trace, warn, Level};
+use log::{trace, warn, Level};
 use regex::Regex;
 use rlua::Lua;
 use serde::Deserialize;
@@ -16,6 +16,7 @@ use serde::Deserialize;
 const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const DEFAULT_MOD_META_FILENAME: &str = "mod.toml";
+pub const DEFAULT_DATA_FILENAME: &str = "data.lua";
 pub const DEFAULT_MOD_NAME_REGEX: &str = "^[a-zA-Z][a-zA-Z0-9_]+$";
 
 /// Container for mod data, event subscription registry and
@@ -47,6 +48,7 @@ impl Mods {
                 mod_path,
                 max_search_depth: 2,
                 mod_meta_filename: DEFAULT_MOD_META_FILENAME.to_string(),
+                mod_data_filename: DEFAULT_DATA_FILENAME.to_string(),
                 mod_name_re: Regex::new(DEFAULT_MOD_NAME_REGEX).unwrap(),
             },
         })
@@ -57,7 +59,7 @@ impl Mods {
     /// Instantiates a Lua VM for each registered mod. Does not execute
     /// any scripts yet. See [`Mods::data_stage`].
     pub fn load_mods(&mut self) -> self::Result<()> {
-        if max_level() >= Level::Trace {
+        if log::max_level() >= Level::Trace {
             trace!("Loading mods {}", self.settings.mod_path.to_string_lossy());
         }
 
@@ -90,7 +92,7 @@ impl Mods {
                     continue;
                 }
 
-                if max_level() >= Level::Trace {
+                if log::max_level() >= Level::Trace {
                     trace!("Discovered mod at {}", dir_path.to_string_lossy());
                 }
 
@@ -110,9 +112,10 @@ impl Mods {
                 if seen_names.contains(&meta.name) {
                     return Err(ModError::ModNameTaken(meta.name));
                 }
+                seen_names.insert(meta.name.clone());
 
-                // TODO: Load order and IDs by dependencies.
-                self.mods.push(ModBundle {
+                
+                mods.push(ModBundle {
                     meta: ModMeta {
                         id: ModId::none(),
                         name: meta.name,
@@ -122,6 +125,13 @@ impl Mods {
                 });
             }
         }
+
+        // TODO: Load order and IDs by dependencies.
+        for (index, mod_bundle) in mods.iter_mut().enumerate() {
+            mod_bundle.meta.id = ModId(index);
+        }
+
+        self.mods = mods;
 
         trace!("Loading mods Done");
 
@@ -145,8 +155,65 @@ impl Mods {
     }
 
     /// Execute the data definition stage on all registered mods.
-    pub fn data_stage(&self) {
-        unimplemented!()
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModError::LuaError`] if a script fails. Since there are
+    /// multiple scripts being executed from multiple mods, a failure could
+    /// leave the passed in `data_definer` in an inconsistent state.
+    ///
+    /// It's best to discard any partial definitions on error.
+    pub fn data_stage<'scope, T>(&self, data_definer: T) -> self::Result<()>
+    where
+        T: 'scope + rlua::UserData,
+    {
+        trace!("Mod data define stage pass start");
+        let lua = Mods::create_lua();
+
+        // Buffer for file contents.
+        let mut buf = vec![];
+
+        let result: rlua::Result<()> = lua.context(|lua_ctx| {
+            lua_ctx.scope(|scope| {
+                let user_data = scope.create_nonstatic_userdata(data_definer)?;
+                lua_ctx.globals().set("data", user_data)?;
+
+                for mod_bundle in &self.mods {
+                    let walker = WalkDir::new(&mod_bundle.meta.path);
+                    for entry in walker {
+                        let entry = entry.unwrap();
+                        let file_path = canonicalize(entry.path()).unwrap();
+
+                        if file_path.file_name().unwrap()
+                            != self.settings.mod_data_filename.as_str()
+                        {
+                            continue;
+                        }
+
+                        // TODO: Handle file error
+                        let mut file = File::open(&file_path).unwrap();
+                        buf.clear();
+                        file.read_to_end(&mut buf).unwrap();
+
+                        if log::max_level() >= Level::Trace {
+                            trace!(
+                                "Executing data definitions at {}",
+                                file_path.to_string_lossy()
+                            );
+                        }
+
+                        lua_ctx.load(&buf).exec()?;
+                    }
+                }
+                Ok(())
+            })?;
+            Ok(())
+        });
+        result?;
+
+        trace!("Mod data define stage pass done");
+
+        Ok(())
     }
 
     /// Unload all mods in this registry.
@@ -188,6 +255,9 @@ pub struct ModSettings {
 
     /// Filename for mod metadata file.
     pub mod_meta_filename: String,
+
+    /// Filename for mod data definition script file.
+    pub mod_data_filename: String,
 
     /// Regular expression used for validating mod names.
     pub mod_name_re: Regex,
@@ -257,6 +327,12 @@ pub enum ModError {
 
     /// Mod name failed validation check.
     ModNameInvalid(String),
+
+    /// Failure operating on file.
+    IoError(std::io::Error),
+
+    /// Error in Lua.
+    LuaError(rlua::Error),
 }
 
 impl ::std::fmt::Display for ModError {
@@ -268,6 +344,8 @@ impl ::std::fmt::Display for ModError {
             }
             ModNameTaken(name) => write!(f, "mod with name '{}' already exists", name),
             ModNameInvalid(name) => write!(f, "mod name '{}' is invalid", name),
+            IoError(_) => write!(f, "mod file error"),
+            LuaError(_) => write!(f, "error in Lua script"),
         }
     }
 }
@@ -276,8 +354,16 @@ impl std::error::Error for ModError {
     fn source(&self) -> Option<&(dyn ::std::error::Error + 'static)> {
         use ModError::*;
         match self {
-            ModDirectory(_, src) => Some(src),
+            ModDirectory(_, err) => Some(err),
+            IoError(err) => Some(err),
+            LuaError(err) => Some(err),
             _ => None,
         }
+    }
+}
+
+impl From<rlua::Error> for ModError {
+    fn from(lua_err: rlua::Error) -> Self {
+        ModError::LuaError(lua_err)
     }
 }
