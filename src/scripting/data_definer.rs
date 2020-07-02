@@ -1,6 +1,6 @@
 //! Interface for registering prototype definitions.
 pub use std::cell::{Ref, RefMut};
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use rlua::{Lua, Table, UserData, UserDataMethods, Value};
 
@@ -24,7 +24,7 @@ impl LuaDataDefiner {
 
         Ok(LuaDataDefiner {
             current_mod_name: None,
-            table_key: table_key,
+            table_key,
         })
     }
 
@@ -56,7 +56,7 @@ impl LuaDataDefinerRc {
 
 impl UserData for LuaDataDefinerRc {
     fn add_methods<'lua, T: UserDataMethods<'lua, Self>>(methods: &mut T) {
-        methods.add_method("register", |lua_ctx, definer_rc, data: Table| {
+        methods.add_method("extend", |lua_ctx, definer_rc, data: Table| {
             let data_definer = definer_rc.borrow();
             let mod_name = data_definer
                 .current_mod_name
@@ -65,26 +65,31 @@ impl UserData for LuaDataDefinerRc {
                 .as_str();
             let data_table = lua_ctx.registry_value::<Table>(&data_definer.table_key)?;
 
-            for pair in data.pairs() {
-                let (_, value): (i32, rlua::Table) = pair?;
-                println!("registering {}", mod_name);
+            for def_table_result in data.sequence_values::<Table>() {
+                let def_table = def_table_result?;
+                let def_name: String = def_table.get("name")?;
 
                 match data_table.get::<_, Value>(mod_name)? {
                     Value::Nil => {
-                        println!("value nil");
                         let t = lua_ctx.create_table()?;
                         // TODO: Definition validation
-                        t.set(value.get::<_, String>("name")?, value)?;
+                        t.set(def_name, def_table)?;
+                        data_table.set(mod_name, t)?;
                     }
                     Value::Table(t) => {
-                        println!("value table");
-                        t.set(value.get::<_, String>("name")?, value)?;
+                        t.set(def_name, def_table)?;
                     }
                     _ => { /* unsupported */ }
                 }
             }
 
             Ok(())
+        });
+
+        methods.add_method("table", |lua_ctx, definer_rc, ()| {
+            let data_definer = definer_rc.borrow();
+            let table: Table = lua_ctx.registry_value(&data_definer.table_key)?;
+            Ok(table)
         });
     }
 }

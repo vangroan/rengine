@@ -166,9 +166,10 @@ impl Mods {
     /// leave the passed in `data_definer` in an inconsistent state.
     ///
     /// It's best to discard any partial definitions on error.
-    pub fn data_stage<'scope>(&self) -> self::Result<()> {
+    pub fn data_stage(&self) -> self::Result<()> {
         trace!("Mod data define stage pass start");
         let lua = Mods::create_lua();
+        Mods::load_builtins(&lua)?;
 
         // Buffer for file contents.
         let mut buf = vec![];
@@ -209,7 +210,6 @@ impl Mods {
                         lua_ctx.load(&buf).exec()?;
                     }
                 }
-                println!("data_stage()");
 
                 // Extract definitions
                 let data_table: rlua::Table =
@@ -217,11 +217,16 @@ impl Mods {
 
                 for pair in data_table.pairs() {
                     let (mod_name, definitions): (String, rlua::Table) = pair?;
-                    println!("mod_name {}", mod_name);
                     for pair in definitions.pairs() {
-                        let (index, def): (i32, rlua::Table) = pair?;
+                        let (def_name, def): (String, rlua::Table) = pair?;
+                        println!(
+                            "definition {} {} {}",
+                            mod_name,
+                            def_name,
+                            def.get::<_, String>("name")?
+                        );
 
-                        println!("{} {} {}", mod_name, index, def.get::<_, String>("name")?);
+                        // TODO: Return definitions to caller
                     }
                 }
 
@@ -263,6 +268,15 @@ impl Mods {
     /// Creates a new Lua state instance.
     fn create_lua() -> Lua {
         rlua::Lua::new()
+    }
+
+    pub fn load_builtins(lua: &rlua::Lua) -> rlua::Result<()> {
+        lua.context(|lua_ctx| {
+            let deep_copy_src: &[u8] = include_bytes!("scripting/builtins/deepcopy.lua");
+            lua_ctx.load(&deep_copy_src).exec()?;
+
+            Ok(())
+        })
     }
 }
 
