@@ -161,7 +161,7 @@ impl Mods {
     ///
     /// # Errors
     ///
-    /// Returns [`ModError::LuaError`] if a script fails. Since there are
+    /// Returns [`ModError::LuaError`](enum.ModError.html) if a script fails. Since there are
     /// multiple scripts being executed from multiple mods, a failure could
     /// leave the passed in `data_definer` in an inconsistent state.
     ///
@@ -338,6 +338,7 @@ impl Into<usize> for ModId {
     }
 }
 
+/// Specialised `Result` for the scripting API.
 pub type Result<T> = std::result::Result<T, ModError>;
 
 #[derive(Debug)]
