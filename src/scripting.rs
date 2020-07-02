@@ -13,6 +13,10 @@ use regex::Regex;
 use rlua::Lua;
 use serde::Deserialize;
 
+mod data_definer;
+
+use data_definer::{LuaDataDefiner, LuaDataDefinerRc};
+
 const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const DEFAULT_MOD_META_FILENAME: &str = "mod.toml";
@@ -114,7 +118,6 @@ impl Mods {
                 }
                 seen_names.insert(meta.name.clone());
 
-                
                 mods.push(ModBundle {
                     meta: ModMeta {
                         id: ModId::none(),
@@ -143,15 +146,15 @@ impl Mods {
     where
         K: Borrow<ModId>,
     {
-        unimplemented!()
+        self.mods.get(id.borrow().inner())
     }
 
     /// Retrieve a mutable reference to a mod.
-    pub fn get_mut<K>(&self, id: &K) -> Option<&mut ModBundle>
+    pub fn get_mut<K>(&mut self, id: &K) -> Option<&mut ModBundle>
     where
         K: Borrow<ModId>,
     {
-        unimplemented!()
+        self.mods.get_mut(id.borrow().inner())
     }
 
     /// Execute the data definition stage on all registered mods.
@@ -163,20 +166,20 @@ impl Mods {
     /// leave the passed in `data_definer` in an inconsistent state.
     ///
     /// It's best to discard any partial definitions on error.
-    pub fn data_stage<'scope, T>(&self, data_definer: T) -> self::Result<()>
-    where
-        T: 'scope + rlua::UserData,
-    {
+    pub fn data_stage<'scope>(&self) -> self::Result<()> {
         trace!("Mod data define stage pass start");
         let lua = Mods::create_lua();
 
         // Buffer for file contents.
         let mut buf = vec![];
 
+        let mut data_definer_rc = LuaDataDefinerRc::new(LuaDataDefiner::new(&lua)?);
+
         let result: rlua::Result<()> = lua.context(|lua_ctx| {
             lua_ctx.scope(|scope| {
-                let user_data = scope.create_nonstatic_userdata(data_definer)?;
-                lua_ctx.globals().set("data", user_data)?;
+                let globals = lua_ctx.globals();
+                let user_data = scope.create_nonstatic_userdata(data_definer_rc.clone())?;
+                globals.set("data", user_data)?;
 
                 for mod_bundle in &self.mods {
                     let walker = WalkDir::new(&mod_bundle.meta.path);
@@ -202,9 +205,26 @@ impl Mods {
                             );
                         }
 
+                        data_definer_rc.borrow_mut().prime_mod(&mod_bundle.meta);
                         lua_ctx.load(&buf).exec()?;
                     }
                 }
+                println!("data_stage()");
+
+                // Extract definitions
+                let data_table: rlua::Table =
+                    lua_ctx.registry_value(&data_definer_rc.borrow().table_key)?;
+
+                for pair in data_table.pairs() {
+                    let (mod_name, definitions): (String, rlua::Table) = pair?;
+                    println!("mod_name {}", mod_name);
+                    for pair in definitions.pairs() {
+                        let (index, def): (i32, rlua::Table) = pair?;
+
+                        println!("{} {} {}", mod_name, index, def.get::<_, String>("name")?);
+                    }
+                }
+
                 Ok(())
             })?;
             Ok(())
@@ -218,7 +238,7 @@ impl Mods {
 
     /// Unload all mods in this registry.
     pub fn clear(&mut self) {
-        unimplemented!()
+        self.mods.clear();
     }
 
     /// Utility to check whether a directory is intended to be hidden.
@@ -240,6 +260,7 @@ impl Mods {
         self.settings.mod_name_re.is_match(name.as_ref())
     }
 
+    /// Creates a new Lua state instance.
     fn create_lua() -> Lua {
         rlua::Lua::new()
     }
@@ -300,10 +321,12 @@ impl ModId {
     /// Constructs a [`ModId`] with an invalid inner value.
     ///
     /// Used as metadata id while loading mods, before sorting.
+    #[inline]
     fn none() -> Self {
         ModId(::std::usize::MAX)
     }
 
+    #[inline]
     pub fn inner(&self) -> usize {
         self.0
     }

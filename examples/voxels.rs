@@ -18,6 +18,7 @@ use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::render::{Gizmo, Material};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
+use rengine::scripting;
 use rengine::specs::prelude::*;
 use rengine::sprite::{Billboard, BillboardSystem};
 use rengine::util::FpsCounter;
@@ -143,6 +144,7 @@ fn handle_script_commands(_world: &World, cmds: &[u32]) {
 }
 
 pub struct Game {
+    mods: scripting::Mods,
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
     billboard_sys: BillboardSystem,
     orbital_sys: OrbitalCameraControlSystem,
@@ -161,6 +163,7 @@ pub struct Game {
 impl Game {
     fn new() -> Self {
         Game {
+            mods: scripting::Mods::from_path("./examples/mods").unwrap(),
             chunk_upkeep_sys: None,
             billboard_sys: BillboardSystem,
             orbital_sys: OrbitalCameraControlSystem::new(),
@@ -326,6 +329,12 @@ impl Scene for Game {
                 println!("{:?}", e);
             }
         });
+        self.mods
+            .load_mods()
+            .expect("game state error loading mods");
+        self.mods
+            .data_stage()
+            .expect("game state error during data stage");
 
         // Buttons
         {
