@@ -14,8 +14,10 @@ use rlua::Lua;
 use serde::Deserialize;
 
 mod data_definer;
+mod errors;
 
 use data_definer::{LuaDataDefiner, LuaDataDefinerRc};
+use errors::ModError;
 
 const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -32,7 +34,7 @@ pub struct Mods {
 
 impl Mods {
     /// Creates a new [`Mods`] instance that points to the given directory path.
-    pub fn from_path<P>(mod_path: P) -> self::Result<Self>
+    pub fn from_path<P>(mod_path: P) -> self::errors::Result<Self>
     where
         P: AsRef<Path>,
     {
@@ -62,7 +64,7 @@ impl Mods {
     ///
     /// Instantiates a Lua VM for each registered mod. Does not execute
     /// any scripts yet. See [`Mods::data_stage`].
-    pub fn load_mods(&mut self) -> self::Result<()> {
+    pub fn load_mods(&mut self) -> self::errors::Result<()> {
         if log::max_level() >= Level::Trace {
             trace!("Loading mods {}", self.settings.mod_path.to_string_lossy());
         }
@@ -166,7 +168,7 @@ impl Mods {
     /// leave the passed in `data_definer` in an inconsistent state.
     ///
     /// It's best to discard any partial definitions on error.
-    pub fn data_stage(&self) -> self::Result<()> {
+    pub fn data_stage(&self) -> self::errors::Result<()> {
         trace!("Mod data define stage pass start");
         let lua = Mods::create_lua();
         Mods::load_builtins(&lua)?;
@@ -310,7 +312,7 @@ pub struct ModMeta {
 
 /// Meta file found at the top level of a mod's folder.
 #[derive(Deserialize)]
-struct ModMetaModel {
+pub struct ModMetaModel {
     name: String,
     version: String,
     author: String,
@@ -349,59 +351,5 @@ impl ModId {
 impl Into<usize> for ModId {
     fn into(self) -> usize {
         self.0
-    }
-}
-
-/// Specialised `Result` for the scripting API.
-pub type Result<T> = std::result::Result<T, ModError>;
-
-#[derive(Debug)]
-pub enum ModError {
-    /// IO error accessing mod directory.
-    ModDirectory(PathBuf, std::io::Error),
-
-    /// Mod name is not unique in the mod registry.
-    ModNameTaken(String),
-
-    /// Mod name failed validation check.
-    ModNameInvalid(String),
-
-    /// Failure operating on file.
-    IoError(std::io::Error),
-
-    /// Error in Lua.
-    LuaError(rlua::Error),
-}
-
-impl ::std::fmt::Display for ModError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> ::std::fmt::Result {
-        use ModError::*;
-        match self {
-            ModDirectory(path, _) => {
-                write!(f, "error accessing mod folder {}", path.to_string_lossy())
-            }
-            ModNameTaken(name) => write!(f, "mod with name '{}' already exists", name),
-            ModNameInvalid(name) => write!(f, "mod name '{}' is invalid", name),
-            IoError(_) => write!(f, "mod file error"),
-            LuaError(_) => write!(f, "error in Lua script"),
-        }
-    }
-}
-
-impl std::error::Error for ModError {
-    fn source(&self) -> Option<&(dyn ::std::error::Error + 'static)> {
-        use ModError::*;
-        match self {
-            ModDirectory(_, err) => Some(err),
-            IoError(err) => Some(err),
-            LuaError(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl From<rlua::Error> for ModError {
-    fn from(lua_err: rlua::Error) -> Self {
-        ModError::LuaError(lua_err)
     }
 }
