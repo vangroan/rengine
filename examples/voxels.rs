@@ -27,6 +27,7 @@ use rengine::voxel::{
     DeformedBoxGen, VoxelArrayChunk, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
+use serde::Deserialize;
 use std::error::Error;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
@@ -143,6 +144,47 @@ fn handle_script_commands(_world: &World, cmds: &[u32]) {
     }
 }
 
+#[derive(Default, Debug, Deserialize)]
+pub struct SkellyPrototype {
+    tag: String,
+    name: String,
+    position: [f32; 3],
+    texture_path: String,
+}
+
+impl rengine::scripting::Prototype for SkellyPrototype {}
+
+fn test_load() -> rlua::Result<()> {
+    use rlua::Lua;
+    use rlua_serde;
+
+    let mut lua = Lua::new();
+    let result: rlua::Result<()> = lua.context(|lua_ctx| {
+        // let mut skelly_proto = SkellyPrototype::default();
+
+        let skelly_val = lua_ctx
+            .load(
+                r#"
+                {
+                    tag = 'skelly_soldier',
+                    name = 'Skeleton Soldier',
+                    position = { 0.0, 0.0, 0.0 },
+                    texture_path = 'examples/skelly.png',
+                }
+                "#,
+            )
+            .eval::<rlua::Value>()?;
+
+        let skelly_proto: SkellyPrototype = rlua_serde::from_value(skelly_val).unwrap();
+        println!("{:?}", skelly_proto);
+
+        Ok(())
+    });
+    result?;
+
+    Ok(())
+}
+
 pub struct Game {
     mods: scripting::Mods,
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
@@ -183,6 +225,8 @@ impl Game {
 
 impl Scene for Game {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        test_load().unwrap();
+
         // Setup Voxels
         ctx.world.add_resource(TileVoxelCtrl::new());
         ctx.world.add_resource(ChunkMapping::new());
