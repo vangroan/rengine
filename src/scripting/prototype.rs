@@ -2,7 +2,7 @@
 use std::{
     any::{Any, TypeId},
     borrow::Cow,
-    collections::HashMap,
+    collections::{hash_map, HashMap},
     marker::PhantomData,
     mem,
 };
@@ -70,11 +70,14 @@ where
     // }
 }
 
-trait Factory {
-    fn from_value<'de>(&self, storage: &mut dyn Any, value: rlua::Value<'de>);
+trait Factory: mopa::Any {
+    fn insert_value<'de>(&mut self, key: String, value: rlua::Value<'de>);
 }
 
+mopafy!(Factory);
+
 struct PrototypeFactory<T: Prototype> {
+    data: HashMap<String, T>,
     _marker: PhantomData<T>,
 }
 
@@ -84,6 +87,7 @@ where
 {
     fn new() -> Self {
         PrototypeFactory {
+            data: HashMap::new(),
             _marker: PhantomData,
         }
     }
@@ -102,17 +106,12 @@ impl<'de, T> Factory for PrototypeFactory<T>
 where
     T: 'static + Prototype + Deserialize<'de>,
 {
-    fn from_value<'lua>(&self, storage: &mut dyn Any, value: rlua::Value<'lua>) {
-        // let proto: Option<T> = self.from_value(value);
-        // let proto: Option<T> = rlua_serde::from_value(value).unwrap();
+    fn insert_value<'lua>(&mut self, key: String, value: rlua::Value<'lua>) {
         let deserializer = rlua_serde::de::Deserializer { value };
         let proto = T::deserialize(deserializer).unwrap();
 
-        if let Some(concrete_storage) = storage.downcast_mut::<PrototypeVecStorage<T>>() {
-            concrete_storage.insert(proto);
-        } else {
-            panic!("failed to downcast storage to concrete type");
-        }
+        // TODO: Error on existing?
+        self.data.insert(key, proto);
     }
 }
 
@@ -155,10 +154,32 @@ impl PrototypeTable {
 
     pub fn insert<'lua>(&mut self, type_name: &str, value: rlua::Value<'lua>) {
         let type_id = self.types.get(type_name).unwrap();
-        let factory = Box::as_ref(self.factories.get(&type_id).unwrap());
-        let proto_storage = Box::as_mut(self.prototypes.get_mut(&type_id).unwrap());
+        let factory = Box::as_mut(self.factories.get_mut(&type_id).unwrap());
+        // let proto_storage = Box::as_mut(self.prototypes.get_mut(&type_id).unwrap());
 
-        factory.from_value(proto_storage, value);
+        // TODO: Smarter way to extract key from value
+        let key = if let rlua::Value::Table(ref t) = value {
+            t.get::<_, String>("name").unwrap()
+        } else {
+            panic!("Unsupported Lua value type");
+        };
+
+        // Dynamic dispatch to concrete storage type, which would
+        // have the concrete type of the target prototype.
+        factory.insert_value(key, value);
+    }
+
+    // TODO: Figure out how to get rid of Deserialize<'de>
+    pub fn get<'de, T>(&self, type_name: &str, proto_name: &str) -> Option<&T>
+    where
+        T: 'static + Prototype + Deserialize<'de>,
+    {
+        self.types
+            .get(type_name)
+            .and_then(|type_id| self.factories.get(&type_id))
+            .map(|factory_box| Box::as_ref(factory_box))
+            .and_then(|factory| factory.downcast_ref::<PrototypeFactory<T>>())
+            .and_then(|proto_factory| proto_factory.data.get(proto_name))
     }
 }
 
@@ -170,6 +191,7 @@ mod test {
     #[derive(Deserialize)]
     struct Foo {
         name: String,
+        position: [i32; 2],
     }
 
     impl PrototypeMarker for Foo {
@@ -190,7 +212,8 @@ mod test {
                 .load(
                     r#"
                     {
-                        name = 'Prototype 1',
+                        name = 'prototype_1',
+                        position = { 1, 2 },
                     }
                     "#,
                 )
@@ -201,5 +224,8 @@ mod test {
             Ok(())
         });
         result.unwrap();
+
+        let prototype = table.get::<Foo>("foo", "prototype_1").unwrap();
+        assert_eq!(prototype.position, [1, 2]);
     }
 }
