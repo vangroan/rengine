@@ -235,8 +235,7 @@ impl Mods {
                 }
 
                 Ok(())
-            })?;
-            Ok(())
+            })
         });
         result?;
 

@@ -2,7 +2,7 @@
 pub use std::cell::{Ref, RefMut};
 use std::{cell::RefCell, rc::Rc};
 
-use rlua::{Lua, Table, UserData, UserDataMethods, Value};
+use rlua::{Context, Lua, RegistryKey, Table, UserData, UserDataMethods, Value};
 
 use crate::scripting::ModMeta;
 
@@ -17,9 +17,9 @@ pub struct LuaDataDefiner {
 
 impl LuaDataDefiner {
     pub fn new(lua: &Lua) -> rlua::Result<Self> {
-        let table_key = lua.context(|lua_ctx| {
-            let table = lua_ctx.create_table()?;
-            Ok(lua_ctx.create_registry_value(table)?)
+        let table_key: RegistryKey = lua.context(|lua_ctx: Context<'_>| {
+            let table: Table = lua_ctx.create_table()?;
+            lua_ctx.create_registry_value(table)
         })?;
 
         Ok(LuaDataDefiner {
