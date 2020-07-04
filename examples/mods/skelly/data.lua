@@ -1,10 +1,13 @@
 
 
-data:extend({
+data:extend(
+  'soldier',
   {
-    tag = "skelly_soldier",
-    name = "Skeleton Soldier",
-    position = { 0.0, 0.0, 0.0 },
-    texture_path = "examples/skelly.png",
+    {
+      name = "skelly_soldier",
+      descriptive = "Skeleton Soldier",
+      position = { 0.0, 0.0, 0.0 },
+      texture_path = "examples/skelly.png",
+    },
   }
-})
+)
