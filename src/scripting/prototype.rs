@@ -1,16 +1,65 @@
 //! Entity prototype definitions.
 //!
+//! # Examples
+//!
+//! ```
+//! use std::borrow::Cow;
+//! use serde::Deserialize;
+//! use rlua;
+//! use rengine::scripting::{prelude::*, prototype::PrototypeTable};
+//!
+//! #[derive(Deserialize)]
+//! struct GameActor {
+//!     name: String,
+//!     position: [f32; 2],
+//!     health: i32,
+//!     can_jump: bool,
+//! }
+//!
+//! impl Prototype for GameActor {
+//!     type Context = ();
+//!     type Spawned = ();
+//!
+//!     fn type_name<'a>() -> Cow<'a, str> {
+//!         "game_actor".into()
+//!     }
+//!
+//!     fn spawn(&self, ctx: &mut Self::Context) -> Self::Spawned {
+//!         unimplemented!()
+//!     }
+//! }
+//!
+//! let mut prototype_table: PrototypeTable<()> = PrototypeTable::new();
+//!
+//! // Importantly: Register type first!
+//! prototype_table.register::<GameActor>();
+//!
+//! let lua = rlua::Lua::new();
+//! let result: rlua::Result<()> = lua.context(|lua_ctx| {
+//!     // The definition is retrieved as `rlua::Value`
+//!     let soldier_table = lua_ctx.load(r#"
+//!         {
+//!             name = 'foot_soldier',
+//!             position = {100.0, 200.0},
+//!             health = 100,
+//!             can_jump = true,
+//!         }
+//!         "#).eval::<rlua::Value>()?;
+//!
+//!     // Note: The `type_name` argument must match the `type_name` in
+//!     //       the struct `GameActor`;
+//!     prototype_table.insert("game_actor", "my_mod:game_actor:foot_soldier", soldier_table);
+//!
+//!     Ok(())
+//! });
+//! # result.unwrap();
+//! ```
+//!
 //! # Implementation
 //!
 //! Prototypes are stored in a separate boxed storage so the `Deserialized`
 //! trait isn't needed for [`PrototypeTable::get`].
-use std::{
-    any::{Any, TypeId},
-    borrow::Cow,
-    collections::{hash_map, HashMap},
-    marker::PhantomData,
-    mem,
-};
+use std::{any::TypeId, borrow::Cow, collections::HashMap, marker::PhantomData};
 
 use serde::Deserialize;
 
@@ -58,22 +107,27 @@ pub trait Prototype {
     fn spawn(&self, ctx: &mut Self::Context) -> Self::Spawned;
 }
 
-trait Storage: mopa::Any {
-    // fn insert<T: Prototype>(&mut self, proto: T);
-    // fn get<T: Prototype>(&self) -> &dyn T;
-}
+/// Trait for a container that maps prototype keys to definition intances.
+///
+/// Used for upcasting and boxing a concrete storage type in the [`PrototypeTable`](struct.PrototypeTable.html).
+trait Storage: mopa::Any {}
 mopafy!(Storage);
 
-pub struct PrototypeVecStorage<T: Prototype> {
+/// Concrete storage implementation of prototype storage.
+///
+/// Backed by a map of prototype keys to prototype definition instances.
+///
+/// Definitions from scripts live here.
+pub struct PrototypeMapStorage<T: Prototype> {
     data: HashMap<String, T>,
 }
 
-impl<T> PrototypeVecStorage<T>
+impl<T> PrototypeMapStorage<T>
 where
     T: Prototype,
 {
     fn new() -> Self {
-        PrototypeVecStorage {
+        PrototypeMapStorage {
             data: HashMap::new(),
         }
     }
@@ -90,30 +144,22 @@ where
     }
 }
 
-impl<T> Storage for PrototypeVecStorage<T>
-where
-    T: 'static + Prototype,
-{
-    // fn insert<P>(&mut self, proto: P)
-    // where
-    //     T: Prototype,
-    // {
-    // if TypeId::of::<T>() == TypeId::of::<P>() {
-    //     mem::transmute(e: T)
-    // } else {
-    //     panic!("mismatched types");
-    // }
-    // }
-}
+impl<T> Storage for PrototypeMapStorage<T> where T: 'static + Prototype {}
 
+/// Trait for a factory that creates a concrete prototype from a dynamically typed Lua value.
+///
+/// When [`PrototypeTable::insert`](struct.PrototypeTable.html) is called from a context with no
+/// knowledge of the prototype's concrete type, the factory dynamically dispatches to a concrete
+/// implementation which can create an instance of the concrete type via deserialization.
+///
+/// Used for upcasting and boxing a concrete storage type in the [`PrototypeTable`](struct.PrototypeTable.html).
 trait Factory: mopa::Any {
-    fn insert_value<'lua>(&self, storage: &mut Storage, key: String, value: rlua::Value<'lua>);
+    fn insert_value<'lua>(&self, storage: &mut dyn Storage, key: String, value: rlua::Value<'lua>);
 }
-
 mopafy!(Factory);
 
+/// Concrete factory implementation for creating prototypes from Lua values.
 struct PrototypeFactory<T: Prototype> {
-    data: HashMap<String, T>,
     _marker: PhantomData<T>,
 }
 
@@ -123,44 +169,33 @@ where
 {
     fn new() -> Self {
         PrototypeFactory {
-            data: HashMap::new(),
             _marker: PhantomData,
         }
     }
 }
 
-// impl<T> Factory for PrototypeFactory<T>
-// where
-//     T: Prototype,
-// {
-//     fn from_value<'lua>(&self, storage: &mut dyn PrototypeStorage, value: rlua::Value<'lua>) {
-//         // let deserializer = rlua_serde::de::Deserializer { value };
-//     }
-// }
-
 impl<'de, T> Factory for PrototypeFactory<T>
 where
     T: 'static + Prototype + Deserialize<'de>,
 {
-    fn insert_value<'lua>(&self, storage: &mut Storage, key: String, value: rlua::Value<'lua>) {
+    fn insert_value<'lua>(&self, storage: &mut dyn Storage, key: String, value: rlua::Value<'lua>) {
         let deserializer = rlua_serde::de::Deserializer { value };
         let proto = T::deserialize(deserializer).unwrap();
 
         // TODO: Error on existing?
         storage
-            .downcast_mut::<PrototypeVecStorage<T>>()
+            .downcast_mut::<PrototypeMapStorage<T>>()
             .expect("Unexpected storage type during downcast")
             .insert(key, proto);
     }
 }
 
+/// Bundle of a factory and storage that are scoped to a prototype category.
 type ProtoBundle = (Box<dyn Factory>, Box<dyn Storage>);
 
 /// Mapping of prototype names to types.
 pub struct PrototypeTable<Ctx> {
     prototypes2: HashMap<TypeId, ProtoBundle>,
-    prototypes: HashMap<TypeId, Box<dyn Any>>,
-    factories: HashMap<TypeId, Box<dyn Factory>>,
     types: HashMap<String, TypeId>,
     _marker: PhantomData<Ctx>,
 }
@@ -179,24 +214,43 @@ impl<C> PrototypeTable<C> {
 
         // Name can be either defined as a static string, or
         // dynamically in script at runtime.
-        let type_name = match T::type_name() {
-            Cow::Borrowed(s) => s.to_owned(),
-            Cow::Owned(s) => s,
-        };
-
+        let type_name: String = T::type_name().to_string();
         self.types.insert(type_name, type_id);
 
         let proto_factory: PrototypeFactory<T> = PrototypeFactory::new();
         let factory: Box<dyn Factory> = Box::new(proto_factory);
-        // self.factories.insert(type_id, factory);
 
-        let proto_storage: PrototypeVecStorage<T> = PrototypeVecStorage::new();
-        // self.prototypes.insert(type_id, Box::new(proto_storage));
+        let proto_storage: PrototypeMapStorage<T> = PrototypeMapStorage::new();
 
         self.prototypes2
             .insert(type_id, (factory, Box::new(proto_storage)));
     }
 
+    /// Inserts a prototype definition into the table.
+    ///
+    /// The type name is required for the table to determine which concrete Rust
+    /// type to use when deserializing the Lua value.
+    ///
+    /// The key can be any string that uniquely identifies the instance.
+    ///
+    /// Types must first be registered using [`PrototypeTable::register`](struct.PrototypeTable.html#method.register).
+    ///
+    /// This method is intended to be used in contexts where the Rust type for the
+    /// prototype is not available. This is mostly Rust functions called by Lua inside
+    /// a context, scope or user data method.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// prototype_table.insert("game_actor", "my_mod:game_actor:foot_soldier", soldier_table);
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the type name has not been registered.
+    ///
+    /// Deserialization errors occur when the given Lua value cannot be deserialized into
+    /// the registered Rust type.
     pub fn insert<'lua>(&mut self, type_name: &str, key: &str, value: rlua::Value<'lua>) {
         let type_id = self.types.get(type_name).unwrap();
         let (factory, storage) = self
@@ -206,7 +260,8 @@ impl<C> PrototypeTable<C> {
             .unwrap();
 
         // Dynamic dispatch to concrete storage type, which would
-        // have the concrete type of the target prototype.
+        // have the concrete type of the target prototype as a generic
+        // type parameter.
         factory.insert_value(storage, key.to_string(), value);
     }
 
@@ -219,8 +274,8 @@ impl<C> PrototypeTable<C> {
             .get(type_name.as_ref())
             .and_then(|type_id| self.prototypes2.get(&type_id))
             .map(|(_, storage)| Box::as_ref(storage))
-            .and_then(|storage| storage.downcast_ref::<PrototypeVecStorage<T>>())
-            .and_then(|proto_factory| proto_factory.data.get(key))
+            .and_then(|storage| storage.downcast_ref::<PrototypeMapStorage<T>>())
+            .and_then(|proto_factory| proto_factory.get(key))
     }
 }
 
@@ -228,8 +283,6 @@ impl<C> Default for PrototypeTable<C> {
     fn default() -> Self {
         PrototypeTable {
             prototypes2: HashMap::new(),
-            prototypes: HashMap::new(),
-            factories: HashMap::new(),
             types: HashMap::new(),
             _marker: PhantomData,
         }

@@ -14,9 +14,9 @@ use rlua::Lua;
 use serde::Deserialize;
 
 mod data_definer;
-mod errors;
+pub mod errors;
 pub mod prelude;
-mod prototype;
+pub mod prototype;
 
 use data_definer::{LuaDataDefiner, LuaDataDefinerRc};
 use errors::ModError;
