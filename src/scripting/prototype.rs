@@ -290,6 +290,7 @@ mod test {
         result.unwrap();
 
         let prototype = table.get::<Foo>("test:foo:prototype_1").unwrap();
+        assert_eq!(prototype.name, "prototype_1");
         assert_eq!(prototype.position, [1, 2]);
     }
 }
