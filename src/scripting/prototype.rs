@@ -1,4 +1,9 @@
 //! Entity prototype definitions.
+//! 
+//! # Implementation
+//! 
+//! Prototypes are stored in a separate boxed storage so the `Deserialized`
+//! trait isn't needed for [`PrototypeTable::get`].
 use std::{
     any::{Any, TypeId},
     borrow::Cow,
@@ -9,6 +14,33 @@ use std::{
 
 use serde::Deserialize;
 
+/// Trait for prototypes that can be declared in Rust and defined in Lua.
+/// 
+/// # Examples
+/// 
+/// ```
+/// use std::borrow::Cow;
+/// use serde::Deserialize;
+/// use rengine::scripting::prelude::*;
+/// 
+/// // Define a type that is both `Prototype` and `Deserialize`.
+/// #[derive(Deserialize)]
+/// struct GameActor {
+///     position: [f32; 2],
+///     sprite: String,
+/// }
+/// 
+/// impl Prototype for GameActor {
+///     // Game context for spawning an entity, like
+///     // the world database and graphics device.
+///     type Context = ();
+/// 
+///     // A string key for mod scripts to refer to this type.
+///     fn type_name<'a>() -> Cow<'a, str> {
+///         "game_actor".into()
+///     }
+/// }
+/// ```
 pub trait Prototype {
     type Context;
 

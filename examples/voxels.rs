@@ -29,6 +29,7 @@ use rengine::voxel::{
     DeformedBoxGen, VoxelArrayChunk, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
+use rengine::scripting::prelude::*;
 use serde::Deserialize;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
@@ -153,7 +154,7 @@ pub struct SoldierPrototype {
     texture_path: String,
 }
 
-impl rengine::scripting::Prototype for SoldierPrototype {
+impl Prototype for SoldierPrototype {
     type Context = ();
 
     fn type_name<'a>() -> Cow<'a, str> {

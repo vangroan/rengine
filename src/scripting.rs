@@ -16,10 +16,11 @@ use serde::Deserialize;
 mod data_definer;
 mod errors;
 mod prototype;
+pub mod prelude;
 
 use data_definer::{LuaDataDefiner, LuaDataDefinerRc};
 use errors::ModError;
-pub use prototype::Prototype;
+use prototype::Prototype;
 
 const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
