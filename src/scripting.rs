@@ -15,23 +15,25 @@ use serde::Deserialize;
 
 mod data_definer;
 mod errors;
-mod prototype;
 pub mod prelude;
+mod prototype;
 
 use data_definer::{LuaDataDefiner, LuaDataDefinerRc};
 use errors::ModError;
-use prototype::Prototype;
+use prototype::{Prototype, PrototypeTable};
 
 const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const DEFAULT_MOD_META_FILENAME: &str = "mod.toml";
 pub const DEFAULT_DATA_FILENAME: &str = "data.lua";
 pub const DEFAULT_MOD_NAME_REGEX: &str = "^[a-zA-Z][a-zA-Z0-9_]+$";
+pub const DEFAULT_PROTO_KEY_FIELD: &str = "name";
 
 /// Container for mod data, event subscription registry and
 /// scripting virtual machines.
 pub struct Mods {
     mods: Vec<ModBundle>,
+    prototypes: PrototypeTable<()>,
     settings: ModSettings,
 }
 
@@ -53,14 +55,23 @@ impl Mods {
 
         Ok(Mods {
             mods: vec![],
+            prototypes: PrototypeTable::new(),
             settings: ModSettings {
                 mod_path,
                 max_search_depth: 2,
                 mod_meta_filename: DEFAULT_MOD_META_FILENAME.to_string(),
                 mod_data_filename: DEFAULT_DATA_FILENAME.to_string(),
                 mod_name_re: Regex::new(DEFAULT_MOD_NAME_REGEX).unwrap(),
+                prototype_key_field: DEFAULT_PROTO_KEY_FIELD.to_string(),
             },
         })
+    }
+
+    pub fn register_prototype<'de, T>(&mut self)
+    where
+        T: 'static + Prototype + Deserialize<'de>,
+    {
+        self.prototypes.register::<T>();
     }
 
     /// Walks the mod path and loads all mods discovered metadata files.
@@ -130,6 +141,7 @@ impl Mods {
                         path: dir_path.to_path_buf(),
                     },
                     lua: Mods::create_lua(),
+                    prototypes: prototype::PrototypeTable::new(),
                 });
             }
         }
@@ -171,7 +183,7 @@ impl Mods {
     /// leave the passed in `data_definer` in an inconsistent state.
     ///
     /// It's best to discard any partial definitions on error.
-    pub fn data_stage(&self) -> self::errors::Result<()> {
+    pub fn data_stage(&mut self) -> self::errors::Result<()> {
         trace!("Mod data define stage pass start");
         let lua = Mods::create_lua();
         Mods::load_builtins(&lua)?;
@@ -179,7 +191,10 @@ impl Mods {
         // Buffer for file contents.
         let mut buf = vec![];
 
-        let mut data_definer_rc = LuaDataDefinerRc::new(LuaDataDefiner::new(&lua)?);
+        let mut data_definer_rc = LuaDataDefinerRc::new(LuaDataDefiner::new(
+            &lua,
+            self.settings.prototype_key_field.clone(),
+        )?);
 
         let result: rlua::Result<()> = lua.context(|lua_ctx| {
             lua_ctx.scope(|scope| {
@@ -217,21 +232,33 @@ impl Mods {
                 }
 
                 // Extract definitions
-                let data_table: rlua::Table =
+                let mod_table: rlua::Table =
                     lua_ctx.registry_value(&data_definer_rc.borrow().table_key)?;
 
-                for pair in data_table.pairs() {
-                    let (mod_name, definitions): (String, rlua::Table) = pair?;
-                    for pair in definitions.pairs() {
-                        let (def_name, def): (String, rlua::Table) = pair?;
-                        println!(
-                            "definition {} {} {}",
-                            mod_name,
-                            def_name,
-                            def.get::<_, String>("name")?
-                        );
+                for pair in mod_table.pairs() {
+                    let (mod_name, categories): (String, rlua::Table) = pair?;
+                    println!("mod_name {}", mod_name);
+                    for pair in categories.pairs() {
+                        let (category_name, proto_definitions): (String, rlua::Table) = pair?;
+                        println!("category_name {}", category_name);
 
-                        // TODO: Return definitions to caller
+                        for pair in proto_definitions.pairs() {
+                            let (proto_name, proto_value): (String, rlua::Value) = pair?;
+                            // println!(
+                            //     "definition {} {} {}",
+                            //     mod_name,
+                            //     def_name,
+                            //     def.get::<_, String>("name")?
+                            // );
+
+                            let key = format!("{}:{}:{}", mod_name, category_name, proto_name);
+                            println!("Registering prototype {}", key);
+                            self.prototypes.insert(
+                                category_name.as_str(),
+                                key.as_str(),
+                                proto_value,
+                            );
+                        }
                     }
                 }
 
@@ -300,6 +327,9 @@ pub struct ModSettings {
 
     /// Regular expression used for validating mod names.
     pub mod_name_re: Regex,
+
+    /// Name of the table field to use when extracting prototype identifiers.
+    pub prototype_key_field: String,
 }
 
 /// Information describing a mod.
@@ -326,6 +356,7 @@ pub struct ModMetaModel {
 pub struct ModBundle {
     meta: ModMeta,
     lua: rlua::Lua,
+    pub prototypes: prototype::PrototypeTable<()>,
     // TODO: event subscriptions
 }
 

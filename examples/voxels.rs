@@ -21,6 +21,7 @@ use rengine::option::lift2;
 use rengine::render::{Gizmo, Material};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
 use rengine::scripting;
+use rengine::scripting::prelude::*;
 use rengine::specs::prelude::*;
 use rengine::sprite::{Billboard, BillboardSystem};
 use rengine::util::FpsCounter;
@@ -29,7 +30,6 @@ use rengine::voxel::{
     DeformedBoxGen, VoxelArrayChunk, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
-use rengine::scripting::prelude::*;
 use serde::Deserialize;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
@@ -147,18 +147,41 @@ fn handle_script_commands(_world: &World, cmds: &[u32]) {
 }
 
 #[derive(Default, Debug, Deserialize)]
-pub struct SoldierPrototype {
-    tag: String,
+pub struct ExamplePrototype {
     name: String,
+}
+
+impl Prototype for ExamplePrototype {
+    type Context = ();
+    type Spawned = ();
+
+    fn type_name<'a>() -> Cow<'a, str> {
+        "example".into()
+    }
+
+    fn spawn(&self, _ctx: &mut Self::Context) -> Self::Spawned {
+        unimplemented!()
+    }
+}
+
+#[derive(Default, Debug, Deserialize)]
+pub struct SoldierPrototype {
+    name: String,
+    descriptive: String,
     position: [f32; 3],
     texture_path: String,
 }
 
 impl Prototype for SoldierPrototype {
     type Context = ();
+    type Spawned = ();
 
     fn type_name<'a>() -> Cow<'a, str> {
         "soldier".into()
+    }
+
+    fn spawn(&self, _ctx: &mut Self::Context) -> Self::Spawned {
+        unimplemented!()
     }
 }
 
@@ -174,8 +197,8 @@ fn test_load() -> rlua::Result<()> {
             .load(
                 r#"
                 {
-                    tag = 'skelly_soldier',
-                    name = 'Skeleton Soldier',
+                    name = 'skelly_soldier',
+                    descriptive = 'Skeleton Soldier',
                     position = { 0.0, 0.0, 0.0 },
                     texture_path = 'examples/skelly.png',
                 }
@@ -381,6 +404,10 @@ impl Scene for Game {
                 println!("{:?}", e);
             }
         });
+
+        self.mods.register_prototype::<ExamplePrototype>();
+        self.mods.register_prototype::<SoldierPrototype>();
+
         self.mods
             .load_mods()
             .expect("game state error loading mods");
