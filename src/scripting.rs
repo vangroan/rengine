@@ -303,6 +303,9 @@ impl Mods {
 
     pub fn load_builtins(lua: &rlua::Lua) -> rlua::Result<()> {
         lua.context(|lua_ctx| {
+            let globals = lua_ctx.globals();
+            globals.set("ENGINE_VERSION", ENGINE_VERSION)?;
+
             let deep_copy_src: &[u8] = include_bytes!("scripting/builtins/deepcopy.lua");
             lua_ctx.load(&deep_copy_src).exec()?;
 

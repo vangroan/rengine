@@ -2,7 +2,8 @@
   Data Definition
 --]]
 
-print('Lua: Hello from data.lua')
+print('Lua: Hello from example data.lua')
+print('     Engine Version: ' .. tostring(ENGINE_VERSION))
 
 data:extend(
   'example',
