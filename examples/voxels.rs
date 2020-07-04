@@ -1,5 +1,7 @@
 extern crate rengine;
 
+use std::{borrow::Cow, error::Error};
+
 use log::trace;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
@@ -28,7 +30,6 @@ use rengine::voxel::{
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
 use serde::Deserialize;
-use std::error::Error;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
 type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
@@ -145,14 +146,20 @@ fn handle_script_commands(_world: &World, cmds: &[u32]) {
 }
 
 #[derive(Default, Debug, Deserialize)]
-pub struct SkellyPrototype {
+pub struct SoldierPrototype {
     tag: String,
     name: String,
     position: [f32; 3],
     texture_path: String,
 }
 
-impl rengine::scripting::Prototype for SkellyPrototype {}
+impl rengine::scripting::Prototype for SoldierPrototype {
+    type Context = ();
+
+    fn type_name<'a>() -> Cow<'a, str> {
+        "soldier".into()
+    }
+}
 
 fn test_load() -> rlua::Result<()> {
     use rlua::Lua;
@@ -175,7 +182,7 @@ fn test_load() -> rlua::Result<()> {
             )
             .eval::<rlua::Value>()?;
 
-        let skelly_proto: SkellyPrototype = rlua_serde::from_value(skelly_val).unwrap();
+        let skelly_proto: SoldierPrototype = rlua_serde::from_value(skelly_val).unwrap();
         println!("{:?}", skelly_proto);
 
         Ok(())
