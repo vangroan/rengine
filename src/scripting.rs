@@ -255,12 +255,6 @@ impl Mods {
 
                         for pair in proto_definitions.pairs() {
                             let (proto_name, proto_value): (String, rlua::Value) = pair?;
-                            // println!(
-                            //     "definition {} {} {}",
-                            //     mod_name,
-                            //     def_name,
-                            //     def.get::<_, String>("name")?
-                            // );
 
                             let key = format!("{}:{}:{}", mod_name, category_name, proto_name);
                             println!("Registering prototype {}", key);
