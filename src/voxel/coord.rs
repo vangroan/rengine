@@ -6,7 +6,7 @@ use std::ops::{Add, Sub};
 /// Float positions can implicitly be converted
 /// to a coordinate, with rounding handled correctly.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct VoxelCoord {
     pub i: i32,
     pub j: i32,
@@ -153,7 +153,7 @@ impl From<(f32, f32, f32)> for VoxelCoord {
 /// Chunk space normalises a single chunk
 /// to size (1.0, 1.0, 1.0).
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct ChunkCoord {
     pub i: i32,
     pub j: i32,
