@@ -67,6 +67,17 @@ impl Mods {
         })
     }
 
+    #[inline]
+    pub fn settings(&self) -> &ModSettings {
+        &self.settings
+    }
+
+    /// Access to the inner [`PrototypeTable`](struct.PrototypeTable.html).
+    #[inline]
+    pub fn prototypes(&self) -> &PrototypeTable<()> {
+        &self.prototypes
+    }
+
     pub fn register_prototype<'de, T>(&mut self)
     where
         T: 'static + Prototype + Deserialize<'de>,
@@ -335,6 +346,10 @@ impl Mods {
         }
 
         // TODO: return result(s)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &ModBundle> {
+        self.mods.iter()
     }
 }
 

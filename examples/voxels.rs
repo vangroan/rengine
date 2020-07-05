@@ -221,7 +221,7 @@ struct LuaWorld<'a> {
     entities: &'a mut Vec<Entity>,
     world: &'a mut World,
     graphics: &'a mut GraphicContext,
-    mod_ctx: &'a scripting::ModContext<'a>,
+    prototypes: &'a PrototypeTable<()>,
 }
 
 impl<'a> UserData for LuaWorld<'a> {
@@ -233,7 +233,6 @@ impl<'a> UserData for LuaWorld<'a> {
                 // create_sprite
                 println!("spawn skelly");
                 let proto = lua_world
-                    .mod_ctx
                     .prototypes
                     .get::<SoldierPrototype>(proto_name.as_str())
                     .unwrap_or_else(|| panic!("No prototype registered called '{}'", proto_name));
@@ -475,8 +474,9 @@ impl Scene for Game {
 
         {
             let entities = &mut self.entities;
-            self.mods.exec(|mod_ctx| {
-                let result: rlua::Result<()> = mod_ctx.mod_bundle.lua.context(|lua_ctx| {
+            let prototypes = &self.mods.prototypes();
+            for mod_bundle in self.mods.iter() {
+                let result: rlua::Result<()> = mod_bundle.lua.context(|lua_ctx| {
                     lua_ctx.scope(|scope| {
                         use std::fs::{canonicalize, File};
                         use std::io::prelude::*;
@@ -486,14 +486,14 @@ impl Scene for Game {
                             entities,
                             world: ctx.world,
                             graphics: ctx.graphics,
-                            mod_ctx: &mod_ctx,
+                            prototypes,
                         };
                         let world_user_data = scope.create_nonstatic_userdata(lua_world)?;
                         let globals = lua_ctx.globals();
                         globals.set("GAME", world_user_data)?;
 
                         let mut buf = vec![];
-                        let walker = WalkDir::new(mod_ctx.mod_bundle.meta.path());
+                        let walker = WalkDir::new(mod_bundle.meta.path());
                         for entry in walker {
                             let entry = entry.unwrap();
                             let file_path = canonicalize(entry.path()).unwrap();
@@ -520,7 +520,7 @@ impl Scene for Game {
                     })
                 });
                 result.unwrap();
-            });
+            }
         }
 
         // Buttons
