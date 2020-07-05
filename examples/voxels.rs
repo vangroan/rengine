@@ -1,5 +1,7 @@
 extern crate rengine;
 
+use std::{borrow::Cow, error::Error};
+
 use log::trace;
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
@@ -18,6 +20,9 @@ use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::render::{Gizmo, Material};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
+use rengine::rlua::{UserData, UserDataMethods};
+use rengine::scripting;
+use rengine::scripting::prelude::*;
 use rengine::specs::prelude::*;
 use rengine::sprite::{Billboard, BillboardSystem};
 use rengine::util::FpsCounter;
@@ -26,7 +31,7 @@ use rengine::voxel::{
     DeformedBoxGen, VoxelArrayChunk, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
-use std::error::Error;
+use serde::Deserialize;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
 type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
@@ -142,7 +147,119 @@ fn handle_script_commands(_world: &World, cmds: &[u32]) {
     }
 }
 
+#[derive(Default, Debug, Deserialize)]
+pub struct ExamplePrototype {
+    name: String,
+}
+
+impl Prototype for ExamplePrototype {
+    fn type_name<'a>() -> Cow<'a, str> {
+        "example".into()
+    }
+}
+
+#[derive(Default, Debug, Deserialize)]
+pub struct SoldierPrototype {
+    name: String,
+    descriptive: String,
+    position: [f32; 3],
+    texture_path: String,
+}
+
+impl Prototype for SoldierPrototype {
+    fn type_name<'a>() -> Cow<'a, str> {
+        "soldier".into()
+    }
+}
+
+fn test_load() -> rlua::Result<()> {
+    use rlua::Lua;
+
+    let lua = Lua::new();
+    let result: rlua::Result<()> = lua.context(|lua_ctx| {
+        // let mut skelly_proto = SkellyPrototype::default();
+
+        let skelly_val = lua_ctx
+            .load(
+                r#"
+                {
+                    name = 'skelly_soldier',
+                    descriptive = 'Skeleton Soldier',
+                    position = { 0.0, 0.0, 0.0 },
+                    texture_path = 'examples/skelly.png',
+                }
+                "#,
+            )
+            .eval::<rlua::Value>()?;
+
+        let skelly_proto: SoldierPrototype = rlua_serde::from_value(skelly_val).unwrap();
+        println!("{:?}", skelly_proto);
+
+        Ok(())
+    });
+    result?;
+
+    Ok(())
+}
+
+struct LuaWorld<'a> {
+    entities: &'a mut Vec<Entity>,
+    world: &'a mut World,
+    graphics: &'a mut GraphicContext,
+    prototypes: &'a PrototypeTable,
+}
+
+impl<'a> UserData for LuaWorld<'a> {
+    fn add_methods<'lua, T: UserDataMethods<'lua, Self>>(methods: &mut T) {
+        methods.add_method_mut(
+            "spawn_soldier",
+            |_lua_ctx, lua_world, (proto_name, params): (String, rlua::Table)| {
+                use rlua::Value;
+                // create_sprite
+                println!("spawn skelly");
+                let proto = lua_world
+                    .prototypes
+                    .get::<SoldierPrototype>(proto_name.as_str())
+                    .unwrap_or_else(|| panic!("No prototype registered called '{}'", proto_name));
+
+                let skelly_tex = GlTexture::from_bundle(
+                    lua_world
+                        .world
+                        .write_resource::<TextureAssets>()
+                        .load_texture(
+                            &mut lua_world.graphics.factory_mut(),
+                            proto.texture_path.as_str(),
+                        ),
+                );
+
+                let param_pos: Value = params.get("position")?;
+                let pos: [f32; 3] = if let Value::Table(_) = param_pos {
+                    rlua_serde::from_value(param_pos).unwrap()
+                } else {
+                    proto.position
+                };
+
+                let entity = create_sprite(
+                    &mut lua_world.world,
+                    &mut lua_world.graphics,
+                    pos,
+                    skelly_tex,
+                );
+
+                lua_world.entities.push(entity);
+
+                Ok(())
+            },
+        );
+    }
+}
+
+// ----- //
+// Scene //
+// ----- //
+
 pub struct Game {
+    mods: scripting::Mods,
     chunk_upkeep_sys: Option<TileUpkeepSystem>,
     billboard_sys: BillboardSystem,
     orbital_sys: OrbitalCameraControlSystem,
@@ -161,6 +278,7 @@ pub struct Game {
 impl Game {
     fn new() -> Self {
         Game {
+            mods: scripting::Mods::from_path("./examples/mods").unwrap(),
             chunk_upkeep_sys: None,
             billboard_sys: BillboardSystem,
             orbital_sys: OrbitalCameraControlSystem::new(),
@@ -180,6 +298,8 @@ impl Game {
 
 impl Scene for Game {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
+        test_load().unwrap();
+
         // Setup Voxels
         ctx.world.add_resource(TileVoxelCtrl::new());
         ctx.world.add_resource(ChunkMapping::new());
@@ -326,6 +446,67 @@ impl Scene for Game {
                 println!("{:?}", e);
             }
         });
+
+        self.mods.register_prototype::<ExamplePrototype>();
+        self.mods.register_prototype::<SoldierPrototype>();
+
+        self.mods
+            .load_mods()
+            .expect("game state error loading mods");
+        self.mods
+            .data_stage()
+            .expect("game state error during data stage");
+
+        {
+            let entities = &mut self.entities;
+            let prototypes = &self.mods.prototypes();
+            for mod_bundle in self.mods.iter() {
+                let result: rlua::Result<()> = mod_bundle.lua.context(|lua_ctx| {
+                    lua_ctx.scope(|scope| {
+                        use std::fs::{canonicalize, File};
+                        use std::io::prelude::*;
+                        use walkdir::WalkDir;
+
+                        let lua_world = LuaWorld {
+                            entities,
+                            world: ctx.world,
+                            graphics: ctx.graphics,
+                            prototypes,
+                        };
+                        let world_user_data = scope.create_nonstatic_userdata(lua_world)?;
+                        let globals = lua_ctx.globals();
+                        globals.set("GAME", world_user_data)?;
+
+                        let mut buf = vec![];
+                        let walker = WalkDir::new(mod_bundle.meta.path());
+                        for entry in walker {
+                            let entry = entry.unwrap();
+                            let file_path = canonicalize(entry.path()).unwrap();
+
+                            if entry.path().file_name().unwrap() == "init.lua" {
+                                if !file_path.is_file() {
+                                    continue;
+                                }
+
+                                let mut file = File::open(&file_path).unwrap();
+                                buf.clear();
+                                file.read_to_end(&mut buf).unwrap();
+
+                                lua_ctx.load(&buf).exec()?;
+                                if let Ok(func) = globals.get::<_, rlua::Function>("on_init") {
+                                    func.call(())?;
+                                }
+
+                                continue;
+                            }
+                        }
+
+                        Ok(())
+                    })
+                });
+                result.unwrap();
+            }
+        }
 
         // Buttons
         {

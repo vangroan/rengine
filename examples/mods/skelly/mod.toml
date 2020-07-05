@@ -1,0 +1,7 @@
+
+name = "skelly"
+version = "0.0.0"
+author = "You"
+email = "optional email address"
+website = "optional website address"
+dependencies = ["core >= 0.1.0"]

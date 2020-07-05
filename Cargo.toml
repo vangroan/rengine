@@ -1,6 +1,6 @@
 [package]
 name = "rengine"
-version = "0.5.1"
+version = "0.6.0"
 authors = ["Willem Victor <wimpievictor@gmail.com>"]
 edition = "2018"
 description = "Game engine/framework that aggregates several existing libraries"
@@ -21,10 +21,12 @@ gfx_glyph = "0.17.0"
 image = "0.21.1"
 lazy_static = "1.4.0"
 log = "0.4"
+mopa = "0.2"
 nalgebra = "0.18.0"
 nalgebra-glm = "0.4.0"
 num-traits = "0.2.6"
-rlua = "0.16"
+rlua = "0.17"
+rlua_serde = "0.4"
 regex = "1"
 serde = { version = "1.0", features = ["derive"] }
 shred = "0.7.0"

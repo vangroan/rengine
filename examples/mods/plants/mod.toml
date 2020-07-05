@@ -1,6 +1,7 @@
 
-name = "Example Plant Mod"
+name = "example_plants"
 version = "0.2.1"
 author = "modder632"
 email = "modder632@examplemod.com"
 website = "examplemod.com"
+dependencies = []

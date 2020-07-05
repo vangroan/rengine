@@ -12,6 +12,8 @@ pub extern crate glutin;
 #[macro_use]
 extern crate lazy_static;
 extern crate log;
+#[macro_use]
+extern crate mopa;
 pub extern crate nalgebra;
 pub extern crate nalgebra_glm as glm;
 extern crate num_traits;
@@ -51,6 +53,7 @@ pub mod option;
 pub mod render;
 pub mod res;
 mod scene;
+pub mod scripting;
 pub mod sprite;
 pub mod sync;
 pub mod sys;
