@@ -31,6 +31,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// World level resource that contains a mapping of
 /// mod keys to mod meta objects.
 #[allow(dead_code)]
+#[deprecated(since="0.6.0", note="please use `rengine::scripting` instead")]
 pub struct Mods {
     mods: BTreeMap<InternedStr, ModMeta>,
 
