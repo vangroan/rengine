@@ -33,7 +33,7 @@ pub const DEFAULT_PROTO_KEY_FIELD: &str = "name";
 /// scripting virtual machines.
 pub struct Mods {
     mods: Vec<ModBundle>,
-    prototypes: PrototypeTable<()>,
+    prototypes: PrototypeTable,
     settings: ModSettings,
 }
 
@@ -74,7 +74,7 @@ impl Mods {
 
     /// Access to the inner [`PrototypeTable`](struct.PrototypeTable.html).
     #[inline]
-    pub fn prototypes(&self) -> &PrototypeTable<()> {
+    pub fn prototypes(&self) -> &PrototypeTable {
         &self.prototypes
     }
 
@@ -377,9 +377,7 @@ pub struct ModSettings {
 /// Information describing a mod.
 pub struct ModMeta {
     id: ModId,
-
     name: String,
-
     /// Path to the directory where the mod was found.
     path: PathBuf,
 }
@@ -392,6 +390,7 @@ impl ModMeta {
 }
 
 /// Meta file found at the top level of a mod's folder.
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct ModMetaModel {
     name: String,
@@ -405,7 +404,7 @@ pub struct ModMetaModel {
 pub struct ModBundle {
     pub meta: ModMeta,
     pub lua: rlua::Lua,
-    pub prototypes: prototype::PrototypeTable<()>,
+    pub prototypes: prototype::PrototypeTable,
     // TODO: event subscriptions
 }
 
@@ -439,6 +438,6 @@ impl Into<usize> for ModId {
 /// Payload of contextual data borrowed by execution loop from [`Mods`](struct.Mods.html).
 pub struct ModContext<'a> {
     pub settings: &'a ModSettings,
-    pub prototypes: &'a PrototypeTable<()>,
+    pub prototypes: &'a PrototypeTable,
     pub mod_bundle: &'a ModBundle,
 }

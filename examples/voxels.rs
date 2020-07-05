@@ -153,15 +153,8 @@ pub struct ExamplePrototype {
 }
 
 impl Prototype for ExamplePrototype {
-    type Context = ();
-    type Spawned = ();
-
     fn type_name<'a>() -> Cow<'a, str> {
         "example".into()
-    }
-
-    fn spawn(&self, _ctx: &mut Self::Context) -> Self::Spawned {
-        unimplemented!()
     }
 }
 
@@ -174,15 +167,8 @@ pub struct SoldierPrototype {
 }
 
 impl Prototype for SoldierPrototype {
-    type Context = ();
-    type Spawned = ();
-
     fn type_name<'a>() -> Cow<'a, str> {
         "soldier".into()
-    }
-
-    fn spawn(&self, _ctx: &mut Self::Context) -> Self::Spawned {
-        unimplemented!()
     }
 }
 
@@ -221,14 +207,14 @@ struct LuaWorld<'a> {
     entities: &'a mut Vec<Entity>,
     world: &'a mut World,
     graphics: &'a mut GraphicContext,
-    prototypes: &'a PrototypeTable<()>,
+    prototypes: &'a PrototypeTable,
 }
 
 impl<'a> UserData for LuaWorld<'a> {
     fn add_methods<'lua, T: UserDataMethods<'lua, Self>>(methods: &mut T) {
         methods.add_method_mut(
             "spawn_soldier",
-            |lua_ctx, lua_world, (proto_name, params): (String, rlua::Table)| {
+            |_lua_ctx, lua_world, (proto_name, params): (String, rlua::Table)| {
                 use rlua::Value;
                 // create_sprite
                 println!("spawn skelly");

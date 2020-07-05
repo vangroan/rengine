@@ -6,7 +6,7 @@
 //! use std::borrow::Cow;
 //! use serde::Deserialize;
 //! use rlua;
-//! use rengine::scripting::{prelude::*, prototype::PrototypeTable};
+//! use rengine::scripting::prelude::*;
 //!
 //! #[derive(Deserialize)]
 //! struct GameActor {
@@ -17,19 +17,12 @@
 //! }
 //!
 //! impl Prototype for GameActor {
-//!     type Context = ();
-//!     type Spawned = ();
-//!
 //!     fn type_name<'a>() -> Cow<'a, str> {
 //!         "game_actor".into()
 //!     }
-//!
-//!     fn spawn(&self, ctx: &mut Self::Context) -> Self::Spawned {
-//!         unimplemented!()
-//!     }
 //! }
 //!
-//! let mut prototype_table: PrototypeTable<()> = PrototypeTable::new();
+//! let mut prototype_table: PrototypeTable = PrototypeTable::new();
 //!
 //! // Importantly: Register type first!
 //! prototype_table.register::<GameActor>();
@@ -80,31 +73,14 @@ use serde::Deserialize;
 /// }
 ///
 /// impl Prototype for GameActor {
-///     /// Game context for spawning an entity, like
-///     /// the world database and graphics device.
-///     type Context = ();
-///
-///     /// The return value when spawning an entity
-///     /// from this prototype.
-///     type Spawned = Option<()>;
-///
 ///     /// A string key for mod scripts to refer to this type.
 ///     fn type_name<'a>() -> Cow<'a, str> {
 ///         "game_actor".into()
 ///     }
-///
-///     /// Create an entity using the data in this prototype.
-///     fn spawn(&self, ctx: &mut Self::Context) -> Self::Spawned {
-///         Some(())
-///     }
 /// }
 /// ```
 pub trait Prototype {
-    type Context;
-    type Spawned;
-
     fn type_name<'a>() -> Cow<'a, str>;
-    fn spawn(&self, ctx: &mut Self::Context) -> Self::Spawned;
 }
 
 /// Trait for a container that maps prototype keys to definition intances.
@@ -178,6 +154,9 @@ impl<'de, T> Factory for PrototypeFactory<T>
 where
     T: 'static + Prototype + Deserialize<'de>,
 {
+    /// Magic happens here.
+    ///
+    /// This factory knows the static type needed for deserialization.
     fn insert_value<'lua>(&self, storage: &mut dyn Storage, key: String, value: rlua::Value<'lua>) {
         let deserializer = rlua_serde::de::Deserializer { value };
         let proto = T::deserialize(deserializer).unwrap();
@@ -194,17 +173,19 @@ where
 type ProtoBundle = (Box<dyn Factory>, Box<dyn Storage>);
 
 /// Mapping of prototype names to types.
-pub struct PrototypeTable<Ctx> {
+pub struct PrototypeTable {
     prototypes2: HashMap<TypeId, ProtoBundle>,
     types: HashMap<String, TypeId>,
-    _marker: PhantomData<Ctx>,
 }
 
-impl<C> PrototypeTable<C> {
+impl PrototypeTable {
     pub fn new() -> Self {
         Default::default()
     }
 
+    /// Registers a prototype in the table.
+    ///
+    /// Required in order to add definition instances later.
     pub fn register<'de, T>(&mut self)
     where
         T: 'static + Prototype + Deserialize<'de>,
@@ -241,8 +222,36 @@ impl<C> PrototypeTable<C> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// # use std::borrow::Cow;
+    /// # use serde::Deserialize;
+    /// # use rlua;
+    /// # use rengine::scripting::prelude::*;
+    /// #
+    /// # #[derive(Deserialize)]
+    /// # struct GameActor {}
+    /// #
+    /// # impl Prototype for GameActor {
+    /// #    fn type_name<'a>() -> Cow<'a, str> {
+    /// #        "game_actor".into()
+    /// #    }
+    /// # }
+    /// #
+    /// # let mut prototype_table: PrototypeTable = PrototypeTable::new();
+    /// // Importantly: Register type first!
+    /// prototype_table.register::<GameActor>();
+    ///
+    /// # let lua = rlua::Lua::new();
+    /// # let result: rlua::Result<()> = lua.context(|lua_ctx| {
+    /// # let soldier_table = lua_ctx.load(r#"{}"#).eval::<rlua::Value>()?;
+    /// #
+    /// // Note: The `type_name` argument must match the `type_name` in
+    /// //       the struct `GameActor`;
     /// prototype_table.insert("game_actor", "my_mod:game_actor:foot_soldier", soldier_table);
+    /// #
+    /// #    Ok(())
+    /// # });
+    /// # result.unwrap();
     /// ```
     ///
     /// # Errors
@@ -265,6 +274,7 @@ impl<C> PrototypeTable<C> {
         factory.insert_value(storage, key.to_string(), value);
     }
 
+    /// Retrieve an immutable reference to a prototype if it exists.
     pub fn get<T>(&self, key: &str) -> Option<&T>
     where
         T: 'static + Prototype,
@@ -279,12 +289,11 @@ impl<C> PrototypeTable<C> {
     }
 }
 
-impl<C> Default for PrototypeTable<C> {
+impl Default for PrototypeTable {
     fn default() -> Self {
         PrototypeTable {
             prototypes2: HashMap::new(),
             types: HashMap::new(),
-            _marker: PhantomData,
         }
     }
 }
@@ -294,9 +303,6 @@ mod test {
     use super::*;
     use serde::Deserialize;
 
-    struct World(usize);
-    type Entity = usize;
-
     #[derive(Deserialize)]
     struct Foo {
         name: String,
@@ -304,22 +310,14 @@ mod test {
     }
 
     impl Prototype for Foo {
-        type Context = World;
-        type Spawned = Entity;
-
         fn type_name<'a>() -> Cow<'a, str> {
             "foo".into()
-        }
-
-        fn spawn(&self, ctx: &mut Self::Context) -> Self::Spawned {
-            ctx.0 += 1;
-            ctx.0
         }
     }
 
     #[test]
     fn test_table() {
-        let mut table: PrototypeTable<World> = PrototypeTable::new();
+        let mut table: PrototypeTable = PrototypeTable::new();
         let lua = rlua::Lua::new();
 
         table.register::<Foo>();
