@@ -20,6 +20,7 @@ use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
 use rengine::render::{Gizmo, Material};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
+use rengine::rlua::{UserData, UserDataMethods};
 use rengine::scripting;
 use rengine::scripting::prelude::*;
 use rengine::specs::prelude::*;
@@ -215,6 +216,63 @@ fn test_load() -> rlua::Result<()> {
 
     Ok(())
 }
+
+struct LuaWorld<'a> {
+    entities: &'a mut Vec<Entity>,
+    world: &'a mut World,
+    graphics: &'a mut GraphicContext,
+    mod_ctx: &'a scripting::ModContext<'a>,
+}
+
+impl<'a> UserData for LuaWorld<'a> {
+    fn add_methods<'lua, T: UserDataMethods<'lua, Self>>(methods: &mut T) {
+        methods.add_method_mut(
+            "spawn_soldier",
+            |lua_ctx, lua_world, (proto_name, params): (String, rlua::Table)| {
+                use rlua::Value;
+                // create_sprite
+                println!("spawn skelly");
+                let proto = lua_world
+                    .mod_ctx
+                    .prototypes
+                    .get::<SoldierPrototype>(proto_name.as_str())
+                    .unwrap_or_else(|| panic!("No prototype registered called '{}'", proto_name));
+
+                let skelly_tex = GlTexture::from_bundle(
+                    lua_world
+                        .world
+                        .write_resource::<TextureAssets>()
+                        .load_texture(
+                            &mut lua_world.graphics.factory_mut(),
+                            proto.texture_path.as_str(),
+                        ),
+                );
+
+                let param_pos: Value = params.get("position")?;
+                let pos: [f32; 3] = if let Value::Table(_) = param_pos {
+                    rlua_serde::from_value(param_pos).unwrap()
+                } else {
+                    proto.position
+                };
+
+                let entity = create_sprite(
+                    &mut lua_world.world,
+                    &mut lua_world.graphics,
+                    pos,
+                    skelly_tex,
+                );
+
+                lua_world.entities.push(entity);
+
+                Ok(())
+            },
+        );
+    }
+}
+
+// ----- //
+// Scene //
+// ----- //
 
 pub struct Game {
     mods: scripting::Mods,
@@ -414,6 +472,56 @@ impl Scene for Game {
         self.mods
             .data_stage()
             .expect("game state error during data stage");
+
+        {
+            let entities = &mut self.entities;
+            self.mods.exec(|mod_ctx| {
+                let result: rlua::Result<()> = mod_ctx.mod_bundle.lua.context(|lua_ctx| {
+                    lua_ctx.scope(|scope| {
+                        use std::fs::{canonicalize, File};
+                        use std::io::prelude::*;
+                        use walkdir::WalkDir;
+
+                        let lua_world = LuaWorld {
+                            entities,
+                            world: ctx.world,
+                            graphics: ctx.graphics,
+                            mod_ctx: &mod_ctx,
+                        };
+                        let world_user_data = scope.create_nonstatic_userdata(lua_world)?;
+                        let globals = lua_ctx.globals();
+                        globals.set("GAME", world_user_data)?;
+
+                        let mut buf = vec![];
+                        let walker = WalkDir::new(mod_ctx.mod_bundle.meta.path());
+                        for entry in walker {
+                            let entry = entry.unwrap();
+                            let file_path = canonicalize(entry.path()).unwrap();
+
+                            if entry.path().file_name().unwrap() == "init.lua" {
+                                if !file_path.is_file() {
+                                    continue;
+                                }
+
+                                let mut file = File::open(&file_path).unwrap();
+                                buf.clear();
+                                file.read_to_end(&mut buf).unwrap();
+
+                                lua_ctx.load(&buf).exec()?;
+                                if let Ok(func) = globals.get::<_, rlua::Function>("on_init") {
+                                    func.call(())?;
+                                }
+
+                                continue;
+                            }
+                        }
+
+                        Ok(())
+                    })
+                });
+                result.unwrap();
+            });
+        }
 
         // Buttons
         {

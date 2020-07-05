@@ -312,6 +312,30 @@ impl Mods {
             Ok(())
         })
     }
+
+    // TODO: return result or error
+    pub fn exec<F, R>(&self, mut func: F)
+    where
+        F: FnMut(ModContext<'_>) -> R,
+    {
+        let Mods {
+            ref mods,
+            ref prototypes,
+            ref settings,
+        } = self;
+
+        for mod_bundle in mods {
+            let ctx = ModContext {
+                settings,
+                prototypes,
+                mod_bundle,
+            };
+
+            func(ctx);
+        }
+
+        // TODO: return result(s)
+    }
 }
 
 /// Global settings for mod system.
@@ -345,6 +369,13 @@ pub struct ModMeta {
     path: PathBuf,
 }
 
+impl ModMeta {
+    #[inline]
+    pub fn path(&self) -> &Path {
+        self.path.as_path()
+    }
+}
+
 /// Meta file found at the top level of a mod's folder.
 #[derive(Deserialize)]
 pub struct ModMetaModel {
@@ -357,8 +388,8 @@ pub struct ModMetaModel {
 }
 
 pub struct ModBundle {
-    meta: ModMeta,
-    lua: rlua::Lua,
+    pub meta: ModMeta,
+    pub lua: rlua::Lua,
     pub prototypes: prototype::PrototypeTable<()>,
     // TODO: event subscriptions
 }
@@ -388,4 +419,11 @@ impl Into<usize> for ModId {
     fn into(self) -> usize {
         self.0
     }
+}
+
+/// Payload of contextual data borrowed by execution loop from [`Mods`](struct.Mods.html).
+pub struct ModContext<'a> {
+    pub settings: &'a ModSettings,
+    pub prototypes: &'a PrototypeTable<()>,
+    pub mod_bundle: &'a ModBundle,
 }
