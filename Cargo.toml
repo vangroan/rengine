@@ -22,7 +22,7 @@ image = "0.21.1"
 lazy_static = "1.4.0"
 log = "0.4"
 mopa = "0.2"
-nalgebra = { version = "0.18.0", feature = "serde-serialize" }
+nalgebra = { version = "0.18.0", features = ["serde-serialize"] }
 nalgebra-glm = "0.4.0"
 num-traits = "0.2.6"
 rlua = "0.17"
@@ -46,3 +46,5 @@ name = "voxel"
 
 [features]
 default= []
+
+serde-serialize = []
