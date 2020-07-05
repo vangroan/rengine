@@ -174,9 +174,8 @@ impl Prototype for SoldierPrototype {
 
 fn test_load() -> rlua::Result<()> {
     use rlua::Lua;
-    use rlua_serde;
 
-    let mut lua = Lua::new();
+    let lua = Lua::new();
     let result: rlua::Result<()> = lua.context(|lua_ctx| {
         // let mut skelly_proto = SkellyPrototype::default();
 

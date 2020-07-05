@@ -2,6 +2,7 @@
 pub use std::cell::{Ref, RefMut};
 use std::{cell::RefCell, rc::Rc};
 
+use log::trace;
 use rlua::{Context, Lua, RegistryKey, Table, UserData, UserDataMethods, Value};
 
 use crate::scripting::ModMeta;
@@ -81,28 +82,23 @@ impl UserData for LuaDataDefinerRc {
                 for proto_table in definitions.sequence_values::<Table>() {
                     let proto_table = proto_table?;
                     let proto_name: String = proto_table.get(key_field)?;
-                    println!("mod_name {}", mod_name);
+                    trace!("mod_name {}", mod_name);
 
                     // Prototypes for the current mod
                     let mod_table = match data_table.get::<_, Value>(mod_name)? {
                         Value::Nil => {
                             let t = lua_ctx.create_table()?;
                             // TODO: Definition validation
-                            // t.set(def_name, def_table)?;
                             data_table.set(mod_name, t.clone())?;
                             t
                         }
-                        Value::Table(t) => {
-                            // t.set(def_name, def_table)?;
-                            t
-                        }
+                        Value::Table(t) => t,
                         _ => {
                             /* unsupported */
                             panic!("mod table unsupported type");
                         }
                     };
 
-                    println!("type_name {}", type_name);
                     // Prototype category table
                     let category_table = match mod_table.get(type_name.as_str())? {
                         Value::Nil => {
@@ -117,10 +113,14 @@ impl UserData for LuaDataDefinerRc {
                         }
                     };
 
-                    println!(
-                        "Data definition expanded with '{}:{}:{}'",
-                        mod_name, type_name, proto_name
-                    );
+                    if log::max_level() >= log::Level::Trace {
+                        trace!(
+                            "Data definition expanded with '{}:{}:{}'",
+                            mod_name,
+                            type_name,
+                            proto_name
+                        );
+                    }
                     category_table.set(proto_name, proto_table)?;
                 }
 
