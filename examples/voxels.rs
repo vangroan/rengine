@@ -1,8 +1,12 @@
 extern crate rengine;
+#[macro_use]
+extern crate slog;
 
 use std::{borrow::Cow, error::Error};
 
 use log::trace;
+use slog::Drain;
+
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
     ActiveCamera, CameraDriftSystem, CameraProjection, CameraView, DollyCamera,
@@ -18,7 +22,7 @@ use rengine::metrics::{builtin_metrics::*, DataPoint, MetricAggregate, MetricHub
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
-use rengine::render::{Gizmo, Material};
+use rengine::render::{create_light, Gizmo, GlossMaterial, Material};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
 use rengine::rlua::{UserData, UserDataMethods};
 use rengine::scripting;
@@ -71,12 +75,27 @@ fn isometric_camera_position() -> Point3<f32> {
     m.transform_point(&p)
 }
 
-fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Entity {
+fn create_chunk(
+    world: &mut World,
+    graphics: &mut GraphicContext,
+    chunk_id: ChunkCoord,
+    tex: GlTexture,
+) -> Entity {
     // Note: Mesh is generated later
     let entity = world
         .create_entity()
-        .with(Material::Basic { texture: tex })
-        .with(Gizmo)
+        // .with(Material::Basic { texture: tex })
+        .with(Material::Gloss {
+            texture: tex,
+            material: GlossMaterial::new(
+                graphics,
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                32.0,
+            ),
+        })
+        // .with(Gizmo)
         .with(TileVoxelChunk::new(chunk_id.clone()))
         .with(Transform::new().with_position([
             chunk_id.i as f32 * CHUNK_DIM8 as f32,
@@ -101,7 +120,7 @@ fn create_sprite<V: Into<glm::Vec3>>(
     world
         .create_entity()
         .with(Material::Basic { texture: tex })
-        .with(Gizmo)
+        // .with(Gizmo)
         .with(Billboard)
         .with(
             MeshBuilder::new()
@@ -300,6 +319,9 @@ impl Scene for Game {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         test_load().unwrap();
 
+        // Point Light
+        create_light(&mut ctx.world, &mut ctx.graphics, [8.0, 10.0, 8.0]);
+
         // Setup Voxels
         ctx.world.add_resource(TileVoxelCtrl::new());
         ctx.world.add_resource(ChunkMapping::new());
@@ -341,6 +363,7 @@ impl Scene for Game {
                 for z in 0..2 {
                     self.entities.push(create_chunk(
                         &mut ctx.world,
+                        &mut ctx.graphics,
                         ChunkCoord::new(x, y, z),
                         tex.clone(),
                     ));
@@ -783,6 +806,16 @@ impl Scene for Game {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // Async logging drain
+    // let decorator = slog_term::TermDecorator::new().build();
+    // let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    // let drain = slog_async::Async::new(drain).build().fuse();
+    // let _log = slog::Logger::root(drain, o!());
+
+    simple_logger::init().expect("failed to initialized logger");
+
+    trace!("Building Application");
+
     let app = AppBuilder::new()
         .title("Voxels Example")
         .size(800, 600)

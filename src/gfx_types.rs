@@ -22,18 +22,20 @@ gfx_defines! {
         transform: [[f32; 4]; 4] = "u_Transform",
     }
 
+    // Note: Never use vec3 inside uniform block
     constant GlossMaterial {
-        ambient: [f32; 3] = "u_Ambient",
-        diffuse: [f32; 3] = "u_Diffuse",
-        specular: [f32; 3] = "u_Specular",
+        ambient: [f32; 4] = "u_Ambient",
+        diffuse: [f32; 4] = "u_Diffuse",
+        specular: [f32; 4] = "u_Specular",
         shininess: f32 = "u_Shininess",
     }
 
-    constant PointLight {
-        pos: [f32; 3] = "pos",
-        ambient: [f32; 3] = "ambient",
-        diffuse: [f32; 3] = "diffuse",
-        specular: [f32; 3] = "specular",
+    // Note: Never use vec3 inside uniform block
+    constant LightParams {
+        pos: [f32; 4] = "pos",
+        ambient: [f32; 4] = "ambient",
+        diffuse: [f32; 4] = "diffuse",
+        specular: [f32; 4] = "specular",
     }
 
     pipeline pipe {
@@ -72,7 +74,10 @@ gfx_defines! {
         material: gfx::ConstantBuffer<GlossMaterial> = "b_Material",
 
         // Support one point light
-        light: gfx::ConstantBuffer<PointLight> = "b_Light",
+        lights: gfx::ConstantBuffer<LightParams> = "b_Lights",
+
+        // Camera position
+        eye: gfx::Global<[f32; 4]> = "u_Eye",
 
         // Model Transform Matrix
         model: gfx::Global<[[f32; 4]; 4]> = "u_Model",

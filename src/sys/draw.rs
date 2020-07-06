@@ -1,11 +1,14 @@
 use crate::camera::{ActiveCamera, CameraProjection, CameraView};
 use crate::comp::{GlTexture, Mesh, Transform};
-use crate::gfx_types::{self, gizmo_pipe, pipe, DepthTarget, PipelineBundle, RenderTarget};
+use crate::gfx_types::{
+    self, gizmo_pipe, gloss_pipe, pipe, DepthTarget, PipelineBundle, RenderTarget,
+};
 use crate::metrics::{builtin_metrics::*, MetricAggregate, MetricHub};
 use crate::option::lift2;
-use crate::render::{ChannelPair, Gizmo, Material};
+use crate::render::{ChannelPair, Gizmo, Material, PointLight};
 use crate::res::ViewPort;
-use nalgebra::Matrix4;
+
+use nalgebra::{Matrix4, Vector4};
 use specs::{Join, Read, ReadExpect, ReadStorage, System};
 
 pub struct DrawSystem {
@@ -18,6 +21,7 @@ pub struct DrawSystem {
 pub struct DrawSystemData<'a> {
     metrics: Read<'a, MetricHub>,
     basic_pipe_bundle: ReadExpect<'a, PipelineBundle<pipe::Meta>>,
+    gloss_pipe_bundle: ReadExpect<'a, PipelineBundle<gloss_pipe::Meta>>,
     gizmo_pipe_bundle: ReadExpect<'a, PipelineBundle<gizmo_pipe::Meta>>,
     view_port: ReadExpect<'a, ViewPort>,
     active_camera: Read<'a, ActiveCamera>,
@@ -28,6 +32,7 @@ pub struct DrawSystemData<'a> {
     cam_views: ReadStorage<'a, CameraView>,
     cam_projs: ReadStorage<'a, CameraProjection>,
     gizmos: ReadStorage<'a, Gizmo>,
+    lights: ReadStorage<'a, PointLight>,
 }
 
 impl DrawSystem {
@@ -77,6 +82,7 @@ impl<'a> System<'a> for DrawSystem {
         let DrawSystemData {
             metrics,
             basic_pipe_bundle,
+            gloss_pipe_bundle,
             gizmo_pipe_bundle,
             view_port,
             active_camera,
@@ -87,6 +93,7 @@ impl<'a> System<'a> for DrawSystem {
             cam_views,
             cam_projs,
             gizmos,
+            lights,
         } = data;
         match self.channel.recv_block() {
             Ok(mut encoder) => {
@@ -95,15 +102,23 @@ impl<'a> System<'a> for DrawSystem {
                     metrics.counter(GRAPHICS_DRAW_CALLS, MetricAggregate::Sum);
 
                 // Without a camera, we draw according to the default OpenGL behaviour
-                let (proj_matrix, view_matrix) = active_camera
+                let (proj_matrix, view_matrix, eye) = active_camera
                     .camera_entity()
                     .and_then(|entity| lift2(cam_projs.get(entity), cam_views.get(entity)))
                     .map(|(proj, view)| {
                         // let pos = view.position();
                         // TODO: Allow user to select between orthographic and perspective at runtime
-                        (proj.perspective(), view.view_matrix())
+                        (
+                            proj.perspective(),
+                            view.view_matrix(),
+                            view.position().to_homogeneous(),
+                        )
                     })
-                    .unwrap_or((Matrix4::identity(), Matrix4::identity()));
+                    .unwrap_or((
+                        Matrix4::identity(),
+                        Matrix4::identity(),
+                        Vector4::new(0.0, 0.0, 0.0, 1.0),
+                    ));
 
                 for (ref mesh, ref mat, ref trans) in (&meshes, &materials, &transforms).join() {
                     // Choose pipeline based on material
@@ -136,6 +151,60 @@ impl<'a> System<'a> for DrawSystem {
                             };
 
                             encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
+                        }
+                        Material::Gloss { texture, material } => {
+                            // Find first point light
+                            let mut maybe_light = None;
+                            #[allow(clippy::never_loop)]
+                            for (light_trans, light) in (&transforms, &lights).join() {
+                                let vec3 = light_trans.position();
+                                maybe_light = Some((
+                                    light.buf.clone(),
+                                    gfx_types::LightParams {
+                                        pos: [vec3.x, vec3.y, vec3.z, 1.0],
+                                        ambient: light.ambient,
+                                        diffuse: light.diffuse,
+                                        specular: light.specular,
+                                    },
+                                ));
+                                break;
+                            }
+                            let (light_buf, light_params) = maybe_light.unwrap();
+
+                            // Send light to graphics card
+                            encoder
+                                .update_buffer(&light_buf, &[light_params.clone()], 0)
+                                .expect("Failed to update buffer");
+
+                            // Send material to graphics card
+                            encoder
+                                .update_buffer(
+                                    &material.material_buf,
+                                    &[material.clone().into()],
+                                    0,
+                                )
+                                .expect("Failed to update buffer");
+
+                            // Prepare data
+                            let data = gloss_pipe::Data {
+                                vbuf: mesh.vbuf.clone(),
+                                sampler: (
+                                    texture.bundle.view.clone(),
+                                    texture.bundle.sampler.clone(),
+                                ),
+                                material: material.material_buf.clone(),
+                                lights: light_buf,
+                                eye: eye.into(),
+                                model: trans.matrix().into(),
+                                view: view_matrix.into(),
+                                proj: proj_matrix.into(),
+                                // The rectangle to allow rendering within
+                                scissor: view_port.rect,
+                                render_target: self.render_target.clone(),
+                                depth_target: self.depth_target.clone(),
+                            };
+
+                            encoder.draw(&mesh.slice, &gloss_pipe_bundle.pso, &data);
                         }
                         _ => unimplemented!(),
                     }

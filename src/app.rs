@@ -11,7 +11,7 @@ use crate::graphics::GraphicContext;
 use crate::gui::{self, text, widgets, DrawGuiSystem, GuiGraph};
 use crate::metrics::MetricHub;
 use crate::modding::Mods;
-use crate::render::{ChannelPair, Gizmo, Material};
+use crate::render::{ChannelPair, Gizmo, Material, PointLight};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
@@ -80,6 +80,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<Mesh>();
         world.register::<Transform>();
         world.register::<Material>();
+        world.register::<PointLight>();
         world.register::<Gizmo>();
         world.register::<CameraView>();
         world.register::<CameraProjection>();
@@ -209,7 +210,7 @@ impl<'a, 'b> App<'a, 'b> {
                     )),
                 )
                 .unwrap();
-            
+
             // Pipeline State Object
             let pso = graphics
                 .factory
@@ -220,7 +221,7 @@ impl<'a, 'b> App<'a, 'b> {
                     gloss_pipe::new(),
                 )
                 .expect("Failed to link gloss material shader");
-            
+
             // Bundle program and pipeline state object together to avoid
             // lifetime issues with world resources borrowing each other.
             world.add_resource(PipelineBundle::new(pso, shader_program));
@@ -244,15 +245,15 @@ impl<'a, 'b> App<'a, 'b> {
 
             let mut fillmode = gfx::state::Rasterizer::new_fill();
             fillmode.method = gfx::state::RasterMethod::Line(1); // Render lines
-            let gizmo_pso = graphics
-                .factory
-                .create_pipeline_from_program(
-                    &gizmo_shader,
-                    gfx::Primitive::TriangleList,
-                    fillmode,
-                    gizmo_pipe::new(),
-                )
-                .unwrap();
+            let gizmo_pso = match graphics.factory.create_pipeline_from_program(
+                &gizmo_shader,
+                gfx::Primitive::TriangleList,
+                fillmode,
+                gizmo_pipe::new(),
+            ) {
+                Ok(pso) => pso,
+                Err(err) => panic!("{}", err),
+            };
 
             world.add_resource(PipelineBundle::new(gizmo_pso, gizmo_shader));
         }
