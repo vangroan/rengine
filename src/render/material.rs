@@ -1,12 +1,16 @@
-use crate::comp::GlTexture;
-use specs::{Component, DenseVecStorage, FlaggedStorage};
+use specs::prelude::*;
+
+use crate::{comp::GlTexture, gfx_types::GlossMaterial};
 
 #[derive(Component)]
 #[storage(DenseVecStorage)]
 pub enum Material {
     Basic { texture: GlTexture },
     Lambert, // Rename to Matt
-    Phong,   // Rename to Gloss
+    Gloss {
+        texture: GlTexture,
+        material: GlossMaterial,
+    },
     Gizmo,
 }
 

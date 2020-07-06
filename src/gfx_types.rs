@@ -22,6 +22,20 @@ gfx_defines! {
         transform: [[f32; 4]; 4] = "u_Transform",
     }
 
+    constant GlossMaterial {
+        ambient: [f32; 3] = "u_Ambient",
+        diffuse: [f32; 3] = "u_Diffuse",
+        specular: [f32; 3] = "u_Specular",
+        shininess: f32 = "u_Shininess",
+    }
+
+    constant PointLight {
+        pos: [f32; 3] = "pos",
+        ambient: [f32; 3] = "ambient",
+        diffuse: [f32; 3] = "diffuse",
+        specular: [f32; 3] = "specular",
+    }
+
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
 
@@ -30,6 +44,38 @@ gfx_defines! {
 
         // Model Transform Matrix
         transforms: gfx::ConstantBuffer<Transform> = "Transform",
+
+        // View
+        view: gfx::Global<[[f32; 4]; 4]> = "u_View",
+
+        // Projection
+        proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",
+
+        // Enables the scissor test
+        scissor: gfx::Scissor = (),
+
+        // out: gfx::RenderTarget<ColorFormat> = "Target0"
+        // This makes the BlendMode part of the pipeline, which is fine for the simple case
+        render_target: gfx::BlendTarget<ColorFormat> = ("Target0", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
+
+        depth_target: gfx::DepthTarget<DepthFormat> =
+            gfx::preset::depth::LESS_EQUAL_WRITE,
+    }
+
+    pipeline gloss_pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+
+        // Simple texture sampler
+        sampler: gfx::TextureSampler<[f32; 4]> = "t_Sampler",
+
+        // Phong material parameters
+        material: gfx::ConstantBuffer<GlossMaterial> = "b_Material",
+
+        // Support one point light
+        light: gfx::ConstantBuffer<PointLight> = "b_Light",
+
+        // Model Transform Matrix
+        model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
 
         // View
         view: gfx::Global<[[f32; 4]; 4]> = "u_View",

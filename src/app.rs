@@ -193,6 +193,39 @@ impl<'a, 'b> App<'a, 'b> {
             world.add_resource(PipelineBundle::new(pso, shader_program));
         }
 
+        // Gloss Material PSO
+        {
+            // Shader program
+            let shader_program = graphics
+                .factory
+                .link_program(
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gloss_320.glslv"
+                    )),
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gloss_320.glslf"
+                    )),
+                )
+                .unwrap();
+            
+            // Pipeline State Object
+            let pso = graphics
+                .factory
+                .create_pipeline_from_program(
+                    &shader_program,
+                    gfx::Primitive::TriangleList,
+                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    gloss_pipe::new(),
+                )
+                .expect("Failed to link gloss material shader");
+            
+            // Bundle program and pipeline state object together to avoid
+            // lifetime issues with world resources borrowing each other.
+            world.add_resource(PipelineBundle::new(pso, shader_program));
+        }
+
         // Gizmo Wireframe PSO
         {
             let gizmo_shader = graphics
