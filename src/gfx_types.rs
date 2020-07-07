@@ -82,6 +82,8 @@ gfx_defines! {
         // Camera position
         eye: gfx::Global<[f32; 4]> = "u_Eye",
 
+        normal_matrix: gfx::Global<[[f32; 4]; 4]> = "u_NormalMatrix",
+
         // Model Transform Matrix
         model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
 

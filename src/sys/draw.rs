@@ -188,6 +188,12 @@ impl<'a> System<'a> for DrawSystem {
                                 )
                                 .expect("Failed to update buffer");
 
+                            // Surface Normal Matrix
+                            let model_matrix = trans.matrix();
+                            let mut normal_matrix = model_matrix.clone();
+                            normal_matrix.try_inverse_mut();
+                            normal_matrix.transpose_mut();
+
                             // Prepare data
                             let data = gloss_pipe::Data {
                                 vbuf: mesh.vbuf.clone(),
@@ -199,7 +205,8 @@ impl<'a> System<'a> for DrawSystem {
                                 lights: lights.buffer().clone(),
                                 num_lights: light_count,
                                 eye: eye.into(),
-                                model: trans.matrix().into(),
+                                normal_matrix: normal_matrix.into(),
+                                model: model_matrix.into(),
                                 view: view_matrix.into(),
                                 proj: proj_matrix.into(),
                                 // The rectangle to allow rendering within

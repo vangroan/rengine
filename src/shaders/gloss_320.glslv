@@ -9,6 +9,7 @@ out vec4 v_Color;
 out vec3 v_FragPos;
 out vec3 v_Normal;
 
+uniform mat4 u_NormalMatrix;
 uniform mat4 u_Model;
 uniform mat4 u_View;
 uniform mat4 u_Proj;
@@ -23,6 +24,7 @@ void main() {
     // without the projection and view transforms applied.
     v_FragPos = vec3(u_Model * vec4(a_Pos, 1.0));
     
-    // TODO: Normal Matrix from CPU
-    v_Normal = a_Normal;
+    // Normal matrix is casted to mat3 so it loses its translation components
+    // and can be multiplied with a vec3.
+    v_Normal = mat3(u_NormalMatrix) * a_Normal;
 }
