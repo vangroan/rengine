@@ -11,7 +11,7 @@ use crate::graphics::GraphicContext;
 use crate::gui::{self, text, widgets, DrawGuiSystem, GuiGraph};
 use crate::metrics::MetricHub;
 use crate::modding::Mods;
-use crate::render::{ChannelPair, Gizmo, Material, PointLight};
+use crate::render::{self, ChannelPair, Gizmo, Lights, Material, PointLight};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
@@ -115,6 +115,9 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
+
+        // Lights
+        world.add_resource(Lights::new(&mut graphics, render::MAX_NUM_LIGHTS));
 
         // GUI
         let root_entity = widgets::create_container(&mut world, gui::PackMode::Frame);
@@ -474,10 +477,10 @@ impl<'a, 'b> App<'a, 'b> {
             });
 
             // Cooperatively give up CPU time
-            ::std::thread::yield_now();
+            // ::std::thread::yield_now();
 
             // TODO: Remove sleep; call update and render on separate timers
-            // ::std::thread::sleep(::std::time::Duration::from_millis(1));
+            ::std::thread::sleep(::std::time::Duration::from_millis(16));
         }
 
         Ok(())

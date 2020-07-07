@@ -76,6 +76,9 @@ gfx_defines! {
         // Support one point light
         lights: gfx::ConstantBuffer<LightParams> = "b_Lights",
 
+        // Number of lights uploaded to buffer
+        num_lights: gfx::Global<i32> = "u_NumLights",
+
         // Camera position
         eye: gfx::Global<[f32; 4]> = "u_Eye",
 

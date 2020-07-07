@@ -320,7 +320,8 @@ impl Scene for Game {
         test_load().unwrap();
 
         // Point Light
-        create_light(&mut ctx.world, &mut ctx.graphics, [8.0, 10.0, 8.0]);
+        create_light(&mut ctx.world, &mut ctx.graphics, [4.0, 8.5, 8.0]);
+        create_light(&mut ctx.world, &mut ctx.graphics, [8.0, 10.0, 4.0]);
 
         // Setup Voxels
         ctx.world.add_resource(TileVoxelCtrl::new());

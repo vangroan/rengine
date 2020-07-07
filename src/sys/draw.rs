@@ -5,7 +5,7 @@ use crate::gfx_types::{
 };
 use crate::metrics::{builtin_metrics::*, MetricAggregate, MetricHub};
 use crate::option::lift2;
-use crate::render::{ChannelPair, Gizmo, Material, PointLight};
+use crate::render::{ChannelPair, Gizmo, Lights, Material, PointLight};
 use crate::res::ViewPort;
 
 use nalgebra::{Matrix4, Vector4};
@@ -32,7 +32,8 @@ pub struct DrawSystemData<'a> {
     cam_views: ReadStorage<'a, CameraView>,
     cam_projs: ReadStorage<'a, CameraProjection>,
     gizmos: ReadStorage<'a, Gizmo>,
-    lights: ReadStorage<'a, PointLight>,
+    lights: ReadExpect<'a, Lights>,
+    point_lights: ReadStorage<'a, PointLight>,
 }
 
 impl DrawSystem {
@@ -94,6 +95,7 @@ impl<'a> System<'a> for DrawSystem {
             cam_projs,
             gizmos,
             lights,
+            point_lights,
         } = data;
         match self.channel.recv_block() {
             Ok(mut encoder) => {
@@ -153,28 +155,29 @@ impl<'a> System<'a> for DrawSystem {
                             encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
                         }
                         Material::Gloss { texture, material } => {
-                            // Find first point light
-                            let mut maybe_light = None;
-                            #[allow(clippy::never_loop)]
-                            for (light_trans, light) in (&transforms, &lights).join() {
-                                let vec3 = light_trans.position();
-                                maybe_light = Some((
-                                    light.buf.clone(),
-                                    gfx_types::LightParams {
-                                        pos: [vec3.x, vec3.y, vec3.z, 1.0],
-                                        ambient: light.ambient,
-                                        diffuse: light.diffuse,
-                                        specular: light.specular,
-                                    },
-                                ));
-                                break;
-                            }
-                            let (light_buf, light_params) = maybe_light.unwrap();
+                            // Send lights to graphics card
+                            let max_lights = lights.max_num();
+                            let mut light_count = 0;
+                            for (offset, (light_trans, point_light)) in (&transforms, &point_lights)
+                                .join()
+                                .enumerate()
+                                .take(max_lights)
+                            {
+                                let pos = light_trans.position();
+                                let light_params = gfx_types::LightParams {
+                                    pos: [pos.x, pos.y, pos.z, 1.0],
+                                    ambient: point_light.ambient,
+                                    diffuse: point_light.diffuse,
+                                    specular: point_light.specular,
+                                };
 
-                            // Send light to graphics card
-                            encoder
-                                .update_buffer(&light_buf, &[light_params.clone()], 0)
-                                .expect("Failed to update buffer");
+                                // Send light to graphics card
+                                encoder
+                                    .update_buffer(&lights.buffer(), &[light_params], offset)
+                                    .expect("Failed to update buffer");
+
+                                light_count += 1;
+                            }
 
                             // Send material to graphics card
                             encoder
@@ -193,7 +196,8 @@ impl<'a> System<'a> for DrawSystem {
                                     texture.bundle.sampler.clone(),
                                 ),
                                 material: material.material_buf.clone(),
-                                lights: light_buf,
+                                lights: lights.buffer().clone(),
+                                num_lights: light_count,
                                 eye: eye.into(),
                                 model: trans.matrix().into(),
                                 view: view_matrix.into(),

@@ -2,7 +2,7 @@
 
 // precision lowp float;
 
-const int MAX_LIGHTS = 1;
+const int MAX_LIGHTS = 4;
 
 struct Light {
     vec4 pos;
@@ -30,6 +30,7 @@ uniform b_Lights {
     Light u_Lights[MAX_LIGHTS];
 };
 
+uniform int u_NumLights;
 uniform vec4 u_Eye;
 uniform sampler2D t_Sampler;
 
@@ -56,7 +57,7 @@ void main() {
     }
 
     // vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
-    for (int i=0; i<MAX_LIGHTS; ++i) {
+    for (int i=0; i<u_NumLights && i<MAX_LIGHTS; ++i) {
         Light light = u_Lights[i];
         
         // ambient
