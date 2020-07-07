@@ -2,19 +2,37 @@ use gfx::traits::FactoryExt;
 use nalgebra::Vector3;
 use specs::prelude::*;
 
-use crate::{colors::Color, comp::Transform, gfx_types, graphics::GraphicContext};
+use crate::{
+    colors::Color,
+    comp::Transform,
+    comp::{GlTexture, MeshBuilder},
+    gfx_types,
+    graphics::GraphicContext,
+    render::Material,
+    res::TextureAssets,
+};
 
 /// Default maximum number of lights.
 pub const MAX_NUM_LIGHTS: usize = 4;
 
-pub fn create_light<V>(world: &mut World, graphics: &mut GraphicContext, pos: V) -> Entity
+pub fn create_light<V>(
+    world: &mut World,
+    mut graphics: &mut GraphicContext,
+    pos: V,
+    debug: bool,
+) -> Entity
 where
     V: Into<Vector3<f32>>,
 {
     // TODO: Move buffer to global resource
     let lights_buf = graphics.factory.create_constant_buffer(1);
+    let texture = GlTexture::from_bundle(
+        world
+            .write_resource::<TextureAssets>()
+            .default_texture(graphics.factory_mut()),
+    );
 
-    world
+    let mut builder = world
         .create_entity()
         .with(Transform::default().with_position(pos))
         .with(PointLight {
@@ -22,8 +40,33 @@ where
             ambient: [0.6, 0.6, 1.0, 1.0],
             diffuse: [0.6, 0.8, 0.8, 1.0],
             specular: [1.0, 1.0, 1.0, 1.0],
-        })
-        .build()
+        });
+
+    builder = if debug {
+        let tex_rect = texture.source_rect();
+        builder
+            .with(
+                MeshBuilder::new()
+                    .pseudocube(
+                        [0.0, 0.0, 0.0],
+                        [0.25, 0.25, 0.25],
+                        [
+                            tex_rect.clone(),
+                            tex_rect.clone(),
+                            tex_rect.clone(),
+                            tex_rect.clone(),
+                            tex_rect.clone(),
+                            tex_rect,
+                        ],
+                    )
+                    .build(&mut graphics),
+            )
+            .with(Material::Basic { texture })
+    } else {
+        builder
+    };
+
+    builder.build()
 }
 
 #[derive(Component, Debug)]
