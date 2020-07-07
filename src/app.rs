@@ -205,11 +205,11 @@ impl<'a, 'b> App<'a, 'b> {
                 .link_program(
                     include_bytes!(concat!(
                         env!("CARGO_MANIFEST_DIR"),
-                        "/src/shaders/gloss_320.glslv"
+                        "/src/shaders/gloss_150.glslv"
                     )),
                     include_bytes!(concat!(
                         env!("CARGO_MANIFEST_DIR"),
-                        "/src/shaders/gloss_320.glslf"
+                        "/src/shaders/gloss_150.glslf"
                     )),
                 )
                 .unwrap();
