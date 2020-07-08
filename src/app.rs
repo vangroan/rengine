@@ -248,15 +248,15 @@ impl<'a, 'b> App<'a, 'b> {
 
             let mut fillmode = gfx::state::Rasterizer::new_fill();
             fillmode.method = gfx::state::RasterMethod::Line(1); // Render lines
-            let gizmo_pso = match graphics.factory.create_pipeline_from_program(
-                &gizmo_shader,
-                gfx::Primitive::TriangleList,
-                fillmode,
-                gizmo_pipe::new(),
-            ) {
-                Ok(pso) => pso,
-                Err(err) => panic!("{}", err),
-            };
+            let gizmo_pso = graphics
+                .factory
+                .create_pipeline_from_program(
+                    &gizmo_shader,
+                    gfx::Primitive::TriangleList,
+                    fillmode,
+                    gizmo_pipe::new(),
+                )
+                .expect("Failed to link wireframe material shader");
 
             world.add_resource(PipelineBundle::new(gizmo_pso, gizmo_shader));
         }
