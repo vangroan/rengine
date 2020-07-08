@@ -477,10 +477,10 @@ impl<'a, 'b> App<'a, 'b> {
             });
 
             // Cooperatively give up CPU time
-            // ::std::thread::yield_now();
+            ::std::thread::yield_now();
 
             // TODO: Remove sleep; call update and render on separate timers
-            ::std::thread::sleep(::std::time::Duration::from_millis(1));
+            // ::std::thread::sleep(::std::time::Duration::from_millis(1));
         }
 
         Ok(())
