@@ -833,7 +833,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 /// Point light entity that follows mouse around.
 struct MouseLight(Entity);
 
-/// System that positions the light specified by `MouseLight` at 
+/// System that positions the light specified by `MouseLight` at
 /// the voxel intersected by the mouse ray.
 struct MouseLightSystem {
     mouse_pos: PhysicalPosition,
