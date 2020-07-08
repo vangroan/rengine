@@ -1,11 +1,9 @@
 extern crate rengine;
-#[macro_use]
-extern crate slog;
 
 use std::{borrow::Cow, error::Error};
 
 use log::trace;
-use slog::Drain;
+use serde::Deserialize;
 
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
@@ -35,7 +33,6 @@ use rengine::voxel::{
     DeformedBoxGen, VoxelArrayChunk, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
-use serde::Deserialize;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
 type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
@@ -816,12 +813,6 @@ impl Scene for Game {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Async logging drain
-    // let decorator = slog_term::TermDecorator::new().build();
-    // let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    // let drain = slog_async::Async::new(drain).build().fuse();
-    // let _log = slog::Logger::root(drain, o!());
-
     simple_logger::init().expect("failed to initialized logger");
 
     trace!("Building Application");
