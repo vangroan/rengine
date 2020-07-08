@@ -35,20 +35,6 @@ uniform vec4 u_Eye;
 uniform sampler2D t_Sampler;
 
 void main() {
-    // ambient
-    // vec3 a = u_Ambient;
-    // vec3 ambient = material.ambient * light.u_Light.ambient;
-
-    // // diffuse
-    // vec3 norm = normalize(v_Normal);
-    // vec3 lightDir = normalize(u_Light.pos - v_FragPos);
-    // float diff = max(dot(v_Normal, lightDir), 0.0);
-    // vec3 diffuse = u_Light.diffuse * (diff * u_Material.diffuse);
-
-    // // vec3 result = ambient + diffuse + specular;
-    // vec3 result = ambient + diffuse;
-    // Target0 = vec4(result, 1.0);
-
     vec4 texel = texture(t_Sampler, v_Uv).rgba;
 
     // Prevent transparent pixels from overwriting opaque pixels in the back.
