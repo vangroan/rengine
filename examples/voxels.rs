@@ -812,24 +812,6 @@ impl Scene for Game {
     }
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    simple_logger::init().expect("failed to initialized logger");
-
-    trace!("Building Application");
-
-    let app = AppBuilder::new()
-        .title("Voxels Example")
-        .size(800, 600)
-        .background_color([0.3, 0.4, 0.5, 1.0])
-        .init_scene(Game::new())
-        .add_modding("rengine", "./examples/mods")
-        .build()?;
-
-    app.run()?;
-
-    Ok(())
-}
-
 /// Point light entity that follows mouse around.
 struct MouseLight(Entity);
 
@@ -925,4 +907,22 @@ impl<'a> System<'a> for MouseLightSystem {
             }
         }
     }
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    simple_logger::init().expect("failed to initialized logger");
+
+    trace!("Building Application");
+
+    let app = AppBuilder::new()
+        .title("Voxels Example")
+        .size(800, 600)
+        .background_color([0.3, 0.4, 0.5, 1.0])
+        .init_scene(Game::new())
+        .add_modding("rengine", "./examples/mods")
+        .build()?;
+
+    app.run()?;
+
+    Ok(())
 }
