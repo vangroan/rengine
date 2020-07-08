@@ -3,7 +3,7 @@ use nalgebra::{Point3, Unit, Vector3};
 use std::f32::MAX;
 use std::iter::Iterator;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct VoxelRayInfo {
     /// Length traveled along ray.
     t: f32,
@@ -11,11 +11,25 @@ pub struct VoxelRayInfo {
     /// Point where ray entered voxel.
     intersect: Point3<f32>,
 
+    /// Normal pointing away from the intersected surface.
+    normal: Unit<Vector3<f32>>,
+
     /// Voxel that has been intersected.
     voxel: VoxelCoord,
 }
 
 impl VoxelRayInfo {
+    #[inline]
+    pub fn intersect(&self) -> Point3<f32> {
+        self.intersect
+    }
+
+    #[inline]
+    pub fn normal(&self) -> Unit<Vector3<f32>> {
+        self.normal
+    }
+
+    #[inline]
     pub fn voxel_coord(&self) -> &VoxelCoord {
         &self.voxel
     }
@@ -83,12 +97,20 @@ pub fn voxel_raycast(
         (-1, (origin.z.floor() - origin.z).abs() * delta_z)
     };
 
+    // Surface normals for instersection points, per axis.
+    let normals = [
+        Unit::new_unchecked(Vector3::new(-(step_x as f32), 0.0, 0.0)), // x
+        Unit::new_unchecked(Vector3::new(0.0, -(step_y as f32), 0.0)), // y
+        Unit::new_unchecked(Vector3::new(0.0, 0.0, -(step_z as f32))), // z
+    ];
+
     VoxelRaycast {
         origin,
         direction,
         max_steps: steps,
         delta: [delta_x, delta_y, delta_z],
         step: [step_x, step_y, step_z],
+        normals,
         voxel: [x, y, z],
         cursor: 0,
         t: [t_x, t_y, t_z],
@@ -114,6 +136,8 @@ pub struct VoxelRaycast {
     /// Direction to step voxel coordintes.
     step: [i32; 3],
 
+    normals: [Unit<Vector3<f32>>; 3],
+
     /// Current voxel being intersected.
     voxel: [i32; 3],
 
@@ -126,6 +150,20 @@ pub struct VoxelRaycast {
     t: [f32; 3],
 }
 
+impl VoxelRaycast {
+    /// World position where the ray started.
+    #[inline]
+    pub fn origin(&self) -> Point3<f32> {
+        self.origin
+    }
+
+    /// Direction the ray was cast.
+    #[inline]
+    pub fn direction(&self) -> Unit<Vector3<f32>> {
+        self.direction
+    }
+}
+
 impl Iterator for VoxelRaycast {
     type Item = VoxelRayInfo;
 
@@ -135,12 +173,15 @@ impl Iterator for VoxelRaycast {
         } else {
             // Takes current state of shortest axis ray, advances state for
             // next interation, then unaltered returns state.
+            //
+            // The surface normal is simply the step direction in reverse.
             let voxel_info = if self.t[0] < self.t[1] {
                 if self.t[0] < self.t[2] {
                     // X-axis
                     let i = VoxelRayInfo {
                         t: self.t[0],
                         intersect: self.origin + self.direction.into_inner() * self.t[0],
+                        normal: self.normals[0],
                         voxel: self.voxel.into(),
                     };
 
@@ -153,6 +194,7 @@ impl Iterator for VoxelRaycast {
                     let i = VoxelRayInfo {
                         t: self.t[2],
                         intersect: self.origin + self.direction.into_inner() * self.t[2],
+                        normal: self.normals[2],
                         voxel: self.voxel.into(),
                     };
 
@@ -166,6 +208,7 @@ impl Iterator for VoxelRaycast {
                 let i = VoxelRayInfo {
                     t: self.t[1],
                     intersect: self.origin + self.direction.into_inner() * self.t[1],
+                    normal: self.normals[1],
                     voxel: self.voxel.into(),
                 };
 
@@ -178,6 +221,7 @@ impl Iterator for VoxelRaycast {
                 let i = VoxelRayInfo {
                     t: self.t[2],
                     intersect: self.origin + self.direction.into_inner() * self.t[2],
+                    normal: self.normals[2],
                     voxel: self.voxel.into(),
                 };
 

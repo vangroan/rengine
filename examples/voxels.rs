@@ -3,6 +3,8 @@ extern crate rengine;
 use std::{borrow::Cow, error::Error};
 
 use log::trace;
+use serde::Deserialize;
+
 use rengine::angle::{Deg, Rad};
 use rengine::camera::{
     ActiveCamera, CameraDriftSystem, CameraProjection, CameraView, DollyCamera,
@@ -18,7 +20,7 @@ use rengine::metrics::{builtin_metrics::*, DataPoint, MetricAggregate, MetricHub
 use rengine::modding::{Mods, SceneHook, ScriptChannel};
 use rengine::nalgebra::{Point3, Vector3};
 use rengine::option::lift2;
-use rengine::render::{Gizmo, Material};
+use rengine::render::{create_light, Gizmo, GlossMaterial, Material, PointLight};
 use rengine::res::{DeltaTime, DeviceDimensions, TextureAssets};
 use rengine::rlua::{UserData, UserDataMethods};
 use rengine::scripting;
@@ -31,7 +33,6 @@ use rengine::voxel::{
     DeformedBoxGen, VoxelArrayChunk, VoxelChunk, VoxelCoord, VoxelData, CHUNK_DIM8,
 };
 use rengine::{AppBuilder, Context, GraphicContext, Scene, Trans};
-use serde::Deserialize;
 
 const BLOCK_TEX_PATH: &str = "examples/block.png";
 type TileVoxelCtrl = ChunkControl<TileVoxel, VoxelArrayChunk<TileVoxel>>;
@@ -71,12 +72,27 @@ fn isometric_camera_position() -> Point3<f32> {
     m.transform_point(&p)
 }
 
-fn create_chunk(world: &mut World, chunk_id: ChunkCoord, tex: GlTexture) -> Entity {
+fn create_chunk(
+    world: &mut World,
+    graphics: &mut GraphicContext,
+    chunk_id: ChunkCoord,
+    tex: GlTexture,
+) -> Entity {
     // Note: Mesh is generated later
     let entity = world
         .create_entity()
-        .with(Material::Basic { texture: tex })
-        .with(Gizmo)
+        // .with(Material::Basic { texture: tex })
+        .with(Material::Gloss {
+            texture: tex,
+            material: GlossMaterial::new(
+                graphics,
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                32.0,
+            ),
+        })
+        // .with(Gizmo)
         .with(TileVoxelChunk::new(chunk_id.clone()))
         .with(Transform::new().with_position([
             chunk_id.i as f32 * CHUNK_DIM8 as f32,
@@ -101,7 +117,7 @@ fn create_sprite<V: Into<glm::Vec3>>(
     world
         .create_entity()
         .with(Material::Basic { texture: tex })
-        .with(Gizmo)
+        // .with(Gizmo)
         .with(Billboard)
         .with(
             MeshBuilder::new()
@@ -267,6 +283,7 @@ pub struct Game {
     grid_camera_sys: GridCameraControlSystem,
     slide_camera_sys: SlideCameraControlSystem,
     camera_drift_sys: CameraDriftSystem,
+    mouse_light_sys: MouseLightSystem,
     cursor_pos: PhysicalPosition,
     carve: bool,
     carved: bool,
@@ -286,6 +303,7 @@ impl Game {
             grid_camera_sys: GridCameraControlSystem::new(),
             slide_camera_sys: SlideCameraControlSystem::new(),
             camera_drift_sys: CameraDriftSystem::new(),
+            mouse_light_sys: MouseLightSystem::default(),
             cursor_pos: PhysicalPosition::new(0., 0.),
             carve: false,
             carved: false,
@@ -299,6 +317,14 @@ impl Game {
 impl Scene for Game {
     fn on_start(&mut self, ctx: &mut Context<'_>) -> Option<Trans> {
         test_load().unwrap();
+
+        // Point Light
+        {
+            let light_entity =
+                create_light(&mut ctx.world, &mut ctx.graphics, [4.0, 8.5, 8.0], true);
+            ctx.world.add_resource(MouseLight(light_entity));
+        }
+        create_light(&mut ctx.world, &mut ctx.graphics, [8.0, 10.0, 4.0], true);
 
         // Setup Voxels
         ctx.world.add_resource(TileVoxelCtrl::new());
@@ -341,6 +367,7 @@ impl Scene for Game {
                 for z in 0..2 {
                     self.entities.push(create_chunk(
                         &mut ctx.world,
+                        &mut ctx.graphics,
                         ChunkCoord::new(x, y, z),
                         tex.clone(),
                     ));
@@ -778,11 +805,115 @@ impl Scene for Game {
             }
         }
 
+        // Position light at mouse ray intersecting voxel.
+        self.mouse_light_sys.run(ctx.world.system_data());
+
         None
     }
 }
 
+/// Point light entity that follows mouse around.
+struct MouseLight(Entity);
+
+/// System that positions the light specified by `MouseLight` at
+/// the voxel intersected by the mouse ray.
+struct MouseLightSystem {
+    mouse_pos: PhysicalPosition,
+    max_steps: u32,
+
+    /// Distance that light is positioned from intersected surface.
+    surface_distance: f32,
+}
+
+impl Default for MouseLightSystem {
+    fn default() -> Self {
+        MouseLightSystem {
+            mouse_pos: PhysicalPosition::new(0.0, 0.0),
+            max_steps: 1000,
+            // Half a voxel's size
+            surface_distance: 0.5,
+        }
+    }
+}
+
+impl<'a> System<'a> for MouseLightSystem {
+    #[allow(clippy::type_complexity)]
+    type SystemData = (
+        ReadExpect<'a, DeviceDimensions>,
+        ReadExpect<'a, Vec<glutin::Event>>,
+        ReadExpect<'a, MouseLight>,
+        ReadStorage<'a, PointLight>,
+        WriteStorage<'a, Transform>,
+        ReadExpect<'a, ChunkMapping>,
+        ReadStorage<'a, VoxelArrayChunk<TileVoxel>>,
+        (
+            Read<'a, ActiveCamera>,
+            Read<'a, DeviceDimensions>,
+            ReadStorage<'a, CameraView>,
+            ReadStorage<'a, CameraProjection>,
+        ),
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        use glutin::{Event, WindowEvent};
+        use rengine::voxel::VoxelRayInfo;
+
+        let (
+            device_dim,
+            events,
+            mouse_light,
+            point_lights,
+            mut transforms,
+            chunk_map,
+            chunks,
+            raycast_data,
+        ) = data;
+
+        let e = mouse_light.0;
+        if let (Some(_), Some(trans)) = (point_lights.get(e), transforms.get_mut(e)) {
+            for ev in events.iter() {
+                if let Event::WindowEvent { event, .. } = ev {
+                    if let WindowEvent::CursorMoved { position, .. } = event {
+                        self.mouse_pos = position.to_physical(device_dim.dpi_factor());
+                    }
+                }
+            }
+
+            if let Some(raycast) = raycast_from_camera(raycast_data, self.mouse_pos, self.max_steps)
+            {
+                let mut maybe_ray_info: Option<VoxelRayInfo> = None;
+                for ray_info in raycast {
+                    let chunk_coord = voxel_to_chunk(ray_info.voxel_coord());
+                    let occupied = chunk_map
+                        .chunk_entity(chunk_coord)
+                        .and_then(|e| chunks.get(e))
+                        .and_then(|c| c.get(*ray_info.voxel_coord()))
+                        .map(|d| d.occupied())
+                        .unwrap_or(false);
+
+                    if occupied {
+                        if let Some(last_ray) = maybe_ray_info {
+                            // Step back so we don't place the light inside the occupied voxel.
+                            let new_point = last_ray.intersect()
+                                + (last_ray.normal().into_inner() * self.surface_distance);
+                            trans.set_position(new_point.to_homogeneous().xyz());
+                        }
+
+                        break;
+                    } else {
+                        maybe_ray_info = Some(ray_info.clone());
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+    simple_logger::init().expect("failed to initialized logger");
+
+    trace!("Building Application");
+
     let app = AppBuilder::new()
         .title("Voxels Example")
         .size(800, 600)

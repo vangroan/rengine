@@ -22,6 +22,22 @@ gfx_defines! {
         transform: [[f32; 4]; 4] = "u_Transform",
     }
 
+    // Note: Never use vec3 inside uniform block
+    constant GlossMaterial {
+        ambient: [f32; 4] = "u_Ambient",
+        diffuse: [f32; 4] = "u_Diffuse",
+        specular: [f32; 4] = "u_Specular",
+        shininess: f32 = "u_Shininess",
+    }
+
+    // Note: Never use vec3 inside uniform block
+    constant LightParams {
+        pos: [f32; 4] = "pos",
+        ambient: [f32; 4] = "ambient",
+        diffuse: [f32; 4] = "diffuse",
+        specular: [f32; 4] = "specular",
+    }
+
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
 
@@ -30,6 +46,46 @@ gfx_defines! {
 
         // Model Transform Matrix
         transforms: gfx::ConstantBuffer<Transform> = "Transform",
+
+        // View
+        view: gfx::Global<[[f32; 4]; 4]> = "u_View",
+
+        // Projection
+        proj: gfx::Global<[[f32; 4]; 4]> = "u_Proj",
+
+        // Enables the scissor test
+        scissor: gfx::Scissor = (),
+
+        // out: gfx::RenderTarget<ColorFormat> = "Target0"
+        // This makes the BlendMode part of the pipeline, which is fine for the simple case
+        render_target: gfx::BlendTarget<ColorFormat> = ("Target0", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
+
+        depth_target: gfx::DepthTarget<DepthFormat> =
+            gfx::preset::depth::LESS_EQUAL_WRITE,
+    }
+
+    pipeline gloss_pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+
+        // Simple texture sampler
+        sampler: gfx::TextureSampler<[f32; 4]> = "t_Sampler",
+
+        // Phong material parameters
+        material: gfx::ConstantBuffer<GlossMaterial> = "b_Material",
+
+        // Support one point light
+        lights: gfx::ConstantBuffer<LightParams> = "b_Lights",
+
+        // Number of lights uploaded to buffer
+        num_lights: gfx::Global<i32> = "u_NumLights",
+
+        // Camera position
+        eye: gfx::Global<[f32; 4]> = "u_Eye",
+
+        normal_matrix: gfx::Global<[[f32; 4]; 4]> = "u_NormalMatrix",
+
+        // Model Transform Matrix
+        model: gfx::Global<[[f32; 4]; 4]> = "u_Model",
 
         // View
         view: gfx::Global<[[f32; 4]; 4]> = "u_View",

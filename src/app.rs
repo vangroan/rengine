@@ -11,7 +11,7 @@ use crate::graphics::GraphicContext;
 use crate::gui::{self, text, widgets, DrawGuiSystem, GuiGraph};
 use crate::metrics::MetricHub;
 use crate::modding::Mods;
-use crate::render::{ChannelPair, Gizmo, Material};
+use crate::render::{self, ChannelPair, Gizmo, Lights, Material, PointLight};
 use crate::res::{DeltaTime, DeviceDimensions, ViewPort};
 use crate::scene::{Scene, SceneStack};
 use crate::sys::DrawSystem;
@@ -80,6 +80,7 @@ impl<'a, 'b> App<'a, 'b> {
         world.register::<Mesh>();
         world.register::<Transform>();
         world.register::<Material>();
+        world.register::<PointLight>();
         world.register::<Gizmo>();
         world.register::<CameraView>();
         world.register::<CameraProjection>();
@@ -114,6 +115,9 @@ impl<'a, 'b> App<'a, 'b> {
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
+
+        // Lights
+        world.add_resource(Lights::new(&mut graphics, render::MAX_NUM_LIGHTS));
 
         // GUI
         let root_entity = widgets::create_container(&mut world, gui::PackMode::Frame);
@@ -193,6 +197,39 @@ impl<'a, 'b> App<'a, 'b> {
             world.add_resource(PipelineBundle::new(pso, shader_program));
         }
 
+        // Gloss Material PSO
+        {
+            // Shader program
+            let shader_program = graphics
+                .factory
+                .link_program(
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gloss_150.glslv"
+                    )),
+                    include_bytes!(concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/shaders/gloss_150.glslf"
+                    )),
+                )
+                .unwrap();
+
+            // Pipeline State Object
+            let pso = graphics
+                .factory
+                .create_pipeline_from_program(
+                    &shader_program,
+                    gfx::Primitive::TriangleList,
+                    gfx::state::Rasterizer::new_fill().with_cull_back(),
+                    gloss_pipe::new(),
+                )
+                .expect("Failed to link gloss material shader");
+
+            // Bundle program and pipeline state object together to avoid
+            // lifetime issues with world resources borrowing each other.
+            world.add_resource(PipelineBundle::new(pso, shader_program));
+        }
+
         // Gizmo Wireframe PSO
         {
             let gizmo_shader = graphics
@@ -219,7 +256,7 @@ impl<'a, 'b> App<'a, 'b> {
                     fillmode,
                     gizmo_pipe::new(),
                 )
-                .unwrap();
+                .expect("Failed to link wireframe material shader");
 
             world.add_resource(PipelineBundle::new(gizmo_pso, gizmo_shader));
         }
@@ -440,10 +477,10 @@ impl<'a, 'b> App<'a, 'b> {
             });
 
             // Cooperatively give up CPU time
-            ::std::thread::yield_now();
+            // ::std::thread::yield_now();
 
             // TODO: Remove sleep; call update and render on separate timers
-            // ::std::thread::sleep(::std::time::Duration::from_millis(1));
+            ::std::thread::sleep(::std::time::Duration::from_millis(16));
         }
 
         Ok(())

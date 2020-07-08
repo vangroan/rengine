@@ -32,6 +32,34 @@ impl Transform {
 
         m
     }
+
+    /// Creates a transform matrix for surface normals.
+    ///
+    /// For use in shaders for transforming surface normals.
+    ///
+    /// Because normals are only direction vectors, they can't be transformed
+    /// using the model matrix used for transforming the vertices from local
+    /// space to world space. Normal vectors have no fourth component and thus
+    /// must be unaffected by translations.
+    ///
+    /// Furthermore, if a non-uniform scale is applied, the normals will no
+    /// longer be perpendicular to their surface.
+    ///
+    /// The resulting matrix can be cast to a 3x3 matrix to have its translation
+    /// components discarded.
+    ///
+    /// model_matrix → inverse → transpose = normal_matrix
+    ///
+    /// See: [LearnOpenGL - Basic Lighting](https://learnopengl.com/Lighting/Basic-Lighting)
+    #[inline]
+    pub fn normal_matrix(&self) -> Mat4x4 {
+        let mut m = self.matrix();
+
+        m.try_inverse_mut();
+        m.transpose_mut();
+
+        m
+    }
 }
 
 /// Builder methods that consume the `Transform` and returns it
