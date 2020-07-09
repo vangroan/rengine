@@ -133,9 +133,10 @@ impl MetricHub {
                     recv(cancel_recv) -> _msg => {
                         break 'message_pump;
                     }
+                    default() => { thread::sleep(Duration::from_millis(32)) }
                 }
                 // So we don't starve other threads.
-                thread::yield_now();
+                thread::sleep(Duration::from_millis(1));
             }
             trace!("Metric worker thread shut down.");
         })
