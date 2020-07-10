@@ -122,6 +122,30 @@ impl<'a> System<'a> for DrawSystem {
                         Vector4::new(0.0, 0.0, 0.0, 1.0),
                     ));
 
+                // Send lights to graphics card
+                let max_lights = lights.max_num();
+                let mut light_count = 0;
+                for (offset, (light_trans, point_light)) in (&transforms, &point_lights)
+                    .join()
+                    .enumerate()
+                    .take(max_lights)
+                {
+                    let pos = light_trans.position();
+                    let light_params = gfx_types::LightParams {
+                        pos: [pos.x, pos.y, pos.z, 1.0],
+                        ambient: point_light.ambient,
+                        diffuse: point_light.diffuse,
+                        specular: point_light.specular,
+                    };
+
+                    // Send light to graphics card
+                    encoder
+                        .update_buffer(&lights.buffer(), &[light_params], offset)
+                        .expect("Failed to update buffer");
+
+                    light_count += 1;
+                }
+
                 for (ref mesh, ref mat, ref trans) in (&meshes, &materials, &transforms).join() {
                     // Choose pipeline based on material
                     match mat {
@@ -155,30 +179,6 @@ impl<'a> System<'a> for DrawSystem {
                             encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
                         }
                         Material::Gloss { texture, material } => {
-                            // Send lights to graphics card
-                            let max_lights = lights.max_num();
-                            let mut light_count = 0;
-                            for (offset, (light_trans, point_light)) in (&transforms, &point_lights)
-                                .join()
-                                .enumerate()
-                                .take(max_lights)
-                            {
-                                let pos = light_trans.position();
-                                let light_params = gfx_types::LightParams {
-                                    pos: [pos.x, pos.y, pos.z, 1.0],
-                                    ambient: point_light.ambient,
-                                    diffuse: point_light.diffuse,
-                                    specular: point_light.specular,
-                                };
-
-                                // Send light to graphics card
-                                encoder
-                                    .update_buffer(&lights.buffer(), &[light_params], offset)
-                                    .expect("Failed to update buffer");
-
-                                light_count += 1;
-                            }
-
                             // Send material to graphics card
                             encoder
                                 .update_buffer(
@@ -190,7 +190,7 @@ impl<'a> System<'a> for DrawSystem {
 
                             // Surface Normal Matrix
                             let model_matrix = trans.matrix();
-                            let mut normal_matrix = model_matrix.clone();
+                            let mut normal_matrix = model_matrix;
                             normal_matrix.try_inverse_mut();
                             normal_matrix.transpose_mut();
 
