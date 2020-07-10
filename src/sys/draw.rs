@@ -19,7 +19,7 @@ pub struct DrawSystem {
 
 #[derive(SystemData)]
 pub struct DrawSystemData<'a> {
-    metrics: Read<'a, MetricHub>,
+    // metrics: Read<'a, MetricHub>,
     basic_pipe_bundle: ReadExpect<'a, PipelineBundle<pipe::Meta>>,
     gloss_pipe_bundle: ReadExpect<'a, PipelineBundle<gloss_pipe::Meta>>,
     gizmo_pipe_bundle: ReadExpect<'a, PipelineBundle<gizmo_pipe::Meta>>,
@@ -81,7 +81,7 @@ impl<'a> System<'a> for DrawSystem {
 
     fn run(&mut self, data: Self::SystemData) {
         let DrawSystemData {
-            metrics,
+            // metrics,
             basic_pipe_bundle,
             gloss_pipe_bundle,
             gizmo_pipe_bundle,
@@ -99,9 +99,9 @@ impl<'a> System<'a> for DrawSystem {
         } = data;
         match self.channel.recv_block() {
             Ok(mut encoder) => {
-                let mut render_timer = metrics.timer(GRAPHICS_RENDER, MetricAggregate::Maximum);
-                let mut _draw_call_counter =
-                    metrics.counter(GRAPHICS_DRAW_CALLS, MetricAggregate::Sum);
+                // let mut render_timer = metrics.timer(GRAPHICS_RENDER, MetricAggregate::Maximum);
+                // let mut _draw_call_counter =
+                //     metrics.counter(GRAPHICS_DRAW_CALLS, MetricAggregate::Sum);
 
                 // Without a camera, we draw according to the default OpenGL behaviour
                 let (proj_matrix, view_matrix, eye) = active_camera
@@ -240,7 +240,7 @@ impl<'a> System<'a> for DrawSystem {
                     eprintln!("{}", err);
                 }
 
-                render_timer.stop();
+                // render_timer.stop();
             }
             Err(err) => eprintln!("{}", err),
         }

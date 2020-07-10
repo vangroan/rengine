@@ -111,7 +111,7 @@ impl<'a, 'b> App<'a, 'b> {
         }
 
         // Statistics Metrics
-        world.add_resource(MetricHub::default());
+        // world.add_resource(MetricHub::default());
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
