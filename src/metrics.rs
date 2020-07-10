@@ -136,7 +136,7 @@ impl MetricHub {
                     default() => { thread::sleep(Duration::from_millis(32)) }
                 }
                 // So we don't starve other threads.
-                thread::sleep(Duration::from_millis(1));
+                thread::yield_now();
             }
             trace!("Metric worker thread shut down.");
         })
