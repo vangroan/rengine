@@ -575,7 +575,7 @@ impl AppBuilder {
         let context_builder = ContextBuilder::new()
             .with_gl(GlRequest::Specific(Api::OpenGl, (3, 2)))
             .with_gl_profile(GlProfile::Core) // modern OpenGL only
-            .with_vsync(true);
+            .with_vsync(false);
 
         // Init
         let (window, device, factory, render_target, depth_stencil) =
