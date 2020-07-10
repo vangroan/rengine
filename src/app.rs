@@ -477,10 +477,12 @@ impl<'a, 'b> App<'a, 'b> {
             });
 
             // Cooperatively give up CPU time
-            // ::std::thread::yield_now();
+            ::std::thread::yield_now();
 
             // TODO: Remove sleep; call update and render on separate timers
-            ::std::thread::sleep(::std::time::Duration::from_millis(1));
+            // let frame_time = last_time.elapsed().as_millis() as u64;
+            // let sleep_ms = if frame_time <= 16 { 16 - frame_time } else { 0 };
+            // ::std::thread::sleep(::std::time::Duration::from_millis(sleep_ms));
         }
 
         Ok(())
@@ -575,7 +577,7 @@ impl AppBuilder {
         let context_builder = ContextBuilder::new()
             .with_gl(GlRequest::Specific(Api::OpenGl, (3, 2)))
             .with_gl_profile(GlProfile::Core) // modern OpenGL only
-            .with_vsync(false);
+            .with_vsync(true);
 
         // Init
         let (window, device, factory, render_target, depth_stencil) =
