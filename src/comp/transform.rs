@@ -25,11 +25,6 @@ impl Transform {
     pub fn matrix(&self) -> Mat4x4 {
         let mut m = Mat4x4::identity();
 
-        // m = glm::translate(&m, &self.pos);
-        // m = m * nalgebra_glm::quat_to_mat4(&self.rot);
-        // m = glm::scale(&m, &self.scale);
-        // m = glm::translate(&m, &(-self.anchor));
-
         m.append_translation_mut(&self.pos);
         m = m * nalgebra_glm::quat_to_mat4(&self.rot);
         m.append_nonuniform_scaling_mut(&self.scale);

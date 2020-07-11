@@ -111,7 +111,7 @@ impl<'a, 'b> App<'a, 'b> {
         }
 
         // Statistics Metrics
-        // world.add_resource(MetricHub::default());
+        world.add_resource(MetricHub::default());
 
         // Event Streams
         world.add_resource::<Vec<glutin::Event>>(Vec::new());
@@ -478,11 +478,6 @@ impl<'a, 'b> App<'a, 'b> {
 
             // Cooperatively give up CPU time
             ::std::thread::yield_now();
-
-            // TODO: Remove sleep; call update and render on separate timers
-            // let frame_time = last_time.elapsed().as_millis() as u64;
-            // let sleep_ms = if frame_time <= 16 { 16 - frame_time } else { 0 };
-            // ::std::thread::sleep(::std::time::Duration::from_millis(sleep_ms));
         }
 
         Ok(())

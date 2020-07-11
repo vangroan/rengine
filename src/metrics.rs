@@ -65,6 +65,7 @@ impl Default for MetricHub {
         MetricHub::new(MetricSettings {
             data_point_count: 64,
             aggregate_interval: Duration::from_secs(1),
+            sleep_duration: Duration::from_millis(32),
         })
     }
 }
@@ -133,7 +134,7 @@ impl MetricHub {
                     recv(cancel_recv) -> _msg => {
                         break 'message_pump;
                     }
-                    default() => { thread::sleep(Duration::from_millis(32)) }
+                    default() => { thread::sleep(settings.sleep_duration) }
                 }
                 // So we don't starve other threads.
                 thread::yield_now();
@@ -267,6 +268,8 @@ pub struct MetricSettings {
     /// Interval on which the background worker thread aggregates measurements
     /// into data points.
     aggregate_interval: Duration,
+    /// Duration to sleep the worker thread when no messages are left to consume.
+    sleep_duration: Duration,
 }
 
 impl Default for MetricSettings {
@@ -274,6 +277,7 @@ impl Default for MetricSettings {
         MetricSettings {
             data_point_count: 64,
             aggregate_interval: Duration::from_secs(1),
+            sleep_duration: Duration::from_millis(32),
         }
     }
 }
