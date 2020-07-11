@@ -111,6 +111,7 @@ impl<'a, 'b> App<'a, 'b> {
         }
 
         // Statistics Metrics
+        // TODO: Add feature flag to disable metrics for release builds.
         // world.add_resource(MetricHub::default());
 
         // Event Streams
