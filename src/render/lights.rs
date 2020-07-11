@@ -72,7 +72,7 @@ where
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
 pub struct PointLight {
-    pub(crate) buf: gfx::handle::Buffer<gfx_device::Resources, gfx_types::LightParams>,
+    pub buf: gfx::handle::Buffer<gfx_device::Resources, gfx_types::LightParams>,
     pub ambient: Color,
     pub diffuse: Color,
     pub specular: Color,
