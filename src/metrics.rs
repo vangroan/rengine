@@ -64,7 +64,7 @@ impl Default for MetricHub {
     fn default() -> Self {
         MetricHub::new(MetricSettings {
             data_point_count: 64,
-            aggregate_interval: Duration::from_secs(1),
+            aggregate_interval: Duration::from_millis(32),
             sleep_duration: Duration::from_millis(32),
         })
     }
@@ -211,9 +211,12 @@ impl Drop for MetricHub {
 
 /// Process the raw measurements of the given time series into aggregated data points.
 fn process_timeseries(aggregate: MetricAggregate, timeseries: &mut TimeSeries, interval: Duration) {
+    // Expensive call; keep outside loop.
+    let now = Utc::now();
+
     while let Some(slot) = timeseries.measurements.iter().map(|(key, _)| *key).next() {
         // Don't aggregate the current slot.
-        if datetime_to_slot(&Utc::now(), &interval) == Some(slot) {
+        if datetime_to_slot(&now, &interval) == Some(slot) {
             continue;
         }
         // Important: remove element to cleanup memory.
@@ -276,7 +279,7 @@ impl Default for MetricSettings {
     fn default() -> Self {
         MetricSettings {
             data_point_count: 64,
-            aggregate_interval: Duration::from_secs(1),
+            aggregate_interval: Duration::from_millis(32),
             sleep_duration: Duration::from_millis(32),
         }
     }
