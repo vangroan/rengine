@@ -19,7 +19,7 @@ pub struct DrawSystem {
 
 #[derive(SystemData)]
 pub struct DrawSystemData<'a> {
-    metrics: Read<'a, MetricHub>,
+    // metrics: Read<'a, MetricHub>,
     basic_pipe_bundle: ReadExpect<'a, PipelineBundle<pipe::Meta>>,
     gloss_pipe_bundle: ReadExpect<'a, PipelineBundle<gloss_pipe::Meta>>,
     gizmo_pipe_bundle: ReadExpect<'a, PipelineBundle<gizmo_pipe::Meta>>,
@@ -81,7 +81,7 @@ impl<'a> System<'a> for DrawSystem {
 
     fn run(&mut self, data: Self::SystemData) {
         let DrawSystemData {
-            metrics,
+            // metrics,
             basic_pipe_bundle,
             gloss_pipe_bundle,
             gizmo_pipe_bundle,
@@ -99,9 +99,9 @@ impl<'a> System<'a> for DrawSystem {
         } = data;
         match self.channel.recv_block() {
             Ok(mut encoder) => {
-                let mut render_timer = metrics.timer(GRAPHICS_RENDER, MetricAggregate::Maximum);
-                let mut _draw_call_counter =
-                    metrics.counter(GRAPHICS_DRAW_CALLS, MetricAggregate::Sum);
+                // let mut render_timer = metrics.timer(GRAPHICS_RENDER, MetricAggregate::Maximum);
+                // let mut _draw_call_counter =
+                //     metrics.counter(GRAPHICS_DRAW_CALLS, MetricAggregate::Sum);
 
                 // Without a camera, we draw according to the default OpenGL behaviour
                 let (proj_matrix, view_matrix, eye) = active_camera
@@ -121,6 +121,30 @@ impl<'a> System<'a> for DrawSystem {
                         Matrix4::identity(),
                         Vector4::new(0.0, 0.0, 0.0, 1.0),
                     ));
+
+                // Send lights to graphics card
+                let max_lights = lights.max_num();
+                let mut light_count = 0;
+                for (offset, (light_trans, point_light)) in (&transforms, &point_lights)
+                    .join()
+                    .enumerate()
+                    .take(max_lights)
+                {
+                    let pos = light_trans.position();
+                    let light_params = gfx_types::LightParams {
+                        pos: [pos.x, pos.y, pos.z, 1.0],
+                        ambient: point_light.ambient,
+                        diffuse: point_light.diffuse,
+                        specular: point_light.specular,
+                    };
+
+                    // Send light to graphics card
+                    encoder
+                        .update_buffer(&lights.buffer(), &[light_params], offset)
+                        .expect("Failed to update buffer");
+
+                    light_count += 1;
+                }
 
                 for (ref mesh, ref mat, ref trans) in (&meshes, &materials, &transforms).join() {
                     // Choose pipeline based on material
@@ -155,30 +179,6 @@ impl<'a> System<'a> for DrawSystem {
                             encoder.draw(&mesh.slice, &basic_pipe_bundle.pso, &data);
                         }
                         Material::Gloss { texture, material } => {
-                            // Send lights to graphics card
-                            let max_lights = lights.max_num();
-                            let mut light_count = 0;
-                            for (offset, (light_trans, point_light)) in (&transforms, &point_lights)
-                                .join()
-                                .enumerate()
-                                .take(max_lights)
-                            {
-                                let pos = light_trans.position();
-                                let light_params = gfx_types::LightParams {
-                                    pos: [pos.x, pos.y, pos.z, 1.0],
-                                    ambient: point_light.ambient,
-                                    diffuse: point_light.diffuse,
-                                    specular: point_light.specular,
-                                };
-
-                                // Send light to graphics card
-                                encoder
-                                    .update_buffer(&lights.buffer(), &[light_params], offset)
-                                    .expect("Failed to update buffer");
-
-                                light_count += 1;
-                            }
-
                             // Send material to graphics card
                             encoder
                                 .update_buffer(
@@ -190,7 +190,7 @@ impl<'a> System<'a> for DrawSystem {
 
                             // Surface Normal Matrix
                             let model_matrix = trans.matrix();
-                            let mut normal_matrix = model_matrix.clone();
+                            let mut normal_matrix = model_matrix;
                             normal_matrix.try_inverse_mut();
                             normal_matrix.transpose_mut();
 
@@ -240,7 +240,7 @@ impl<'a> System<'a> for DrawSystem {
                     eprintln!("{}", err);
                 }
 
-                render_timer.stop();
+                // render_timer.stop();
             }
             Err(err) => eprintln!("{}", err),
         }
