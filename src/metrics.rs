@@ -62,11 +62,7 @@ pub struct MetricHub {
 
 impl Default for MetricHub {
     fn default() -> Self {
-        MetricHub::new(MetricSettings {
-            data_point_count: 64,
-            aggregate_interval: Duration::from_millis(32),
-            sleep_duration: Duration::from_millis(32),
-        })
+        MetricHub::new(MetricSettings::default())
     }
 }
 
@@ -279,7 +275,7 @@ impl Default for MetricSettings {
     fn default() -> Self {
         MetricSettings {
             data_point_count: 64,
-            aggregate_interval: Duration::from_millis(32),
+            aggregate_interval: Duration::from_secs(1),
             sleep_duration: Duration::from_millis(32),
         }
     }
