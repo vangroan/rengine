@@ -219,6 +219,14 @@ impl Transform {
             self.rot = inverse_quat;
         }
     }
+
+    #[inline]
+    pub fn set_scale<V>(&mut self, scale: V)
+    where
+        V: Into<Vec3>,
+    {
+        self.scale = scale.into();
+    }
 }
 
 impl Default for Transform {
