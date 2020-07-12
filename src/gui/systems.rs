@@ -224,13 +224,13 @@ pub type WidgetEvents = EventChannel<WidgetEvent>;
 #[derive(Debug)]
 pub struct WidgetEvent {
     /// Entity id of the widget that handled the event.
-    entity: specs::Entity,
+    pub entity: specs::Entity,
     /// Node id in the GUI graph for the widget.
-    node_id: crate::gui::NodeId,
+    pub node_id: crate::gui::NodeId,
     /// GUI event kind.
-    kind: WidgetEventKind,
+    pub kind: WidgetEventKind,
     /// Window event that caused this GUI event.
-    window_event: glutin::WindowEvent,
+    pub window_event: glutin::WindowEvent,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
