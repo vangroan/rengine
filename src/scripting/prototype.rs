@@ -52,7 +52,7 @@
 //!
 //! Prototypes are stored in a separate boxed storage so the `Deserialized`
 //! trait isn't needed for [`PrototypeTable::get`].
-use std::{any::TypeId, borrow::Cow, collections::HashMap, marker::PhantomData};
+use std::{any::TypeId, borrow::Cow, collections::HashMap, iter::Iterator, marker::PhantomData};
 
 use serde::Deserialize;
 
@@ -285,7 +285,21 @@ impl PrototypeTable {
             .and_then(|type_id| self.prototypes2.get(&type_id))
             .map(|(_, storage)| Box::as_ref(storage))
             .and_then(|storage| storage.downcast_ref::<PrototypeMapStorage<T>>())
-            .and_then(|proto_factory| proto_factory.get(key))
+            .and_then(|proto_storage| proto_storage.get(key))
+    }
+
+    /// Iterate registered prototypes of the given type.
+    pub fn iter_protos<T>(&self) -> Option<impl Iterator<Item = (&str, &T)>>
+    where
+        T: 'static + Prototype,
+    {
+        let type_id = TypeId::of::<T>();
+
+        self.prototypes2
+            .get(&type_id)
+            .map(|(_, storage)| Box::as_ref(storage))
+            .and_then(|storage| storage.downcast_ref::<PrototypeMapStorage<T>>())
+            .map(|proto_storage| proto_storage.data.iter().map(|(s, p)| (s.as_str(), p)))
     }
 }
 
@@ -343,5 +357,51 @@ mod test {
         let prototype = table.get::<Foo>("test:foo:prototype_1").unwrap();
         assert_eq!(prototype.name, "prototype_1");
         assert_eq!(prototype.position, [1, 2]);
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut table: PrototypeTable = PrototypeTable::new();
+        let lua = rlua::Lua::new();
+
+        table.register::<Foo>();
+
+        let result: rlua::Result<()> = lua.context(|lua_ctx| {
+            for i in 1..4 {
+                let value: rlua::Value = lua_ctx
+                    .load(&format!(
+                        r#"
+                        {{
+                            name = 'prototype_{}',
+                            position = {{ 1, 2 }},
+                        }}
+                        "#,
+                        i
+                    ))
+                    .eval()?;
+
+                table.insert(
+                    Foo::type_name().as_ref(),
+                    &format!("test:foo:prototype_{}", i),
+                    value,
+                );
+            }
+
+            Ok(())
+        });
+        result.unwrap();
+
+        let mut count = 0;
+        if let Some(iter) = table.iter_protos::<Foo>() {
+            let mut v: Vec<_> = iter.collect();
+            v.sort_by(|a, b| a.1.name.cmp(&b.1.name));
+
+            for (idx, (_key, proto)) in v.iter().enumerate() {
+                assert_eq!(proto.name.to_string(), format!("prototype_{}", idx + 1));
+                count += 1;
+            }
+        };
+
+        assert_eq!(count, 3, "Unexpected number of iterations");
     }
 }
