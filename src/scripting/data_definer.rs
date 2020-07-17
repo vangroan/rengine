@@ -5,17 +5,17 @@ use std::{cell::RefCell, rc::Rc};
 use log::trace;
 use rlua::{Context, Lua, RegistryKey, Table, UserData, UserDataMethods, Value};
 
-use crate::scripting::ModMeta;
+use crate::scripting::{ModId, ModMeta};
 
 pub struct LuaDataDefiner {
     /// Name of table field in the prototype to extract
     /// a value and use as an identifier.
     pub key_field: String,
 
-    /// Name of the current mod in the data pass.
+    /// Name and id of the current mod in the data pass.
     ///
     /// Register calls will use this name as the key in the data table.
-    pub current_mod_name: Option<String>,
+    pub current_mod: Option<(ModId, String)>,
 
     /// Table that contains all the definitions.
     pub table_key: rlua::RegistryKey,
@@ -33,7 +33,7 @@ impl LuaDataDefiner {
 
         Ok(LuaDataDefiner {
             key_field: key_field.to_string(),
-            current_mod_name: None,
+            current_mod: None,
             table_key,
         })
     }
@@ -41,7 +41,7 @@ impl LuaDataDefiner {
     /// Set the current mod to prime the definer for loading definitions for that specific mod.
     #[inline]
     pub fn prime_mod(&mut self, mod_meta: &ModMeta) {
-        self.current_mod_name = Some(mod_meta.name.clone());
+        self.current_mod = Some((mod_meta.id, mod_meta.name.clone()));
     }
 }
 
@@ -71,11 +71,11 @@ impl UserData for LuaDataDefinerRc {
             |lua_ctx, definer_rc, (type_name, definitions): (String, Table)| {
                 let data_definer = definer_rc.borrow();
                 let key_field = data_definer.key_field.as_str();
-                let mod_name = data_definer
-                    .current_mod_name
+                let (mod_id, mod_name) = data_definer
+                    .current_mod
                     .as_ref()
-                    .expect("data definer register called, but not primed with mod")
-                    .as_str();
+                    .map(|(id, name)| (id, name.as_str()))
+                    .expect("data definer register called, but not primed with mod");
                 let data_table = lua_ctx.registry_value::<Table>(&data_definer.table_key)?;
 
                 // Sequence of definitions.
