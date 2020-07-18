@@ -1,4 +1,4 @@
 use crate::scripting;
 
 pub use scripting::prototype::{Prototype, PrototypeTable};
-pub use scripting::{ModMeta, Mods};
+pub use scripting::{ModId, ModMeta, Mods};

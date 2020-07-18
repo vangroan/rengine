@@ -41,7 +41,7 @@
 //!
 //!     // Note: The `type_name` argument must match the `type_name` in
 //!     //       the struct `GameActor`;
-//!     prototype_table.insert("game_actor", "my_mod:game_actor:foot_soldier", soldier_table);
+//!     prototype_table.insert(ModId::none(), "game_actor", "my_mod:game_actor:foot_soldier", soldier_table);
 //!
 //!     Ok(())
 //! });
@@ -279,7 +279,7 @@ impl PrototypeTable {
     /// #
     /// // Note: The `type_name` argument must match the `type_name` in
     /// //       the struct `GameActor`;
-    /// prototype_table.insert("game_actor", "my_mod:game_actor:foot_soldier", soldier_table);
+    /// prototype_table.insert(ModId::none(), "game_actor", "my_mod:game_actor:foot_soldier", soldier_table);
     /// #
     /// #    Ok(())
     /// # });
