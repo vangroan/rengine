@@ -97,7 +97,7 @@ mopafy!(Storage);
 ///
 /// Definitions from scripts live here.
 pub struct PrototypeMapStorage<T: Prototype> {
-    data: HashMap<String, T>,
+    data: HashMap<String, PrototypeMeta<T>>,
 }
 
 impl<T> PrototypeMapStorage<T>
@@ -110,11 +110,11 @@ where
         }
     }
 
-    fn insert(&mut self, key: String, proto: T) {
-        self.data.insert(key, proto);
+    fn insert(&mut self, key: String, proto_meta: PrototypeMeta<T>) {
+        self.data.insert(key, proto_meta);
     }
 
-    fn get<S>(&self, key: S) -> Option<&T>
+    fn get<S>(&self, key: S) -> Option<&PrototypeMeta<T>>
     where
         S: AsRef<str>,
     {
@@ -124,6 +124,19 @@ where
 
 impl<T> Storage for PrototypeMapStorage<T> where T: 'static + Prototype {}
 
+/// Meta data describing the prototype.
+struct PrototypeMeta<T> {
+    /// Identifying string that encodes the mod name, prototype
+    /// category and instance name.
+    key: String,
+
+    /// Mod that defined the prototype.
+    mod_id: ModId,
+
+    /// Actual prototype instance.
+    proto: T,
+}
+
 /// Trait for a factory that creates a concrete prototype from a dynamically typed Lua value.
 ///
 /// When [`PrototypeTable::insert`](struct.PrototypeTable.html) is called from a context with no
@@ -132,7 +145,13 @@ impl<T> Storage for PrototypeMapStorage<T> where T: 'static + Prototype {}
 ///
 /// Used for upcasting and boxing a concrete storage type in the [`PrototypeTable`](struct.PrototypeTable.html).
 trait Factory: mopa::Any {
-    fn insert_value<'lua>(&self, storage: &mut dyn Storage, key: String, value: rlua::Value<'lua>);
+    fn insert_value<'lua>(
+        &self,
+        storage: &mut dyn Storage,
+        mod_id: ModId,
+        key: String,
+        value: rlua::Value<'lua>,
+    );
 }
 mopafy!(Factory);
 
@@ -159,15 +178,26 @@ where
     /// Magic happens here.
     ///
     /// This factory knows the static type needed for deserialization.
-    fn insert_value<'lua>(&self, storage: &mut dyn Storage, key: String, value: rlua::Value<'lua>) {
+    fn insert_value<'lua>(
+        &self,
+        storage: &mut dyn Storage,
+        mod_id: ModId,
+        key: String,
+        value: rlua::Value<'lua>,
+    ) {
         let deserializer = rlua_serde::de::Deserializer { value };
         let proto = T::deserialize(deserializer).unwrap();
+        let proto_meta = PrototypeMeta {
+            key: key.clone(),
+            mod_id,
+            proto,
+        };
 
         // TODO: Error on existing?
         storage
             .downcast_mut::<PrototypeMapStorage<T>>()
             .expect("Unexpected storage type during downcast")
-            .insert(key, proto);
+            .insert(key, proto_meta);
     }
 }
 
@@ -279,7 +309,7 @@ impl PrototypeTable {
         // Dynamic dispatch to concrete storage type, which would
         // have the concrete type of the target prototype as a generic
         // type parameter.
-        factory.insert_value(storage, key.to_string(), value);
+        factory.insert_value(storage, mod_id, key.to_string(), value);
     }
 
     /// Retrieve an immutable reference to a prototype if it exists.
@@ -294,6 +324,22 @@ impl PrototypeTable {
             .map(|(_, storage)| Box::as_ref(storage))
             .and_then(|storage| storage.downcast_ref::<PrototypeMapStorage<T>>())
             .and_then(|proto_storage| proto_storage.get(key))
+            .map(|proto_meta| &proto_meta.proto)
+    }
+
+    /// Retrieve the mod id associated with the given prototype instance.
+    pub fn get_mod_id<T>(&self, key: &str) -> Option<ModId>
+    where
+        T: 'static + Prototype,
+    {
+        let type_id = TypeId::of::<T>();
+
+        self.prototypes2
+            .get(&type_id)
+            .map(|(_, storage)| Box::as_ref(storage))
+            .and_then(|storage| storage.downcast_ref::<PrototypeMapStorage<T>>())
+            .and_then(|proto_storage| proto_storage.get(key))
+            .map(|proto_meta| proto_meta.mod_id)
     }
 
     /// Iterate registered prototypes of the given type.
@@ -307,7 +353,12 @@ impl PrototypeTable {
             .get(&type_id)
             .map(|(_, storage)| Box::as_ref(storage))
             .and_then(|storage| storage.downcast_ref::<PrototypeMapStorage<T>>())
-            .map(|proto_storage| proto_storage.data.iter().map(|(s, p)| (s.as_str(), p)))
+            .map(|proto_storage| {
+                proto_storage
+                    .data
+                    .iter()
+                    .map(|(s, p)| (s.as_str(), &p.proto))
+            })
     }
 }
 
@@ -356,7 +407,12 @@ mod test {
                 )
                 .eval()?;
 
-            table.insert(Foo::type_name().as_ref(), "test:foo:prototype_1", value);
+            table.insert(
+                ModId::none(),
+                Foo::type_name().as_ref(),
+                "test:foo:prototype_1",
+                value,
+            );
 
             Ok(())
         });
@@ -389,6 +445,7 @@ mod test {
                     .eval()?;
 
                 table.insert(
+                    ModId::none(),
                     Foo::type_name().as_ref(),
                     &format!("test:foo:prototype_{}", i),
                     value,
