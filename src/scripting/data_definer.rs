@@ -87,7 +87,9 @@ impl UserData for LuaDataDefinerRc {
                     // Prototypes for the current mod
                     let mod_table = match data_table.get::<_, Value>(mod_name)? {
                         Value::Nil => {
+                            // Lazily create a mod table.
                             let t = lua_ctx.create_table()?;
+
                             // TODO: Definition validation
                             data_table.set(mod_name, t.clone())?;
                             t

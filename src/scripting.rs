@@ -246,24 +246,36 @@ impl Mods {
                 let mod_table: rlua::Table =
                     lua_ctx.registry_value(&data_definer_rc.borrow().table_key)?;
 
-                for pair in mod_table.pairs() {
-                    let (mod_name, categories): (String, rlua::Table) = pair?;
-                    println!("mod_name {}", mod_name);
-                    for pair in categories.pairs() {
-                        let (category_name, proto_definitions): (String, rlua::Table) = pair?;
-                        println!("category_name {}", category_name);
+                for mod_bundle in &self.mods {
+                    println!("load data definitions for {}", mod_bundle.meta.name);
+                    let maybe_cat: Option<rlua::Table> =
+                        mod_table.get(mod_bundle.meta.name.clone())?;
 
-                        for pair in proto_definitions.pairs() {
-                            let (proto_name, proto_value): (String, rlua::Value) = pair?;
+                    if let Some(categories) = maybe_cat {
+                        println!("mod_name {}", mod_bundle.meta.name);
 
-                            let key = format!("{}:{}:{}", mod_name, category_name, proto_name);
-                            println!("Registering prototype {}", key);
-                            self.prototypes.insert(
-                                category_name.as_str(),
-                                key.as_str(),
-                                proto_value,
-                            );
+                        for pair in categories.pairs() {
+                            let (category_name, proto_definitions): (String, rlua::Table) = pair?;
+                            println!("category_name {}", category_name);
+
+                            for pair in proto_definitions.pairs() {
+                                let (proto_name, proto_value): (String, rlua::Value) = pair?;
+
+                                let key = format!(
+                                    "{}:{}:{}",
+                                    mod_bundle.meta.name, category_name, proto_name
+                                );
+                                println!("Registering prototype {}", key);
+                                self.prototypes.insert(
+                                    mod_bundle.meta.id,
+                                    category_name.as_str(),
+                                    key.as_str(),
+                                    proto_value,
+                                );
+                            }
                         }
+                    } else {
+                        trace!("Mod {} has no data definitions", mod_bundle.meta.name);
                     }
                 }
 
@@ -428,6 +440,8 @@ impl Into<usize> for ModId {
         self.0
     }
 }
+
+impl rlua::UserData for ModId {}
 
 /// Payload of contextual data borrowed by execution loop from [`Mods`](struct.Mods.html).
 pub struct ModContext<'a> {

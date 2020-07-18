@@ -56,6 +56,8 @@ use std::{any::TypeId, borrow::Cow, collections::HashMap, iter::Iterator, marker
 
 use serde::Deserialize;
 
+use crate::scripting::ModId;
+
 /// Trait for prototypes that can be declared in Rust and defined in Lua.
 ///
 /// # Examples
@@ -260,7 +262,13 @@ impl PrototypeTable {
     ///
     /// Deserialization errors occur when the given Lua value cannot be deserialized into
     /// the registered Rust type.
-    pub fn insert<'lua>(&mut self, type_name: &str, key: &str, value: rlua::Value<'lua>) {
+    pub fn insert<'lua>(
+        &mut self,
+        mod_id: ModId,
+        type_name: &str,
+        key: &str,
+        value: rlua::Value<'lua>,
+    ) {
         let type_id = self.types.get(type_name).unwrap();
         let (factory, storage) = self
             .prototypes2
