@@ -1,3 +1,8 @@
+<p style="text-align: center;">
+⚠ Unmaintained ⚠
+</p>
+
+This engine has experienced some bitrot and no longer builds. Importantly `gfx-rs` is long dead.
 
 # rengine
 
